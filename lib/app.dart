@@ -92,8 +92,10 @@ class _TabShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 800;
+    final fab = shell.currentIndex == 0 ? const BookShowButton() : null;
     if (wide) {
       return Scaffold(
+        floatingActionButton: fab,
         body: Row(
           children: [
             NavigationRail(
@@ -120,6 +122,7 @@ class _TabShell extends StatelessWidget {
       );
     }
     return Scaffold(
+      floatingActionButton: fab,
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,

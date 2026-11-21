@@ -315,48 +315,61 @@ class _StudioSection extends StatelessWidget {
               style: TextStyle(color: StageColors.textMuted),
             )
           else ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 20,
-                horizontalMargin: 0,
-                columns: const [
-                  DataColumn(label: Text('#')),
-                  DataColumn(label: Text('Time')),
-                  DataColumn(label: Text('mph'), numeric: true),
-                  DataColumn(label: Text('Incline'), numeric: true),
-                  DataColumn(label: Text('Miles'), numeric: true),
-                ],
-                rows: [
-                  for (var i = 0; i < details.tracks.length; i++)
-                    DataRow(
-                      cells: [
-                        DataCell(Text('${i + 1}')),
-                        DataCell(
-                          Text(
-                            '${formatDuration(details.tracks[i].startSeconds)}–'
-                            '${formatDuration(details.tracks[i].endSeconds)}',
-                          ),
-                        ),
-                        DataCell(
-                          Text(details.tracks[i].speedMph.toStringAsFixed(1)),
-                        ),
-                        DataCell(
-                          Text(
-                            '${details.tracks[i].inclinePercent.toStringAsFixed(1)}%',
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            formatMiles(
-                              details.tracks[i].distanceMiles,
-                              withUnit: false,
+            // Full card width, so the header rule lines up with the totals
+            // strip below; scrolls sideways only when the card is too narrow.
+            LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: box.maxWidth),
+                  child: DataTable(
+                    columnSpacing: 20,
+                    horizontalMargin: 0,
+                    columns: const [
+                      DataColumn(label: Text('#')),
+                      // Takes up the spare width so the table spans the card.
+                      DataColumn(
+                        label: Text('Time'),
+                        columnWidth: FlexColumnWidth(),
+                      ),
+                      DataColumn(label: Text('mph'), numeric: true),
+                      DataColumn(label: Text('Incline'), numeric: true),
+                      DataColumn(label: Text('Miles'), numeric: true),
+                    ],
+                    rows: [
+                      for (var i = 0; i < details.tracks.length; i++)
+                        DataRow(
+                          cells: [
+                            DataCell(Text('${i + 1}')),
+                            DataCell(
+                              Text(
+                                '${formatDuration(details.tracks[i].startSeconds)}–'
+                                '${formatDuration(details.tracks[i].endSeconds)}',
+                              ),
                             ),
-                          ),
+                            DataCell(
+                              Text(
+                                details.tracks[i].speedMph.toStringAsFixed(1),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${details.tracks[i].inclinePercent.toStringAsFixed(1)}%',
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                formatMiles(
+                                  details.tracks[i].distanceMiles,
+                                  withUnit: false,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

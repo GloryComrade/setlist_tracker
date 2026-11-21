@@ -123,16 +123,30 @@ class AppTheme {
           side: const BorderSide(color: StageColors.outline),
         ),
       ),
+      // Filled fields float their label inside the fill. (An outline border
+      // here would park the label on the field's top edge, half outside it.)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: StageColors.surfaceHigh,
-        border: OutlineInputBorder(
+        border: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        focusedBorder: OutlineInputBorder(
+        enabledBorder: UnderlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: StageColors.magenta, width: 2),
+        ),
+        errorBorder: UnderlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: scheme.error),
+        ),
+        focusedErrorBorder: UnderlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: scheme.error, width: 2),
         ),
         labelStyle: const TextStyle(color: StageColors.textMuted),
         hintStyle: const TextStyle(color: StageColors.textMuted),
@@ -236,6 +250,39 @@ class AppTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(color: StageColors.outline),
+      // Dialogs, sheets and menus sit on the stage's own surfaces instead of
+      // the warm grey Material tints from the seed color.
+      dialogTheme: DialogThemeData(
+        backgroundColor: StageColors.surface,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: text.headlineSmall,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: StageColors.outline),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: StageColors.surface,
+        surfaceTintColor: Colors.transparent,
+        dragHandleColor: StageColors.outline,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: StageColors.surfaceHigh,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: StageColors.outline),
+        ),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        backgroundColor: StageColors.surface,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: StageColors.surfaceHigh,
+        headerForegroundColor: StageColors.text,
+      ),
+      timePickerTheme: const TimePickerThemeData(
+        backgroundColor: StageColors.surface,
+      ),
       snackBarTheme: const SnackBarThemeData(
         backgroundColor: StageColors.surfaceHigh,
         contentTextStyle: TextStyle(color: StageColors.text),

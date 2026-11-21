@@ -25,6 +25,23 @@ class SetlistFilterNotifier extends Notifier<SetlistFilter> {
   void set(SetlistFilter f) => state = f;
 }
 
+/// The Setlist's main action. It lives on the tab shell's Scaffold (not the
+/// Setlist's own) so snack bars such as "Show booked." lift it instead of
+/// covering it.
+class BookShowButton extends StatelessWidget {
+  const BookShowButton({super.key});
+
+  @override
+  Widget build(BuildContext context) => FloatingActionButton.extended(
+    onPressed: () => context.push('/show/new'),
+    icon: const Icon(Icons.add),
+    label: const Text(
+      'Book a Show',
+      style: TextStyle(fontWeight: FontWeight.w800),
+    ),
+  );
+}
+
 /// Home screen: every Show, newest first, grouped by week.
 class SetlistScreen extends ConsumerWidget {
   const SetlistScreen({super.key});
@@ -35,14 +52,6 @@ class SetlistScreen extends ConsumerWidget {
     final filter = ref.watch(setlistFilterProvider);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/show/new'),
-        icon: const Icon(Icons.add),
-        label: const Text(
-          'Book a Show',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-      ),
       body: SafeArea(
         child: showsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

@@ -308,7 +308,11 @@ class _TrackDialogState extends State<_TrackDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _end,
-                      decoration: const InputDecoration(labelText: 'End'),
+                      // Matching helper keeps Start and End level.
+                      decoration: const InputDecoration(
+                        labelText: 'End',
+                        helperText: 'mm:ss',
+                      ),
                       inputFormatters: time,
                       validator: (v) {
                         final end = parseDuration(v ?? '');
