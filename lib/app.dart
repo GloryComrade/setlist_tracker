@@ -1,0 +1,123 @@
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+
+import 'theme/app_theme.dart';
+import 'ui/backstage/backstage_screen.dart';
+import 'ui/backstage/saved_mix_screen.dart';
+import 'ui/setlist/setlist_screen.dart';
+import 'ui/show_detail/show_detail_screen.dart';
+import 'ui/show_form/show_form_screen.dart';
+
+/// Every screen has a URL, so links work on web and deep links on iOS later.
+final appRouter = GoRouter(
+  initialLocation: '/setlist',
+  routes: [
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, shell) => _TabShell(shell: shell),
+      branches: [
+        StatefulShellBranch(routes: [
+          GoRoute(
+              path: '/setlist', builder: (_, _) => const SetlistScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(
+              path: '/backstage', builder: (_, _) => const BackstageScreen()),
+        ]),
+      ],
+    ),
+    GoRoute(path: '/show/new', builder: (_, _) => const ShowFormScreen()),
+    GoRoute(
+      path: '/show/:id',
+      builder: (_, state) =>
+          ShowDetailScreen(showId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/show/:id/edit',
+      builder: (_, state) =>
+          ShowFormScreen(showId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+        path: '/backstage/mix/new', builder: (_, _) => const SavedMixScreen()),
+    GoRoute(
+      path: '/backstage/mix/:id',
+      builder: (_, state) =>
+          SavedMixScreen(mixId: state.pathParameters['id']!),
+    ),
+  ],
+);
+
+class SetlistApp extends StatelessWidget {
+  const SetlistApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      title: 'Setlist Tracker',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.dark,
+      routerConfig: appRouter,
+    );
+  }
+}
+
+/// Bottom bar on phones, side rail on wide screens.
+class _TabShell extends StatelessWidget {
+  const _TabShell({required this.shell});
+  final StatefulNavigationShell shell;
+
+  static const _tabs = [
+    (icon: Icons.queue_music_outlined, active: Icons.queue_music, label: 'Setlist'),
+    (icon: Icons.inventory_2_outlined, active: Icons.inventory_2, label: 'Backstage'),
+  ];
+
+  void _go(int i) => shell.goBranch(i, initialLocation: i == shell.currentIndex);
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 800;
+    if (wide) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: shell.currentIndex,
+              onDestinationSelected: _go,
+              labelType: NavigationRailLabelType.all,
+              leading: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Icon(Icons.mic, color: StageColors.magenta, size: 32),
+              ),
+              destinations: [
+                for (final t in _tabs)
+                  NavigationRailDestination(
+                    icon: Icon(t.icon),
+                    selectedIcon: Icon(t.active),
+                    label: Text(t.label),
+                  ),
+              ],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: shell),
+          ],
+        ),
+      );
+    }
+    return Scaffold(
+      body: shell,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: shell.currentIndex,
+        onDestinationSelected: _go,
+        destinations: [
+          for (final t in _tabs)
+            NavigationDestination(
+              icon: Icon(t.icon),
+              selectedIcon: Icon(t.active),
+              label: t.label,
+            ),
+        ],
+      ),
+    );
+  }
+}
