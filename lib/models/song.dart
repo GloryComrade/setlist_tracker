@@ -38,26 +38,26 @@ class SongOfTheShow {
   bool get hasClip => previewUrl != null && clipStartSeconds != null;
 
   Map<String, Object?> toJson() => {
-        'title': title,
-        'artist': artist,
-        'note': note,
-        'albumArtUrl': albumArtUrl,
-        'spotifyUrl': spotifyUrl,
-        'appleMusicUrl': appleMusicUrl,
-        'previewUrl': previewUrl,
-        'clipStartSeconds': clipStartSeconds,
-        'clipLengthSeconds': clipLengthSeconds,
-      };
+    'title': title,
+    'artist': artist,
+    'note': note,
+    'albumArtUrl': albumArtUrl,
+    'spotifyUrl': spotifyUrl,
+    'appleMusicUrl': appleMusicUrl,
+    'previewUrl': previewUrl,
+    'clipStartSeconds': clipStartSeconds,
+    'clipLengthSeconds': clipLengthSeconds,
+  };
 
   factory SongOfTheShow.fromJson(Map<String, Object?> json) => SongOfTheShow(
-        title: asStringOrNull(json['title']) ?? '',
-        artist: asStringOrNull(json['artist']) ?? '',
-        note: asStringOrNull(json['note']),
-        albumArtUrl: asStringOrNull(json['albumArtUrl']),
-        spotifyUrl: asStringOrNull(json['spotifyUrl']),
-        appleMusicUrl: asStringOrNull(json['appleMusicUrl']),
-        previewUrl: asStringOrNull(json['previewUrl']),
-        clipStartSeconds: asDoubleOrNull(json['clipStartSeconds']),
-        clipLengthSeconds: asDoubleOrNull(json['clipLengthSeconds']),
-      );
+    title: asStringOrNull(json['title']) ?? '',
+    artist: asStringOrNull(json['artist']) ?? '',
+    note: asStringOrNull(json['note']),
+    albumArtUrl: asStringOrNull(json['albumArtUrl']),
+    spotifyUrl: asStringOrNull(json['spotifyUrl']),
+    appleMusicUrl: asStringOrNull(json['appleMusicUrl']),
+    previewUrl: asStringOrNull(json['previewUrl']),
+    clipStartSeconds: asDoubleOrNull(json['clipStartSeconds']),
+    clipLengthSeconds: asDoubleOrNull(json['clipLengthSeconds']),
+  );
 }

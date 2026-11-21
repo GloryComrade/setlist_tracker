@@ -81,17 +81,19 @@ List<SongResult> parseITunesResults(String body) {
     final artist = r['artistName'];
     if (title is! String || artist is! String) continue;
     final art = r['artworkUrl100'];
-    out.add(SongResult(
-      title: title,
-      artist: artist,
-      album: r['collectionName'] as String?,
-      // Ask for a sharper 600px cover instead of the 100px thumbnail.
-      artworkUrl: art is String
-          ? art.replaceFirst(RegExp(r'/\d+x\d+bb\.'), '/600x600bb.')
-          : null,
-      appleMusicUrl: r['trackViewUrl'] as String?,
-      previewUrl: r['previewUrl'] as String?,
-    ));
+    out.add(
+      SongResult(
+        title: title,
+        artist: artist,
+        album: r['collectionName'] as String?,
+        // Ask for a sharper 600px cover instead of the 100px thumbnail.
+        artworkUrl: art is String
+            ? art.replaceFirst(RegExp(r'/\d+x\d+bb\.'), '/600x600bb.')
+            : null,
+        appleMusicUrl: r['trackViewUrl'] as String?,
+        previewUrl: r['previewUrl'] as String?,
+      ),
+    );
   }
   return out;
 }

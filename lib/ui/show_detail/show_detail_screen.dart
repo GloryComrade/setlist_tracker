@@ -29,19 +29,22 @@ class ShowDetailScreen extends ConsumerWidget {
         content: const Text('It will be removed from your Setlist.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Keep it')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep it'),
+          ),
           FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete')),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
     if (ok != true) return;
     await ref.read(showRepositoryProvider).delete(showId);
-    if (context.mounted) context.pop();
+    if (context.mounted) leaveScreen(context);
   }
 
   @override
@@ -57,14 +60,17 @@ class ShowDetailScreen extends ConsumerWidget {
         final show = shows.where((s) => s.id == showId).firstOrNull;
         if (show == null) {
           return Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(leading: backButtonFor(context)),
             body: const Center(child: Text('That Show is not on the Setlist.')),
           );
         }
-        final gearName =
-            gear.where((g) => g.id == show.gearId).firstOrNull?.displayName;
+        final gearName = gear
+            .where((g) => g.id == show.gearId)
+            .firstOrNull
+            ?.displayName;
         return Scaffold(
           appBar: AppBar(
+            leading: backButtonFor(context),
             title: Text(show.workoutType.label.toUpperCase()),
             actions: [
               IconButton(
@@ -125,16 +131,26 @@ class _Poster extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return PosterHeader(
-      kicker: formatShowDateTime(show.date),
       title: formatMiles(show.distanceMiles).toUpperCase(),
       gradient: gradientFor(show.venue),
       children: [
         Text(
           '${formatPace(show.paceSecondsPerMile)}  ·  '
           '${formatDuration(show.durationSeconds)}',
-          style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white),
+          style: theme.textTheme.headlineMedium?.copyWith(
+            color: Colors.white,
+            fontFeatures: StageFonts.tabular,
+          ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
+        Text(
+          formatShowDateTime(show.date),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             Container(
@@ -148,12 +164,15 @@ class _Poster extends StatelessWidget {
                 children: [
                   Icon(iconFor(show.venue), size: 14, color: Colors.white),
                   const SizedBox(width: 4),
-                  Text(show.venue.label.toUpperCase(),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
-                          letterSpacing: 1)),
+                  Text(
+                    show.venue.label.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      letterSpacing: 1,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -172,14 +191,17 @@ class _Stats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      title: 'The Numbers',
+      title: 'Details',
       child: Wrap(
         spacing: 28,
         runSpacing: 16,
         children: [
           StatTile(label: 'Workout', value: show.workoutType.label),
           StatTile(label: 'Effort', value: '${show.effort}/10'),
-          StatTile(label: 'Feel', value: '${show.feel.emoji} ${show.feel.label}'),
+          StatTile(
+            label: 'Feel',
+            value: '${show.feel.emoji} ${show.feel.label}',
+          ),
           if (gearName != null) StatTile(label: 'Gear', value: gearName!),
         ],
       ),
@@ -194,73 +216,71 @@ class _SongCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final song = show.song!;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Stack(
-              alignment: Alignment.center,
+    return SectionCard(
+      title: 'Song of the Show',
+      child: Row(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              AlbumArt(url: song.albumArtUrl, size: 96),
+              if (song.hasClip) ClipPlayButton(song: song),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AlbumArt(url: song.albumArtUrl, size: 96),
-                if (song.hasClip) ClipPlayButton(song: song),
+                Text(
+                  song.title,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                Text(
+                  song.artist,
+                  style: const TextStyle(color: StageColors.textMuted),
+                ),
+                if (song.note != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '“${song.note}”',
+                      style: const TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: spotifyGreen,
+                        foregroundColor: Colors.black,
+                      ),
+                      // An exact track link when we have one; otherwise
+                      // Spotify's search for title + artist.
+                      onPressed: () => openLink(
+                        context,
+                        song.spotifyUrl != null
+                            ? Uri.parse(song.spotifyUrl!)
+                            : spotifySearchUri(song.title, song.artist),
+                      ),
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Open in Spotify'),
+                    ),
+                    if (song.appleMusicUrl != null)
+                      OutlinedButton(
+                        onPressed: () =>
+                            openLink(context, Uri.parse(song.appleMusicUrl!)),
+                        child: const Text('Apple Music'),
+                      ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('SONG OF THE SHOW',
-                      style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w800,
-                          color: StageColors.magenta)),
-                  Text(song.title,
-                      style: Theme.of(context).textTheme.headlineSmall),
-                  Text(song.artist,
-                      style: const TextStyle(color: StageColors.textMuted)),
-                  if (song.note != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text('“${song.note}”',
-                          style: const TextStyle(fontStyle: FontStyle.italic)),
-                    ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: spotifyGreen,
-                          foregroundColor: Colors.black,
-                        ),
-                        // An exact track link when we have one; otherwise
-                        // Spotify's search for title + artist.
-                        onPressed: () => openLink(
-                          context,
-                          song.spotifyUrl != null
-                              ? Uri.parse(song.spotifyUrl!)
-                              : spotifySearchUri(song.title, song.artist),
-                        ),
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Open in Spotify'),
-                      ),
-                      if (song.appleMusicUrl != null)
-                        OutlinedButton(
-                          onPressed: () => openLink(
-                              context, Uri.parse(song.appleMusicUrl!)),
-                          child: const Text('Apple Music'),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -272,9 +292,10 @@ class _StudioSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final where = [details.gymName, details.treadmillName]
-        .whereType<String>()
-        .join(' · ');
+    final where = [
+      details.gymName,
+      details.treadmillName,
+    ].whereType<String>().join(' · ');
     return SectionCard(
       title: 'The Tracks',
       child: Column(
@@ -283,12 +304,16 @@ class _StudioSection extends StatelessWidget {
           if (where.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Text(where,
-                  style: const TextStyle(color: StageColors.textMuted)),
+              child: Text(
+                where,
+                style: const TextStyle(color: StageColors.textMuted),
+              ),
             ),
           if (details.tracks.isEmpty)
-            const Text('No Tracks logged.',
-                style: TextStyle(color: StageColors.textMuted))
+            const Text(
+              'No Tracks logged.',
+              style: TextStyle(color: StageColors.textMuted),
+            )
           else ...[
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -304,18 +329,33 @@ class _StudioSection extends StatelessWidget {
                 ],
                 rows: [
                   for (var i = 0; i < details.tracks.length; i++)
-                    DataRow(cells: [
-                      DataCell(Text('${i + 1}')),
-                      DataCell(Text(
-                          '${formatDuration(details.tracks[i].startSeconds)}–'
-                          '${formatDuration(details.tracks[i].endSeconds)}')),
-                      DataCell(Text(
-                          details.tracks[i].speedMph.toStringAsFixed(1))),
-                      DataCell(Text(
-                          '${details.tracks[i].inclinePercent.toStringAsFixed(1)}%')),
-                      DataCell(Text(formatMiles(details.tracks[i].distanceMiles,
-                          withUnit: false))),
-                    ]),
+                    DataRow(
+                      cells: [
+                        DataCell(Text('${i + 1}')),
+                        DataCell(
+                          Text(
+                            '${formatDuration(details.tracks[i].startSeconds)}–'
+                            '${formatDuration(details.tracks[i].endSeconds)}',
+                          ),
+                        ),
+                        DataCell(
+                          Text(details.tracks[i].speedMph.toStringAsFixed(1)),
+                        ),
+                        DataCell(
+                          Text(
+                            '${details.tracks[i].inclinePercent.toStringAsFixed(1)}%',
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            formatMiles(
+                              details.tracks[i].distanceMiles,
+                              withUnit: false,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -356,16 +396,15 @@ class _LiveSection extends StatelessWidget {
           StatTile(label: 'Surface', value: details.surface.label),
           if (details.elevationGainFt != null)
             StatTile(
-                label: 'Elevation gain',
-                value: '${n(details.elevationGainFt!)} ft'),
+              label: 'Elevation gain',
+              value: '${n(details.elevationGainFt!)} ft',
+            ),
           if (w?.tempF != null)
             StatTile(label: 'Temp', value: '${n(w!.tempF!)}°F'),
           if (w?.windMph != null)
             StatTile(label: 'Wind', value: '${n(w!.windMph!)} mph'),
           if (w?.conditions != null)
-            StatTile(
-                label: 'Conditions',
-                value: '${w!.conditions!.emoji} ${w.conditions!.label}'),
+            StatTile(label: 'Conditions', value: w!.conditions!.label),
         ],
       ),
     );

@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
@@ -132,8 +131,16 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   @override
   void dispose() {
     for (final c in [
-      _gym, _treadmill, _route, _elevation, _temp, _wind, _distance,
-      _duration, _notes, _songNote,
+      _gym,
+      _treadmill,
+      _route,
+      _elevation,
+      _temp,
+      _wind,
+      _distance,
+      _duration,
+      _notes,
+      _songNote,
     ]) {
       c.dispose();
     }
@@ -173,8 +180,12 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   }
 
   Future<void> _saveAsMix() async {
-    final name = await showNameDialog(context,
-        title: 'Save as a Mix', label: 'Mix name', initial: _gym.text);
+    final name = await showNameDialog(
+      context,
+      title: 'Save as a Mix',
+      label: 'Mix name',
+      initial: _gym.text,
+    );
     if (name == null || name.isEmpty) return;
     final now = DateTime.now();
     final mix = SavedMix(
@@ -208,16 +219,32 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    setState(() => _date = DateTime(
-        picked.year, picked.month, picked.day, _date.hour, _date.minute));
+    setState(
+      () => _date = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _date.hour,
+        _date.minute,
+      ),
+    );
   }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
-        context: context, initialTime: TimeOfDay.fromDateTime(_date));
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_date),
+    );
     if (picked == null) return;
-    setState(() => _date = DateTime(
-        _date.year, _date.month, _date.day, picked.hour, picked.minute));
+    setState(
+      () => _date = DateTime(
+        _date.year,
+        _date.month,
+        _date.day,
+        picked.hour,
+        picked.minute,
+      ),
+    );
   }
 
   String? _blankToNull(String s) => s.trim().isEmpty ? null : s.trim();
@@ -233,7 +260,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     }
     final distance = _distanceValue;
     final duration = _durationValue;
-    if (distance == null || distance <= 0 || duration == null || duration <= 0) {
+    if (distance == null ||
+        distance <= 0 ||
+        duration == null ||
+        duration <= 0) {
       _snack('Add a distance and a duration.');
       return;
     }
@@ -242,7 +272,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     final now = DateTime.now();
     final picked = _pickedSong;
     final weather = Weather(
-        tempF: _num(_temp), windMph: _num(_wind), conditions: _conditions);
+      tempF: _num(_temp),
+      windMph: _num(_wind),
+      conditions: _conditions,
+    );
 
     final show = Show(
       id: _existing?.id ?? const Uuid().v4(),
@@ -300,12 +333,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       return;
     }
     if (!mounted) return;
-    _snack(_existing == null ? 'Show booked. 🎤' : 'Show updated.');
-    context.pop();
+    _snack(_existing == null ? 'Show booked.' : 'Show updated.');
+    leaveScreen(context);
   }
 
-  void _snack(String text) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text) => ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(text), duration: const Duration(seconds: 2)),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -315,20 +349,25 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     }
     if (isEdit && _existing == null) {
       return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('That Show is no longer on the Setlist.')),
+        appBar: AppBar(leading: backButtonFor(context)),
+        body: const Center(
+          child: Text('That Show is no longer on the Setlist.'),
+        ),
       );
     }
     final venue = _venue;
     return Scaffold(
       appBar: AppBar(
+        leading: backButtonFor(context),
         title: Text(isEdit ? 'EDIT SHOW' : 'BOOK A SHOW'),
         actions: [
           if (venue != null)
             TextButton(
               onPressed: _saving ? null : _save,
-              child: const Text('SAVE',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              child: const Text(
+                'SAVE',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
         ],
       ),
@@ -482,7 +521,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               },
               title: const Text('Use Track totals for distance and time'),
               subtitle: const Text(
-                  'Turn off to type what the treadmill screen said.'),
+                'Turn off to type what the treadmill screen said.',
+              ),
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -508,7 +548,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           TextFormField(
             controller: _route,
             decoration: const InputDecoration(
-                labelText: 'Route', hintText: 'e.g. River Loop'),
+              labelText: 'Route',
+              hintText: 'e.g. River Loop',
+            ),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 12),
@@ -526,7 +568,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           TextFormField(
             controller: _elevation,
             decoration: const InputDecoration(
-                labelText: 'Elevation gain', suffixText: 'ft'),
+              labelText: 'Elevation gain',
+              suffixText: 'ft',
+            ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: decimal,
           ),
@@ -538,9 +582,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                 child: TextFormField(
                   controller: _temp,
                   decoration: const InputDecoration(
-                      labelText: 'Temperature', suffixText: '°F'),
+                    labelText: 'Temperature',
+                    suffixText: '°F',
+                  ),
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
+                    decimal: true,
+                    signed: true,
+                  ),
                   inputFormatters: decimal,
                 ),
               ),
@@ -549,9 +597,12 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                 child: TextFormField(
                   controller: _wind,
                   decoration: const InputDecoration(
-                      labelText: 'Wind', suffixText: 'mph'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: 'Wind',
+                    suffixText: 'mph',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: decimal,
                 ),
               ),
@@ -564,7 +615,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             children: [
               for (final c in Conditions.values)
                 ChoiceChip(
-                  label: Text('${c.emoji} ${c.label}'),
+                  avatar: Icon(iconForConditions(c), size: 18),
+                  label: Text(c.label),
                   selected: _conditions == c,
                   showCheckmark: false,
                   onSelected: (sel) =>
@@ -579,7 +631,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
 
   Widget _numbers() {
     final auto = _autoTotals;
-    final pace = paceSecondsPerMileFor(_distanceValue ?? 0, _durationValue ?? 0);
+    final pace = paceSecondsPerMileFor(
+      _distanceValue ?? 0,
+      _durationValue ?? 0,
+    );
     return SectionCard(
       title: 'The Numbers',
       child: Column(
@@ -593,11 +648,14 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                   controller: _distance,
                   enabled: !auto,
                   decoration: const InputDecoration(
-                      labelText: 'Distance', suffixText: 'mi'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: 'Distance',
+                    suffixText: 'mi',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                   ],
                   validator: (v) {
                     if (auto) return null;
@@ -612,9 +670,11 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                   controller: _duration,
                   enabled: !auto,
                   decoration: const InputDecoration(
-                      labelText: 'Duration', hintText: 'h:mm:ss or mm:ss'),
+                    labelText: 'Duration',
+                    hintText: 'h:mm:ss or mm:ss',
+                  ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9:]'))
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
                   ],
                   validator: (v) {
                     if (auto) return null;
@@ -628,8 +688,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           if (auto)
             const Padding(
               padding: EdgeInsets.only(top: 6),
-              child: Text('Filled in from your Tracks.',
-                  style: TextStyle(color: StageColors.textMuted, fontSize: 13)),
+              child: Text(
+                'Filled in from your Tracks.',
+                style: TextStyle(color: StageColors.textMuted, fontSize: 13),
+              ),
             ),
           const SizedBox(height: 12),
           StatTile(label: 'Pace', value: formatPace(pace)),
@@ -648,11 +710,11 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             children: [
               const _Label('Effort'),
               const Spacer(),
-              Text('$_effort / 10',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(color: StageColors.amber)),
+              Text(
+                '$_effort / 10',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(color: StageColors.amber),
+              ),
             ],
           ),
           Slider(
@@ -688,7 +750,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                           width: 2,
                         ),
                       ),
-                      child: Text(f.emoji, style: const TextStyle(fontSize: 30)),
+                      child: Text(
+                        f.emoji,
+                        style: const TextStyle(fontSize: 30),
+                      ),
                     ),
                   ),
                 ),
@@ -697,8 +762,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           Center(
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(_feel.label,
-                  style: const TextStyle(color: StageColors.textMuted)),
+              child: Text(
+                _feel.label,
+                style: const TextStyle(color: StageColors.textMuted),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -724,11 +791,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       trailing: TextButton.icon(
         onPressed: _addGear,
         icon: const Icon(Icons.add),
-        label: const Text('New'),
+        label: const Text('Add'),
       ),
       child: options.isEmpty
-          ? const Text('No Gear yet. Add your shoes to track their miles.',
-              style: TextStyle(color: StageColors.textMuted))
+          ? const Text(
+              'No Gear yet. Add your shoes to track their miles.',
+              style: TextStyle(color: StageColors.textMuted),
+            )
           : Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -787,16 +856,23 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(song.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w800, fontSize: 16)),
-                          Text(song.artist,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(color: StageColors.textMuted)),
+                          Text(
+                            song.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: StageColors.textMuted,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -816,8 +892,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                 TextFormField(
                   controller: _songNote,
                   decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
-                      hintText: 'e.g. mile 9 second wind'),
+                    labelText: 'Note (optional)',
+                    hintText: 'e.g. mile 9 second wind',
+                  ),
                   textCapitalization: TextCapitalization.sentences,
                 ),
               ],
@@ -832,17 +909,17 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-            color: StageColors.textMuted,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.2,
+        color: StageColors.textMuted,
+      ),
+    ),
+  );
 }
 
 /// First step of a new Show: two big poster cards.
@@ -859,8 +936,10 @@ class _VenuePicker extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text("WHAT KIND OF SHOW?",
-                  style: Theme.of(context).textTheme.headlineLarge),
+              Text(
+                "WHAT KIND OF SHOW?",
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
               const SizedBox(height: 16),
               for (final v in Venue.values) ...[
                 _VenueCard(venue: v, onTap: () => onPicked(v)),
@@ -901,15 +980,19 @@ class _VenueCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(venue.label.toUpperCase(),
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall
-                              ?.copyWith(color: Colors.white)),
+                      Text(
+                        venue.label.toUpperCase(),
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(color: Colors.white),
+                      ),
                       const SizedBox(height: 4),
-                      Text(blurb,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 15)),
+                      Text(
+                        blurb,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
+                      ),
                     ],
                   ),
                 ),

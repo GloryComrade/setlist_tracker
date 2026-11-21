@@ -9,12 +9,20 @@ library;
 /// Spotify search for "title artist". Opens the Spotify app on iPhone when
 /// it's installed, otherwise the Spotify web player.
 Uri spotifySearchUri(String title, String artist) {
-  final query = [title.trim(), artist.trim()].where((s) => s.isNotEmpty).join(' ');
-  return Uri(scheme: 'https', host: 'open.spotify.com', pathSegments: ['search', query]);
+  final query = [
+    title.trim(),
+    artist.trim(),
+  ].where((s) => s.isNotEmpty).join(' ');
+  return Uri(
+    scheme: 'https',
+    host: 'open.spotify.com',
+    pathSegments: ['search', query],
+  );
 }
 
 final _trackLink = RegExp(
-    r'^https?://open\.spotify\.com/(?:intl-[a-z-]+/)?track/([A-Za-z0-9]{22})');
+  r'^https?://open\.spotify\.com/(?:intl-[a-z-]+/)?track/([A-Za-z0-9]{22})',
+);
 final _trackUri = RegExp(r'^spotify:track:([A-Za-z0-9]{22})$');
 
 /// Turns a pasted Spotify song link (from Share → Copy Song Link, or a

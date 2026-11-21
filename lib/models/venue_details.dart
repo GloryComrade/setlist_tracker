@@ -29,20 +29,20 @@ class StudioDetails {
   TrackTotals get totals => TrackTotals.of(tracks);
 
   Map<String, Object?> toJson() => {
-        'gymName': gymName,
-        'treadmillName': treadmillName,
-        'savedMixId': savedMixId,
-        'tracks': tracks.map((t) => t.toJson()).toList(),
-        'useTrackTotals': useTrackTotals,
-      };
+    'gymName': gymName,
+    'treadmillName': treadmillName,
+    'savedMixId': savedMixId,
+    'tracks': tracks.map((t) => t.toJson()).toList(),
+    'useTrackTotals': useTrackTotals,
+  };
 
   factory StudioDetails.fromJson(Map<String, Object?> json) => StudioDetails(
-        gymName: asStringOrNull(json['gymName']),
-        treadmillName: asStringOrNull(json['treadmillName']),
-        savedMixId: asStringOrNull(json['savedMixId']),
-        tracks: asMapList(json['tracks']).map(Track.fromJson).toList(),
-        useTrackTotals: json['useTrackTotals'] != false,
-      );
+    gymName: asStringOrNull(json['gymName']),
+    treadmillName: asStringOrNull(json['treadmillName']),
+    savedMixId: asStringOrNull(json['savedMixId']),
+    tracks: asMapList(json['tracks']).map(Track.fromJson).toList(),
+    useTrackTotals: json['useTrackTotals'] != false,
+  );
 }
 
 class Weather {
@@ -55,16 +55,16 @@ class Weather {
   bool get isEmpty => tempF == null && windMph == null && conditions == null;
 
   Map<String, Object?> toJson() => {
-        'tempF': tempF,
-        'windMph': windMph,
-        'conditions': conditions?.name,
-      };
+    'tempF': tempF,
+    'windMph': windMph,
+    'conditions': conditions?.name,
+  };
 
   factory Weather.fromJson(Map<String, Object?> json) => Weather(
-        tempF: asDoubleOrNull(json['tempF']),
-        windMph: asDoubleOrNull(json['windMph']),
-        conditions: Conditions.fromName(asStringOrNull(json['conditions'])),
-      );
+    tempF: asDoubleOrNull(json['tempF']),
+    windMph: asDoubleOrNull(json['windMph']),
+    conditions: Conditions.fromName(asStringOrNull(json['conditions'])),
+  );
 }
 
 /// Extra details for a Live Show (outdoor run).
@@ -86,12 +86,12 @@ class LiveDetails {
   final String? gpxFileId;
 
   Map<String, Object?> toJson() => {
-        'routeName': routeName,
-        'surface': surface.name,
-        'elevationGainFt': elevationGainFt,
-        'weather': weather?.toJson(),
-        'gpxFileId': gpxFileId,
-      };
+    'routeName': routeName,
+    'surface': surface.name,
+    'elevationGainFt': elevationGainFt,
+    'weather': weather?.toJson(),
+    'gpxFileId': gpxFileId,
+  };
 
   factory LiveDetails.fromJson(Map<String, Object?> json) {
     final weather = asMap(json['weather']);

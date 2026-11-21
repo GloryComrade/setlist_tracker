@@ -8,33 +8,39 @@ import 'package:setlist_tracker/models/track.dart';
 import 'package:setlist_tracker/models/venue_details.dart';
 
 Show _studioShow(String id, DateTime date) => Show(
-      id: id,
-      date: date,
-      venue: Venue.studio,
-      workoutType: WorkoutType.intervals,
-      distanceMiles: 4.25,
-      durationSeconds: 2400,
-      effort: 7,
-      feel: Feel.encore,
-      notes: 'Felt strong',
-      song: const SongOfTheShow(
-          title: 'Mr. Brightside',
-          artist: 'The Killers',
-          note: 'last rep',
-          previewUrl: 'https://example.com/p.m4a',
-          clipStartSeconds: 9,
-          clipLengthSeconds: 15),
-      studio: const StudioDetails(
-        gymName: 'Downtown Y',
-        treadmillName: 'Lane 3',
-        tracks: [
-          Track(startSeconds: 0, endSeconds: 1800, speedMph: 6, inclinePercent: 1),
-          Track(startSeconds: 1800, endSeconds: 2400, speedMph: 7.5, inclinePercent: 5),
-        ],
+  id: id,
+  date: date,
+  venue: Venue.studio,
+  workoutType: WorkoutType.intervals,
+  distanceMiles: 4.25,
+  durationSeconds: 2400,
+  effort: 7,
+  feel: Feel.encore,
+  notes: 'Felt strong',
+  song: const SongOfTheShow(
+    title: 'Mr. Brightside',
+    artist: 'The Killers',
+    note: 'last rep',
+    previewUrl: 'https://example.com/p.m4a',
+    clipStartSeconds: 9,
+    clipLengthSeconds: 15,
+  ),
+  studio: const StudioDetails(
+    gymName: 'Downtown Y',
+    treadmillName: 'Lane 3',
+    tracks: [
+      Track(startSeconds: 0, endSeconds: 1800, speedMph: 6, inclinePercent: 1),
+      Track(
+        startSeconds: 1800,
+        endSeconds: 2400,
+        speedMph: 7.5,
+        inclinePercent: 5,
       ),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    ],
+  ),
+  createdAt: DateTime.now(),
+  updatedAt: DateTime.now(),
+);
 
 void main() {
   late Database db;

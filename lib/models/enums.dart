@@ -27,8 +27,10 @@ enum WorkoutType {
   const WorkoutType(this.label);
   final String label;
 
-  static WorkoutType fromName(String? name) => WorkoutType.values
-      .firstWhere((v) => v.name == name, orElse: () => WorkoutType.easy);
+  static WorkoutType fromName(String? name) => WorkoutType.values.firstWhere(
+    (v) => v.name == name,
+    orElse: () => WorkoutType.easy,
+  );
 }
 
 /// How the Show felt, from worst to best.
@@ -55,21 +57,22 @@ enum Surface {
   const Surface(this.label);
   final String label;
 
-  static Surface fromName(String? name) =>
-      Surface.values.firstWhere((v) => v.name == name, orElse: () => Surface.road);
+  static Surface fromName(String? name) => Surface.values.firstWhere(
+    (v) => v.name == name,
+    orElse: () => Surface.road,
+  );
 }
 
 enum Conditions {
-  clear('Clear', '☀️'),
-  cloudy('Cloudy', '☁️'),
-  rain('Rain', '🌧️'),
-  snow('Snow', '❄️'),
-  fog('Fog', '🌫️'),
-  windy('Windy', '💨');
+  clear('Clear'),
+  cloudy('Cloudy'),
+  rain('Rain'),
+  snow('Snow'),
+  fog('Fog'),
+  windy('Windy');
 
-  const Conditions(this.label, this.emoji);
+  const Conditions(this.label);
   final String label;
-  final String emoji;
 
   static Conditions? fromName(String? name) {
     for (final c in Conditions.values) {

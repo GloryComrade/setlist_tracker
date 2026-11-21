@@ -36,7 +36,7 @@ class BackstageScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const PosterHeader(kicker: 'Crew only', title: 'BACKSTAGE'),
+                  const PosterHeader(title: 'BACKSTAGE'),
                   const SizedBox(height: 16),
                   SectionCard(
                     title: 'Gear',
@@ -48,7 +48,8 @@ class BackstageScreen extends ConsumerWidget {
                     child: gear.isEmpty
                         ? const Text(
                             'Add your shoes and every Show will add to their miles.',
-                            style: TextStyle(color: StageColors.textMuted))
+                            style: TextStyle(color: StageColors.textMuted),
+                          )
                         : Column(
                             children: [
                               for (final g in active)
@@ -58,12 +59,15 @@ class BackstageScreen extends ConsumerWidget {
                                   padding: EdgeInsets.fromLTRB(0, 12, 0, 4),
                                   child: Align(
                                     alignment: Alignment.centerLeft,
-                                    child: Text('RETIRED',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 1.2,
-                                            fontSize: 12,
-                                            color: StageColors.textMuted)),
+                                    child: Text(
+                                      'RETIRED',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.2,
+                                        fontSize: 12,
+                                        color: StageColors.textMuted,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 for (final g in retired)
@@ -78,17 +82,16 @@ class BackstageScreen extends ConsumerWidget {
                     trailing: TextButton.icon(
                       onPressed: () => context.push('/backstage/mix/new'),
                       icon: const Icon(Icons.add),
-                      label: const Text('New'),
+                      label: const Text('Add'),
                     ),
                     child: mixes.isEmpty
                         ? const Text(
                             'A Saved Mix is a treadmill setup you can load into a '
                             'Studio Session in one tap.',
-                            style: TextStyle(color: StageColors.textMuted))
+                            style: TextStyle(color: StageColors.textMuted),
+                          )
                         : Column(
-                            children: [
-                              for (final m in mixes) _MixTile(mix: m),
-                            ],
+                            children: [for (final m in mixes) _MixTile(mix: m)],
                           ),
                   ),
                 ],
@@ -112,13 +115,16 @@ class _GearTile extends ConsumerWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor:
-            gear.retired ? StageColors.outline : StageColors.amber,
-        child: Icon(Icons.directions_run,
-            color: gear.retired ? StageColors.textMuted : Colors.black),
+        backgroundColor: gear.retired ? StageColors.outline : StageColors.amber,
+        child: Icon(
+          Icons.directions_run,
+          color: gear.retired ? StageColors.textMuted : Colors.black,
+        ),
       ),
-      title: Text(gear.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w700)),
+      title: Text(
+        gear.displayName,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
       subtitle: Text(formatMiles(miles)),
       trailing: PopupMenuButton<String>(
         onSelected: (action) async {
@@ -133,8 +139,9 @@ class _GearTile extends ConsumerWidget {
         itemBuilder: (_) => [
           const PopupMenuItem(value: 'edit', child: Text('Edit')),
           PopupMenuItem(
-              value: 'retire',
-              child: Text(gear.retired ? 'Bring out of retirement' : 'Retire')),
+            value: 'retire',
+            child: Text(gear.retired ? 'Bring out of retirement' : 'Retire'),
+          ),
         ],
       ),
     );
@@ -148,22 +155,29 @@ class _MixTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = mix.totals;
-    final where =
-        [mix.gymName, mix.treadmillName].whereType<String>().join(' · ');
+    final where = [
+      mix.gymName,
+      mix.treadmillName,
+    ].whereType<String>().join(' · ');
     return ListTile(
       contentPadding: EdgeInsets.zero,
       onTap: () => context.push('/backstage/mix/${mix.id}'),
       leading: const CircleAvatar(
-        backgroundColor: StageColors.violet,
+        backgroundColor: StageColors.violetDeep,
         child: Icon(Icons.album, color: Colors.white),
       ),
-      title: Text(mix.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-      subtitle: Text([
-        '${mix.tracks.length} Tracks',
-        formatDuration(t.durationSeconds),
-        formatMiles(t.distanceMiles),
-        if (where.isNotEmpty) where,
-      ].join(' · ')),
+      title: Text(
+        mix.name,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        [
+          '${mix.tracks.length} Tracks',
+          formatDuration(t.durationSeconds),
+          formatMiles(t.distanceMiles),
+          if (where.isNotEmpty) where,
+        ].join(' · '),
+      ),
       trailing: const Icon(Icons.chevron_right),
     );
   }

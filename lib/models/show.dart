@@ -66,47 +66,51 @@ class Show implements Entity {
       paceSecondsPerMileFor(distanceMiles, durationSeconds);
 
   Show copyWith({DateTime? updatedAt, DateTime? deletedAt}) => Show(
-        id: id,
-        date: date,
-        venue: venue,
-        workoutType: workoutType,
-        distanceMiles: distanceMiles,
-        durationSeconds: durationSeconds,
-        effort: effort,
-        feel: feel,
-        notes: notes,
-        gearId: gearId,
-        song: song,
-        studio: studio,
-        live: live,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        deletedAt: deletedAt ?? this.deletedAt,
-      );
+    id: id,
+    date: date,
+    venue: venue,
+    workoutType: workoutType,
+    distanceMiles: distanceMiles,
+    durationSeconds: durationSeconds,
+    effort: effort,
+    feel: feel,
+    notes: notes,
+    gearId: gearId,
+    song: song,
+    studio: studio,
+    live: live,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
+  );
 
   @override
   Map<String, Object?> toJson() => {
-        'schemaVersion': kSchemaVersion,
-        'id': id,
-        // No "Z": this is the runner's local wall-clock time.
-        'date': DateTime(date.year, date.month, date.day, date.hour,
-                date.minute)
-            .toIso8601String(),
-        'venue': venue.name,
-        'workoutType': workoutType.name,
-        'distanceMiles': distanceMiles,
-        'durationSeconds': durationSeconds,
-        'effort': effort,
-        'feel': feel.name,
-        'notes': notes,
-        'gearId': gearId,
-        'song': song?.toJson(),
-        'studio': studio?.toJson(),
-        'live': live?.toJson(),
-        'createdAt': utcString(createdAt),
-        'updatedAt': utcString(updatedAt),
-        'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
-      };
+    'schemaVersion': kSchemaVersion,
+    'id': id,
+    // No "Z": this is the runner's local wall-clock time.
+    'date': DateTime(
+      date.year,
+      date.month,
+      date.day,
+      date.hour,
+      date.minute,
+    ).toIso8601String(),
+    'venue': venue.name,
+    'workoutType': workoutType.name,
+    'distanceMiles': distanceMiles,
+    'durationSeconds': durationSeconds,
+    'effort': effort,
+    'feel': feel.name,
+    'notes': notes,
+    'gearId': gearId,
+    'song': song?.toJson(),
+    'studio': studio?.toJson(),
+    'live': live?.toJson(),
+    'createdAt': utcString(createdAt),
+    'updatedAt': utcString(updatedAt),
+    'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
+  };
 
   factory Show.fromJson(Map<String, Object?> json) {
     final song = asMap(json['song']);
@@ -119,8 +123,13 @@ class Show implements Entity {
       date: rawDate == null
           ? DateTime.now()
           // Strip any zone info: treat it as local wall-clock time.
-          : DateTime(rawDate.year, rawDate.month, rawDate.day, rawDate.hour,
-              rawDate.minute),
+          : DateTime(
+              rawDate.year,
+              rawDate.month,
+              rawDate.day,
+              rawDate.hour,
+              rawDate.minute,
+            ),
       venue: Venue.fromName(asStringOrNull(json['venue'])),
       workoutType: WorkoutType.fromName(asStringOrNull(json['workoutType'])),
       distanceMiles: asDouble(json['distanceMiles']),

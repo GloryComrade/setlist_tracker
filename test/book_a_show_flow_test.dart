@@ -5,19 +5,20 @@ import 'package:sembast/sembast_memory.dart';
 import 'package:setlist_tracker/app.dart';
 import 'package:setlist_tracker/data/music/music_search.dart';
 import 'package:setlist_tracker/data/providers.dart';
+import 'package:setlist_tracker/theme/app_theme.dart';
 
 /// Books a Live Show through the real screens and checks it lands on the
-/// Setlist and its detail page. Uses an in-memory database and a plain theme
-/// (the real theme downloads fonts, which tests can't do).
+/// Setlist and its detail page. Uses an in-memory database and the real theme.
 class _FakeMusicSearch implements MusicSearch {
   @override
   Future<List<SongResult>> search(String query) async => const [
-        SongResult(
-            title: 'Dancing in the Dark',
-            artist: 'Bruce Springsteen',
-            album: 'Born in the U.S.A.'),
-        SongResult(title: 'Born to Run', artist: 'Bruce Springsteen'),
-      ];
+    SongResult(
+      title: 'Dancing in the Dark',
+      artist: 'Bruce Springsteen',
+      album: 'Born in the U.S.A.',
+    ),
+    SongResult(title: 'Born to Run', artist: 'Bruce Springsteen'),
+  ];
 }
 
 void main() {
@@ -27,18 +28,21 @@ void main() {
     addTearDown(tester.view.reset);
 
     final db = await tester.runAsync(
-        () => newDatabaseFactoryMemory().openDatabase('flow.db'));
+      () => newDatabaseFactoryMemory().openDatabase('flow.db'),
+    );
 
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        databaseProvider.overrideWithValue(db!),
-        musicSearchProvider.overrideWithValue(_FakeMusicSearch()),
-      ],
-      child: MaterialApp.router(
-        theme: ThemeData.dark(),
-        routerConfig: appRouter,
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db!),
+          musicSearchProvider.overrideWithValue(_FakeMusicSearch()),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.dark(),
+          routerConfig: appRouter,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
     expect(find.text('NO SHOWS YET'), findsOneWidget);
 

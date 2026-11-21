@@ -11,15 +11,18 @@ import '../widgets/clip_player.dart';
 
 /// Opens the song picker: search as you type, tap a song to pick it.
 /// Returns the picked song (without a note), or null if dismissed.
-Future<SongOfTheShow?> showSongPicker(BuildContext context,
-    {String initialQuery = ''}) {
+Future<SongOfTheShow?> showSongPicker(
+  BuildContext context, {
+  String initialQuery = '',
+}) {
   return showModalBottomSheet<SongOfTheShow>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: StageColors.surface,
     shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     builder: (_) => FractionallySizedBox(
       heightFactor: 0.9,
       child: _SongPicker(initialQuery: initialQuery),
@@ -91,7 +94,8 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
       if (!mounted || id != _requestId) return;
       setState(() {
         _loading = false;
-        _error = "Couldn't reach the song search. Check your connection, "
+        _error =
+            "Couldn't reach the song search. Check your connection, "
             'or type the song in yourself.';
       });
     }
@@ -102,12 +106,14 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
       setState(() => _choosingPartOf = r);
       return;
     }
-    Navigator.of(context).pop(SongOfTheShow(
-      title: r.title,
-      artist: r.artist,
-      albumArtUrl: r.artworkUrl,
-      appleMusicUrl: r.appleMusicUrl,
-    ));
+    Navigator.of(context).pop(
+      SongOfTheShow(
+        title: r.title,
+        artist: r.artist,
+        albumArtUrl: r.artworkUrl,
+        appleMusicUrl: r.appleMusicUrl,
+      ),
+    );
   }
 
   Future<void> _typeItIn() async {
@@ -145,8 +151,10 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text('SONG OF THE SHOW',
-                style: Theme.of(context).textTheme.headlineMedium),
+            child: Text(
+              'SONG OF THE SHOW',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -193,12 +201,15 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
     }
     if (_query.text.trim().isEmpty) {
       return const _Message(
-          icon: Icons.queue_music,
-          text: 'Search for the song that carried this run.');
+        icon: Icons.queue_music,
+        text: 'Search for the song that carried this run.',
+      );
     }
     if (!_loading && _results.isEmpty) {
       return const _Message(
-          icon: Icons.search_off, text: 'No songs found. Try another search.');
+        icon: Icons.search_off,
+        text: 'No songs found. Try another search.',
+      );
     }
     return ListView.builder(
       itemCount: _results.length,
@@ -207,10 +218,12 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
         return ListTile(
           onTap: () => _pick(r),
           leading: AlbumArt(url: r.artworkUrl, size: 52, radius: 6),
-          title: Text(r.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+          title: Text(
+            r.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           subtitle: Text(
             [r.artist, if (r.album != null) r.album].join(' · '),
             maxLines: 1,
@@ -230,20 +243,22 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 48, color: StageColors.textMuted),
-              const SizedBox(height: 12),
-              Text(text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: StageColors.textMuted)),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: StageColors.textMuted),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: StageColors.textMuted),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _ManualSongDialog extends StatefulWidget {
@@ -298,13 +313,18 @@ class _ManualSongDialogState extends State<_ManualSongDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
-            Navigator.of(context).pop(SongOfTheShow(
-                title: _title.text.trim(), artist: _artist.text.trim()));
+            Navigator.of(context).pop(
+              SongOfTheShow(
+                title: _title.text.trim(),
+                artist: _artist.text.trim(),
+              ),
+            );
           },
           child: const Text('Use this song'),
         ),
@@ -312,7 +332,6 @@ class _ManualSongDialogState extends State<_ManualSongDialog> {
     );
   }
 }
-
 
 /// Length of the part you pick, like an Instagram note.
 const double kClipLengthSeconds = 15;
@@ -349,8 +368,12 @@ class _PartChooserState extends State<_PartChooser> {
 
   Future<void> _play() async {
     try {
-      await _player.play(widget.song.previewUrl!, _start, kClipLengthSeconds,
-          loop: true);
+      await _player.play(
+        widget.song.previewUrl!,
+        _start,
+        kClipLengthSeconds,
+        loop: true,
+      );
     } catch (_) {
       // Browsers can block audio until the first tap; the play button
       // below starts it again.
@@ -360,19 +383,20 @@ class _PartChooserState extends State<_PartChooser> {
   void _done() {
     _player.stop();
     final r = widget.song;
-    Navigator.of(context).pop(SongOfTheShow(
-      title: r.title,
-      artist: r.artist,
-      albumArtUrl: r.artworkUrl,
-      appleMusicUrl: r.appleMusicUrl,
-      previewUrl: r.previewUrl,
-      clipStartSeconds: _start,
-      clipLengthSeconds: kClipLengthSeconds,
-    ));
+    Navigator.of(context).pop(
+      SongOfTheShow(
+        title: r.title,
+        artist: r.artist,
+        albumArtUrl: r.artworkUrl,
+        appleMusicUrl: r.appleMusicUrl,
+        previewUrl: r.previewUrl,
+        clipStartSeconds: _start,
+        clipLengthSeconds: kClipLengthSeconds,
+      ),
+    );
   }
 
-  String _mmss(double s) =>
-      '0:${s.round().toString().padLeft(2, '0')}';
+  String _mmss(double s) => '0:${s.round().toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -393,20 +417,26 @@ class _PartChooserState extends State<_PartChooser> {
                 icon: const Icon(Icons.arrow_back),
               ),
               Expanded(
-                child: Text('PICK YOUR PART',
-                    style: Theme.of(context).textTheme.headlineMedium),
+                child: Text(
+                  'PICK YOUR PART',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Center(child: AlbumArt(url: r.artworkUrl, size: 180, radius: 16)),
           const SizedBox(height: 16),
-          Text(r.title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall),
-          Text(r.artist,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StageColors.textMuted)),
+          Text(
+            r.title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          Text(
+            r.artist,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: StageColors.textMuted),
+          ),
           const Spacer(),
           SizedBox(
             height: 56,
@@ -443,7 +473,9 @@ class _PartChooserState extends State<_PartChooser> {
                   tooltip: (snap.data ?? false) ? 'Pause' : 'Play',
                   onPressed: () =>
                       (snap.data ?? false) ? _player.stop() : _play(),
-                  icon: Icon((snap.data ?? false) ? Icons.pause : Icons.play_arrow),
+                  icon: Icon(
+                    (snap.data ?? false) ? Icons.pause : Icons.play_arrow,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -477,11 +509,16 @@ class _WaveformPainter extends CustomPainter {
       final h = (0.25 + 0.75 * (((i * 37) % 17) / 16)) * size.height;
       final x = i * barWidth;
       final f = (i + 0.5) / bars;
-      final inWindow = f >= startFraction && f <= startFraction + lengthFraction;
+      final inWindow =
+          f >= startFraction && f <= startFraction + lengthFraction;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(x + barWidth * 0.2, (size.height - h) / 2,
-              barWidth * 0.6, h),
+          Rect.fromLTWH(
+            x + barWidth * 0.2,
+            (size.height - h) / 2,
+            barWidth * 0.6,
+            h,
+          ),
           const Radius.circular(2),
         ),
         inWindow ? lit : dim,
@@ -491,5 +528,6 @@ class _WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WaveformPainter old) =>
-      old.startFraction != startFraction || old.lengthFraction != lengthFraction;
+      old.startFraction != startFraction ||
+      old.lengthFraction != lengthFraction;
 }

@@ -34,14 +34,16 @@ Future<String> fetchJsonp(Uri uri) {
       completer.completeError(Exception('Song search could not load'));
     }
   }).toJS;
-  script.src = uri.replace(queryParameters: {
-    ...uri.queryParameters,
-    'callback': name,
-  }).toString();
+  script.src = uri
+      .replace(queryParameters: {...uri.queryParameters, 'callback': name})
+      .toString();
   web.document.head!.append(script);
 
-  return completer.future.timeout(const Duration(seconds: 10), onTimeout: () {
-    cleanup();
-    throw TimeoutException('Song search timed out');
-  });
+  return completer.future.timeout(
+    const Duration(seconds: 10),
+    onTimeout: () {
+      cleanup();
+      throw TimeoutException('Song search timed out');
+    },
+  );
 }

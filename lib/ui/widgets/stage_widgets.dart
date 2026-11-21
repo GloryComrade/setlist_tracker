@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -10,11 +11,21 @@ final _fullFormat = DateFormat('EEE, MMM d, y · h:mm a');
 String formatShowDay(DateTime d) => _dayFormat.format(d);
 String formatShowDateTime(DateTime d) => _fullFormat.format(d);
 
-LinearGradient gradientFor(Venue venue) =>
-    venue == Venue.studio ? StageColors.studioGradient : StageColors.liveGradient;
+LinearGradient gradientFor(Venue venue) => venue == Venue.studio
+    ? StageColors.studioGradient
+    : StageColors.liveGradient;
 
 IconData iconFor(Venue venue) =>
     venue == Venue.studio ? Icons.graphic_eq : Icons.landscape;
+
+IconData iconForConditions(Conditions c) => switch (c) {
+  Conditions.clear => Icons.wb_sunny_outlined,
+  Conditions.cloudy => Icons.cloud_outlined,
+  Conditions.rain => Icons.umbrella_outlined,
+  Conditions.snow => Icons.ac_unit,
+  Conditions.fog => Icons.dehaze,
+  Conditions.windy => Icons.air,
+};
 
 /// Small pill that says "STUDIO SESSION" or "LIVE SHOW".
 class VenueBadge extends StatelessWidget {
@@ -54,13 +65,11 @@ class PosterHeader extends StatelessWidget {
   const PosterHeader({
     super.key,
     required this.title,
-    this.kicker,
     this.gradient = StageColors.headlineGradient,
     this.children = const [],
   });
 
   final String title;
-  final String? kicker;
   final Gradient gradient;
   final List<Widget> children;
 
@@ -77,16 +86,6 @@ class PosterHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (kicker != null)
-            Text(
-              kicker!.toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white70,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
-                fontSize: 12,
-              ),
-            ),
           Text(
             title,
             style: theme.textTheme.displayMedium?.copyWith(color: Colors.white),
@@ -122,7 +121,8 @@ class StatTile extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
-          style: Theme.of(context).textTheme.headlineSmall,
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontFeatures: StageFonts.tabular),
         ),
       ],
     );
@@ -234,10 +234,30 @@ class MaxWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: width),
-          child: child,
-        ),
-      );
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width),
+      child: child,
+    ),
+  );
 }
+
+/// Goes back, or to [fallback] when the screen was opened directly from a
+/// link and there is nothing to go back to.
+void leaveScreen(BuildContext context, {String fallback = '/setlist'}) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(fallback);
+  }
+}
+
+/// App bar back button that still works when a screen was opened from a link.
+Widget? backButtonFor(BuildContext context, {String fallback = '/setlist'}) =>
+    context.canPop()
+    ? null
+    : IconButton(
+        tooltip: 'Back',
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => context.go(fallback),
+      );

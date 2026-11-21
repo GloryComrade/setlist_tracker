@@ -5,7 +5,12 @@ import '../../theme/app_theme.dart';
 /// Square album cover, with a stage-light placeholder when there is no art
 /// or it fails to load.
 class AlbumArt extends StatelessWidget {
-  const AlbumArt({super.key, required this.url, this.size = 56, this.radius = 8});
+  const AlbumArt({
+    super.key,
+    required this.url,
+    this.size = 56,
+    this.radius = 8,
+  });
 
   final String? url;
   final double size;

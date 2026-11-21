@@ -7,7 +7,8 @@ Future<void> openLink(BuildContext context, Uri uri) async {
   final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!ok) {
     messenger.showSnackBar(
-        SnackBar(content: Text('Could not open ${uri.host}.')));
+      SnackBar(content: Text('Could not open ${uri.host}.')),
+    );
   }
 }
 

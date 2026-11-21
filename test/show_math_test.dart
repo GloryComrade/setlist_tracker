@@ -43,9 +43,19 @@ void main() {
     test('adds time and distance, weights incline by time', () {
       const tracks = [
         // 30 min at 6 mph, 1% → 3 miles
-        Track(startSeconds: 0, endSeconds: 1800, speedMph: 6, inclinePercent: 1),
+        Track(
+          startSeconds: 0,
+          endSeconds: 1800,
+          speedMph: 6,
+          inclinePercent: 1,
+        ),
         // 10 min at 7.5 mph, 5% → 1.25 miles
-        Track(startSeconds: 1800, endSeconds: 2400, speedMph: 7.5, inclinePercent: 5),
+        Track(
+          startSeconds: 1800,
+          endSeconds: 2400,
+          speedMph: 7.5,
+          inclinePercent: 5,
+        ),
       ];
       final t = TrackTotals.of(tracks);
       expect(t.durationSeconds, 2400);
@@ -62,7 +72,12 @@ void main() {
     });
 
     test('a Track that ends before it starts counts as zero', () {
-      const t = Track(startSeconds: 600, endSeconds: 300, speedMph: 6, inclinePercent: 1);
+      const t = Track(
+        startSeconds: 600,
+        endSeconds: 300,
+        speedMph: 6,
+        inclinePercent: 1,
+      );
       expect(t.durationSeconds, 0);
       expect(t.distanceMiles, 0);
     });

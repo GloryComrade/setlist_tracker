@@ -51,4 +51,4 @@ Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved M
 - Studio Session distance and time come from the Tracks by default. Switch "Use Track totals" off to type what the treadmill screen said.
 - Song of the Show is picked from a search list with album art (Apple's free iTunes Search, no key needed), or typed in. The Show page has Open in Spotify and Apple Music buttons. A Spotify-powered search needs a server for its API secret, so it waits for Phase 5.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
-- Fonts (Bebas Neue, Inter) load from Google Fonts at runtime for now. Phase 4 bundles them so the app works offline.
+- Fonts (Bebas Neue, Inter) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.

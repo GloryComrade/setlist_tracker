@@ -16,8 +16,12 @@ class ClipPlayer {
   bool get isPlaying => _player.playing;
 
   /// Plays [lengthSeconds] from [startSeconds]. Loops when [loop] is true.
-  Future<void> play(String url, double startSeconds, double lengthSeconds,
-      {bool loop = false}) async {
+  Future<void> play(
+    String url,
+    double startSeconds,
+    double lengthSeconds, {
+    bool loop = false,
+  }) async {
     if (_loadedUrl != url) {
       await _player.setUrl(url);
       _loadedUrl = url;
@@ -25,7 +29,8 @@ class ClipPlayer {
     await _player.setClip(
       start: Duration(milliseconds: (startSeconds * 1000).round()),
       end: Duration(
-          milliseconds: ((startSeconds + lengthSeconds) * 1000).round()),
+        milliseconds: ((startSeconds + lengthSeconds) * 1000).round(),
+      ),
     );
     await _player.setLoopMode(loop ? LoopMode.one : LoopMode.off);
     await _player.seek(Duration.zero);
@@ -65,11 +70,17 @@ class _ClipPlayButtonState extends State<ClipPlayButton> {
     }
     try {
       await _player.play(
-          s.previewUrl!, s.clipStartSeconds!, s.clipLengthSeconds ?? 15);
+        s.previewUrl!,
+        s.clipStartSeconds!,
+        s.clipLengthSeconds ?? 15,
+      );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Couldn't play the song. Check your connection.")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Couldn't play the song. Check your connection."),
+          ),
+        );
       }
     }
   }
@@ -85,7 +96,7 @@ class _ClipPlayButtonState extends State<ClipPlayButton> {
           tooltip: playing ? 'Stop' : 'Play your part of the song',
           iconSize: widget.size * 0.55,
           style: IconButton.styleFrom(
-            backgroundColor: StageColors.magenta,
+            backgroundColor: StageColors.magentaDeep,
             foregroundColor: Colors.white,
             fixedSize: Size.square(widget.size),
           ),

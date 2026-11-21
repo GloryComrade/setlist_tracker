@@ -15,14 +15,19 @@ final appRouter = GoRouter(
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => _TabShell(shell: shell),
       branches: [
-        StatefulShellBranch(routes: [
-          GoRoute(
-              path: '/setlist', builder: (_, _) => const SetlistScreen()),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-              path: '/backstage', builder: (_, _) => const BackstageScreen()),
-        ]),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/setlist', builder: (_, _) => const SetlistScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/backstage',
+              builder: (_, _) => const BackstageScreen(),
+            ),
+          ],
+        ),
       ],
     ),
     GoRoute(path: '/show/new', builder: (_, _) => const ShowFormScreen()),
@@ -37,11 +42,12 @@ final appRouter = GoRouter(
           ShowFormScreen(showId: state.pathParameters['id']!),
     ),
     GoRoute(
-        path: '/backstage/mix/new', builder: (_, _) => const SavedMixScreen()),
+      path: '/backstage/mix/new',
+      builder: (_, _) => const SavedMixScreen(),
+    ),
     GoRoute(
       path: '/backstage/mix/:id',
-      builder: (_, state) =>
-          SavedMixScreen(mixId: state.pathParameters['id']!),
+      builder: (_, state) => SavedMixScreen(mixId: state.pathParameters['id']!),
     ),
   ],
 );
@@ -68,11 +74,20 @@ class _TabShell extends StatelessWidget {
   final StatefulNavigationShell shell;
 
   static const _tabs = [
-    (icon: Icons.queue_music_outlined, active: Icons.queue_music, label: 'Setlist'),
-    (icon: Icons.inventory_2_outlined, active: Icons.inventory_2, label: 'Backstage'),
+    (
+      icon: Icons.queue_music_outlined,
+      active: Icons.queue_music,
+      label: 'Setlist',
+    ),
+    (
+      icon: Icons.inventory_2_outlined,
+      active: Icons.inventory_2,
+      label: 'Backstage',
+    ),
   ];
 
-  void _go(int i) => shell.goBranch(i, initialLocation: i == shell.currentIndex);
+  void _go(int i) =>
+      shell.goBranch(i, initialLocation: i == shell.currentIndex);
 
   @override
   Widget build(BuildContext context) {

@@ -25,9 +25,10 @@ class _GearDialogState extends State<_GearDialog> {
   late final _name = TextEditingController(text: widget.existing?.name ?? '');
   late final _brand = TextEditingController(text: widget.existing?.brand ?? '');
   late final _miles = TextEditingController(
-      text: widget.existing == null
-          ? '0'
-          : widget.existing!.startingMiles.toStringAsFixed(1));
+    text: widget.existing == null
+        ? '0'
+        : widget.existing!.startingMiles.toStringAsFixed(1),
+  );
 
   @override
   void dispose() {
@@ -42,15 +43,17 @@ class _GearDialogState extends State<_GearDialog> {
     final now = DateTime.now();
     final e = widget.existing;
     final brand = _brand.text.trim();
-    Navigator.of(context).pop(Gear(
-      id: e?.id ?? const Uuid().v4(),
-      name: _name.text.trim(),
-      brand: brand.isEmpty ? null : brand,
-      startingMiles: double.tryParse(_miles.text) ?? 0,
-      retired: e?.retired ?? false,
-      createdAt: e?.createdAt ?? now,
-      updatedAt: now,
-    ));
+    Navigator.of(context).pop(
+      Gear(
+        id: e?.id ?? const Uuid().v4(),
+        name: _name.text.trim(),
+        brand: brand.isEmpty ? null : brand,
+        startingMiles: double.tryParse(_miles.text) ?? 0,
+        retired: e?.retired ?? false,
+        createdAt: e?.createdAt ?? now,
+        updatedAt: now,
+      ),
+    );
   }
 
   @override
@@ -67,7 +70,9 @@ class _GearDialogState extends State<_GearDialog> {
               TextFormField(
                 controller: _brand,
                 decoration: const InputDecoration(
-                    labelText: 'Brand', hintText: 'e.g. Brooks'),
+                  labelText: 'Brand',
+                  hintText: 'e.g. Brooks',
+                ),
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 12),
@@ -75,7 +80,9 @@ class _GearDialogState extends State<_GearDialog> {
                 controller: _name,
                 autofocus: true,
                 decoration: const InputDecoration(
-                    labelText: 'Name', hintText: 'e.g. Ghost 17'),
+                  labelText: 'Name',
+                  hintText: 'e.g. Ghost 17',
+                ),
                 textCapitalization: TextCapitalization.words,
                 validator: (v) =>
                     (v ?? '').trim().isEmpty ? 'Give it a name' : null,
@@ -87,10 +94,11 @@ class _GearDialogState extends State<_GearDialog> {
                   labelText: 'Miles already on them',
                   suffixText: 'mi',
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                 ],
               ),
             ],
@@ -99,8 +107,9 @@ class _GearDialogState extends State<_GearDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(onPressed: _submit, child: const Text('Save Gear')),
       ],
     );
@@ -108,8 +117,12 @@ class _GearDialogState extends State<_GearDialog> {
 }
 
 /// Asks for a single line of text (used for naming a Saved Mix).
-Future<String?> showNameDialog(BuildContext context,
-    {required String title, required String label, String initial = ''}) {
+Future<String?> showNameDialog(
+  BuildContext context, {
+  required String title,
+  required String label,
+  String initial = '',
+}) {
   final controller = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
@@ -124,11 +137,13 @@ Future<String?> showNameDialog(BuildContext context,
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save')),
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          child: const Text('Save'),
+        ),
       ],
     ),
   );
