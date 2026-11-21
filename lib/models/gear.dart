@@ -43,30 +43,29 @@ class Gear implements Entity {
     bool? retired,
     DateTime? updatedAt,
     DateTime? deletedAt,
-  }) =>
-      Gear(
-        id: id,
-        name: name ?? this.name,
-        brand: brand ?? this.brand,
-        startingMiles: startingMiles ?? this.startingMiles,
-        retired: retired ?? this.retired,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        deletedAt: deletedAt ?? this.deletedAt,
-      );
+  }) => Gear(
+    id: id,
+    name: name ?? this.name,
+    brand: brand ?? this.brand,
+    startingMiles: startingMiles ?? this.startingMiles,
+    retired: retired ?? this.retired,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
+  );
 
   @override
   Map<String, Object?> toJson() => {
-        'schemaVersion': kSchemaVersion,
-        'id': id,
-        'name': name,
-        'brand': brand,
-        'startingMiles': startingMiles,
-        'retired': retired,
-        'createdAt': utcString(createdAt),
-        'updatedAt': utcString(updatedAt),
-        'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
-      };
+    'schemaVersion': kSchemaVersion,
+    'id': id,
+    'name': name,
+    'brand': brand,
+    'startingMiles': startingMiles,
+    'retired': retired,
+    'createdAt': utcString(createdAt),
+    'updatedAt': utcString(updatedAt),
+    'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
+  };
 
   factory Gear.fromJson(Map<String, Object?> json) {
     final created = parseDate(json['createdAt']) ?? DateTime.now().toUtc();

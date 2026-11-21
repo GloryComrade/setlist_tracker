@@ -16,12 +16,30 @@ enum SetlistFilter { all, studio, live }
 
 final setlistFilterProvider =
     NotifierProvider<SetlistFilterNotifier, SetlistFilter>(
-        SetlistFilterNotifier.new);
+      SetlistFilterNotifier.new,
+    );
 
 class SetlistFilterNotifier extends Notifier<SetlistFilter> {
   @override
   SetlistFilter build() => SetlistFilter.all;
   void set(SetlistFilter f) => state = f;
+}
+
+/// The Setlist's main action. It lives on the tab shell's Scaffold (not the
+/// Setlist's own) so snack bars such as "Show booked." lift it instead of
+/// covering it.
+class BookShowButton extends StatelessWidget {
+  const BookShowButton({super.key});
+
+  @override
+  Widget build(BuildContext context) => FloatingActionButton.extended(
+    onPressed: () => context.push('/show/new'),
+    icon: const Icon(Icons.add),
+    label: const Text(
+      'Book a Show',
+      style: TextStyle(fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 /// Home screen: every Show, newest first, grouped by week.
@@ -34,18 +52,11 @@ class SetlistScreen extends ConsumerWidget {
     final filter = ref.watch(setlistFilterProvider);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/show/new'),
-        backgroundColor: StageColors.magenta,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Book a Show',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-      ),
       body: SafeArea(
         child: showsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Could not load the Setlist: $e')),
+          error: (e, _) =>
+              Center(child: Text('Could not load the Setlist: $e')),
           data: (shows) {
             final visible = switch (filter) {
               SetlistFilter.all => shows,
@@ -112,10 +123,16 @@ class SetlistScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  formatMiles(entry.value
-                      .fold<double>(0, (sum, s) => sum + s.distanceMiles)),
+                  formatMiles(
+                    entry.value.fold<double>(
+                      0,
+                      (sum, s) => sum + s.distanceMiles,
+                    ),
+                  ),
                   style: const TextStyle(
-                      fontWeight: FontWeight.w800, color: StageColors.amber),
+                    fontWeight: FontWeight.w800,
+                    color: StageColors.amber,
+                  ),
                 ),
               ],
             ),
@@ -141,53 +158,28 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final thisWeek = weekStart(DateTime.now());
-    final weekShows =
-        shows.where((s) => !s.date.isBefore(thisWeek)).toList();
-    final miles =
-        weekShows.fold<double>(0, (sum, s) => sum + s.distanceMiles);
+    final weekShows = shows.where((s) => !s.date.isBefore(thisWeek)).toList();
+    final miles = weekShows.fold<double>(0, (sum, s) => sum + s.distanceMiles);
+    final n = weekShows.length;
     return PosterHeader(
-      kicker: 'Setlist Tracker',
       title: 'THE SETLIST',
       children: [
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _HeaderStat(label: 'Miles this week', value: formatMiles(miles, withUnit: false)),
-            const SizedBox(width: 24),
-            _HeaderStat(label: 'Shows this week', value: '${weekShows.length}'),
-            const SizedBox(width: 24),
-            _HeaderStat(label: 'All-time Shows', value: '${shows.length}'),
-          ],
+        const SizedBox(height: 8),
+        Text(
+          shows.isEmpty
+              ? 'Every run is a Show. Book your first one.'
+              : '${formatMiles(miles)} this week across $n '
+                    '${n == 1 ? 'Show' : 'Shows'}',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.92),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFeatures: StageFonts.tabular,
+          ),
         ),
       ],
     );
   }
-}
-
-class _HeaderStat extends StatelessWidget {
-  const _HeaderStat({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Flexible(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .displaySmall
-                    ?.copyWith(color: Colors.white)),
-            Text(label.toUpperCase(),
-                style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1)),
-          ],
-        ),
-      );
 }
 
 class _FilterChips extends StatelessWidget {
@@ -202,18 +194,23 @@ class _FilterChips extends StatelessWidget {
       SetlistFilter.studio: 'Studio Sessions',
       SetlistFilter.live: 'Live Shows',
     };
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final f in SetlistFilter.values)
-          ChoiceChip(
-            label: Text(labels[f]!),
-            selected: value == f,
-            showCheckmark: false,
-            onSelected: (_) => onChanged(f),
-          ),
-      ],
+    // One row that scrolls sideways on narrow phones instead of wrapping.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final f in SetlistFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(labels[f]!),
+                selected: value == f,
+                showCheckmark: false,
+                onSelected: (_) => onChanged(f),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

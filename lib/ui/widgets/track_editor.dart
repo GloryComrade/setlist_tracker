@@ -22,13 +22,20 @@ class TrackEditor extends StatelessWidget {
       speedMph: last?.speedMph ?? 6.0,
       inclinePercent: last?.inclinePercent ?? 1.0,
     );
-    final result = await showTrackDialog(context, draft, number: tracks.length + 1);
+    final result = await showTrackDialog(
+      context,
+      draft,
+      number: tracks.length + 1,
+    );
     if (result != null) onChanged([...tracks, result]);
   }
 
   Future<void> _edit(BuildContext context, int index) async {
-    final result =
-        await showTrackDialog(context, tracks[index], number: index + 1);
+    final result = await showTrackDialog(
+      context,
+      tracks[index],
+      number: index + 1,
+    );
     if (result == null) return;
     final next = [...tracks];
     next[index] = result;
@@ -109,10 +116,14 @@ class _TrackTile extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: StageColors.violet,
-                  child: Text('$number',
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w800)),
+                  backgroundColor: StageColors.violetDeep,
+                  child: Text(
+                    '$number',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -122,15 +133,18 @@ class _TrackTile extends StatelessWidget {
                       Text(
                         '${formatDuration(track.startSeconds)} – '
                         '${formatDuration(track.endSeconds)}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: StageFonts.tabular,
+                        ),
                       ),
                       Text(
                         invalid
                             ? 'End time must be after start time'
                             : '${track.speedMph.toStringAsFixed(1)} mph '
-                                '(${formatPace(paceFromMph(track.speedMph))}) · '
-                                '${track.inclinePercent.toStringAsFixed(1)}% · '
-                                '${formatMiles(track.distanceMiles)}',
+                                  '(${formatPace(paceFromMph(track.speedMph))}) · '
+                                  '${track.inclinePercent.toStringAsFixed(1)}% · '
+                                  '${formatMiles(track.distanceMiles)}',
                         style: TextStyle(
                           color: invalid
                               ? Theme.of(context).colorScheme.error
@@ -163,22 +177,27 @@ class TrackTotalsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget item(String label, String value) => Expanded(
-          child: Column(
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1)),
-              Text(value,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(color: Colors.white)),
-            ],
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1,
+            ),
           ),
-        );
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontFeatures: StageFonts.tabular,
+            ),
+          ),
+        ],
+      ),
+    );
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
@@ -189,8 +208,10 @@ class TrackTotalsBar extends StatelessWidget {
         children: [
           item('TIME', formatDuration(totals.durationSeconds)),
           item('MILES', formatMiles(totals.distanceMiles, withUnit: false)),
-          item('AVG INCLINE',
-              '${totals.averageInclinePercent.toStringAsFixed(1)}%'),
+          item(
+            'AVG INCLINE',
+            '${totals.averageInclinePercent.toStringAsFixed(1)}%',
+          ),
         ],
       ),
     );
@@ -198,8 +219,11 @@ class TrackTotalsBar extends StatelessWidget {
 }
 
 /// Dialog to add or edit one Track. Returns null when cancelled.
-Future<Track?> showTrackDialog(BuildContext context, Track initial,
-    {required int number}) {
+Future<Track?> showTrackDialog(
+  BuildContext context,
+  Track initial, {
+  required int number,
+}) {
   return showDialog<Track>(
     context: context,
     builder: (_) => _TrackDialog(initial: initial, number: number),
@@ -217,14 +241,18 @@ class _TrackDialog extends StatefulWidget {
 
 class _TrackDialogState extends State<_TrackDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _start =
-      TextEditingController(text: formatDuration(widget.initial.startSeconds));
-  late final _end =
-      TextEditingController(text: formatDuration(widget.initial.endSeconds));
-  late final _speed =
-      TextEditingController(text: widget.initial.speedMph.toStringAsFixed(1));
+  late final _start = TextEditingController(
+    text: formatDuration(widget.initial.startSeconds),
+  );
+  late final _end = TextEditingController(
+    text: formatDuration(widget.initial.endSeconds),
+  );
+  late final _speed = TextEditingController(
+    text: widget.initial.speedMph.toStringAsFixed(1),
+  );
   late final _incline = TextEditingController(
-      text: widget.initial.inclinePercent.toStringAsFixed(1));
+    text: widget.initial.inclinePercent.toStringAsFixed(1),
+  );
 
   @override
   void dispose() {
@@ -237,12 +265,14 @@ class _TrackDialogState extends State<_TrackDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pop(Track(
-      startSeconds: parseDuration(_start.text)!,
-      endSeconds: parseDuration(_end.text)!,
-      speedMph: double.parse(_speed.text),
-      inclinePercent: double.parse(_incline.text),
-    ));
+    Navigator.of(context).pop(
+      Track(
+        startSeconds: parseDuration(_start.text)!,
+        endSeconds: parseDuration(_end.text)!,
+        speedMph: double.parse(_speed.text),
+        inclinePercent: double.parse(_incline.text),
+      ),
+    );
   }
 
   String? _timeValidator(String? v) =>
@@ -267,7 +297,9 @@ class _TrackDialogState extends State<_TrackDialog> {
                     child: TextFormField(
                       controller: _start,
                       decoration: const InputDecoration(
-                          labelText: 'Start', helperText: 'mm:ss into the run'),
+                        labelText: 'Start',
+                        helperText: 'mm:ss into the run',
+                      ),
                       inputFormatters: time,
                       validator: _timeValidator,
                     ),
@@ -276,7 +308,11 @@ class _TrackDialogState extends State<_TrackDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _end,
-                      decoration: const InputDecoration(labelText: 'End'),
+                      // Matching helper keeps Start and End level.
+                      decoration: const InputDecoration(
+                        labelText: 'End',
+                        helperText: 'mm:ss',
+                      ),
                       inputFormatters: time,
                       validator: (v) {
                         final end = parseDuration(v ?? '');
@@ -298,9 +334,12 @@ class _TrackDialogState extends State<_TrackDialog> {
                     child: TextFormField(
                       controller: _speed,
                       decoration: const InputDecoration(
-                          labelText: 'Speed', suffixText: 'mph'),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                        labelText: 'Speed',
+                        suffixText: 'mph',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       inputFormatters: decimal,
                       validator: (v) {
                         final n = double.tryParse(v ?? '');
@@ -314,9 +353,12 @@ class _TrackDialogState extends State<_TrackDialog> {
                     child: TextFormField(
                       controller: _incline,
                       decoration: const InputDecoration(
-                          labelText: 'Incline', suffixText: '%'),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                        labelText: 'Incline',
+                        suffixText: '%',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       inputFormatters: decimal,
                       validator: (v) {
                         final n = double.tryParse(v ?? '');

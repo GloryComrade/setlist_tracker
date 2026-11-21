@@ -28,27 +28,26 @@ class Track {
     int? endSeconds,
     double? speedMph,
     double? inclinePercent,
-  }) =>
-      Track(
-        startSeconds: startSeconds ?? this.startSeconds,
-        endSeconds: endSeconds ?? this.endSeconds,
-        speedMph: speedMph ?? this.speedMph,
-        inclinePercent: inclinePercent ?? this.inclinePercent,
-      );
+  }) => Track(
+    startSeconds: startSeconds ?? this.startSeconds,
+    endSeconds: endSeconds ?? this.endSeconds,
+    speedMph: speedMph ?? this.speedMph,
+    inclinePercent: inclinePercent ?? this.inclinePercent,
+  );
 
   Map<String, Object?> toJson() => {
-        'startSeconds': startSeconds,
-        'endSeconds': endSeconds,
-        'speedMph': speedMph,
-        'inclinePercent': inclinePercent,
-      };
+    'startSeconds': startSeconds,
+    'endSeconds': endSeconds,
+    'speedMph': speedMph,
+    'inclinePercent': inclinePercent,
+  };
 
   factory Track.fromJson(Map<String, Object?> json) => Track(
-        startSeconds: asInt(json['startSeconds']),
-        endSeconds: asInt(json['endSeconds']),
-        speedMph: asDouble(json['speedMph']),
-        inclinePercent: asDouble(json['inclinePercent']),
-      );
+    startSeconds: asInt(json['startSeconds']),
+    endSeconds: asInt(json['endSeconds']),
+    speedMph: asDouble(json['speedMph']),
+    inclinePercent: asDouble(json['inclinePercent']),
+  );
 
   @override
   bool operator ==(Object other) =>

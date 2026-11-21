@@ -13,7 +13,7 @@ Needs Flutter 3.50 or newer (it uses the new `material_ui` package).
 ```
 flutter pub get
 flutter run -d chrome          # web
-flutter test                   # 18 tests: math, storage, and a full "book a Show" flow
+flutter test                   # 20 tests: math, storage, and a full "book a Show" flow
 flutter build web              # production web build in build/web
 ```
 
@@ -49,6 +49,6 @@ Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved M
 ## Notes
 
 - Studio Session distance and time come from the Tracks by default. Switch "Use Track totals" off to type what the treadmill screen said.
-- Song of the Show links to Spotify: paste a song link (Share → Copy Song Link) to get a Play on Spotify button, or use Find on Spotify to search by title and artist. No Spotify account or API key needed. Album-art search waits for Phase 5.
+- Song of the Show is picked from a search list with album art (Apple's free iTunes Search, no key needed), or typed in. The Show page has Open in Spotify and Apple Music buttons. A Spotify-powered search needs a server for its API secret, so it waits for Phase 5.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
-- Fonts (Bebas Neue, Inter) load from Google Fonts at runtime for now. Phase 4 bundles them so the app works offline.
+- Fonts (Bebas Neue, Inter) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.

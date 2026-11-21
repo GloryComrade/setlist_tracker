@@ -42,30 +42,29 @@ class SavedMix implements Entity {
     List<Track>? tracks,
     DateTime? updatedAt,
     DateTime? deletedAt,
-  }) =>
-      SavedMix(
-        id: id,
-        name: name ?? this.name,
-        gymName: gymName ?? this.gymName,
-        treadmillName: treadmillName ?? this.treadmillName,
-        tracks: tracks ?? this.tracks,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        deletedAt: deletedAt ?? this.deletedAt,
-      );
+  }) => SavedMix(
+    id: id,
+    name: name ?? this.name,
+    gymName: gymName ?? this.gymName,
+    treadmillName: treadmillName ?? this.treadmillName,
+    tracks: tracks ?? this.tracks,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
+  );
 
   @override
   Map<String, Object?> toJson() => {
-        'schemaVersion': kSchemaVersion,
-        'id': id,
-        'name': name,
-        'gymName': gymName,
-        'treadmillName': treadmillName,
-        'tracks': tracks.map((t) => t.toJson()).toList(),
-        'createdAt': utcString(createdAt),
-        'updatedAt': utcString(updatedAt),
-        'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
-      };
+    'schemaVersion': kSchemaVersion,
+    'id': id,
+    'name': name,
+    'gymName': gymName,
+    'treadmillName': treadmillName,
+    'tracks': tracks.map((t) => t.toJson()).toList(),
+    'createdAt': utcString(createdAt),
+    'updatedAt': utcString(updatedAt),
+    'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
+  };
 
   factory SavedMix.fromJson(Map<String, Object?> json) {
     final created = parseDate(json['createdAt']) ?? DateTime.now().toUtc();

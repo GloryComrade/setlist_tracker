@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../logic/show_math.dart';
 import '../../models/show.dart';
 import '../../theme/app_theme.dart';
+import '../widgets/album_art.dart';
 import '../widgets/stage_widgets.dart';
 
 /// One Show on the Setlist, styled like a ticket stub.
@@ -34,15 +35,17 @@ class ShowCard extends StatelessWidget {
                     Text(
                       formatShowDay(show.date).split(',').first.toUpperCase(),
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          letterSpacing: 1),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        letterSpacing: 1,
+                      ),
                     ),
                     Text(
                       '${show.date.day}',
-                      style: theme.textTheme.displaySmall
-                          ?.copyWith(color: Colors.white),
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     Icon(iconFor(show.venue), color: Colors.white, size: 18),
                   ],
@@ -61,15 +64,18 @@ class ShowCard extends StatelessWidget {
                               '${show.workoutType.label.toUpperCase()} · '
                               '${show.venue.label.toUpperCase()}',
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1,
-                                  color: StageColors.textMuted),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1,
+                                color: StageColors.textMuted,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(show.feel.emoji,
-                              style: const TextStyle(fontSize: 20)),
+                          Text(
+                            show.feel.emoji,
+                            style: const TextStyle(fontSize: 20),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -77,33 +83,62 @@ class ShowCard extends StatelessWidget {
                         spacing: 16,
                         crossAxisAlignment: WrapCrossAlignment.end,
                         children: [
-                          Text(formatMiles(show.distanceMiles),
-                              style: theme.textTheme.headlineMedium),
-                          Text(formatPace(show.paceSecondsPerMile),
-                              style: theme.textTheme.headlineSmall
-                                  ?.copyWith(color: StageColors.amber)),
-                          Text(formatDuration(show.durationSeconds),
-                              style: theme.textTheme.headlineSmall
-                                  ?.copyWith(color: StageColors.textMuted)),
+                          Text(
+                            formatMiles(show.distanceMiles),
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontFeatures: StageFonts.tabular,
+                            ),
+                          ),
+                          Text(
+                            formatPace(show.paceSecondsPerMile),
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: StageColors.amber,
+                              fontFeatures: StageFonts.tabular,
+                            ),
+                          ),
+                          Text(
+                            formatDuration(show.durationSeconds),
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: StageColors.textMuted,
+                              fontFeatures: StageFonts.tabular,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text('Effort ${show.effort}/10',
-                          style: const TextStyle(
-                              fontSize: 13, color: StageColors.textMuted)),
+                      Text(
+                        'Effort ${show.effort}/10',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: StageColors.textMuted,
+                        ),
+                      ),
                       if (song != null) ...[
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.music_note,
-                                size: 16, color: StageColors.magenta),
-                            const SizedBox(width: 4),
+                            if (song.albumArtUrl != null) ...[
+                              AlbumArt(
+                                url: song.albumArtUrl,
+                                size: 22,
+                                radius: 4,
+                              ),
+                              const SizedBox(width: 6),
+                            ] else ...[
+                              const Icon(
+                                Icons.music_note,
+                                size: 16,
+                                color: StageColors.magenta,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
                             Expanded(
                               child: Text(
                                 '${song.title} — ${song.artist}',
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600),
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],

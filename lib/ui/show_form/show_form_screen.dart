@@ -1,12 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
-import '../../logic/spotify_links.dart';
 import '../../models/enums.dart';
 import '../../models/gear.dart';
 import '../../models/saved_mix.dart';
@@ -16,7 +14,9 @@ import '../../models/track.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
 import '../backstage/gear_dialog.dart';
-import '../widgets/open_link.dart';
+import '../song_picker/song_picker_sheet.dart';
+import '../widgets/album_art.dart';
+import '../widgets/clip_player.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
 
@@ -69,10 +69,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   String? _gearId;
 
   // Song of the Show
-  final _songTitle = TextEditingController();
-  final _songArtist = TextEditingController();
+  /// Picked from the song search (or typed in). The note is separate.
+  SongOfTheShow? _pickedSong;
   final _songNote = TextEditingController();
-  final _spotify = TextEditingController();
 
   @override
   void initState() {
@@ -80,8 +79,6 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     // Pace preview updates as you type.
     _distance.addListener(_refresh);
     _duration.addListener(_refresh);
-    _songTitle.addListener(_refresh);
-    _songArtist.addListener(_refresh);
     _load();
   }
 
@@ -107,10 +104,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     _feel = s.feel;
     _notes.text = s.notes ?? '';
     _gearId = s.gearId;
-    _songTitle.text = s.song?.title ?? '';
-    _songArtist.text = s.song?.artist ?? '';
+    _pickedSong = s.song;
     _songNote.text = s.song?.note ?? '';
-    _spotify.text = s.song?.spotifyUrl ?? '';
     final st = s.studio;
     if (st != null) {
       _gym.text = st.gymName ?? '';
@@ -136,8 +131,16 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   @override
   void dispose() {
     for (final c in [
-      _gym, _treadmill, _route, _elevation, _temp, _wind, _distance,
-      _duration, _notes, _songTitle, _songArtist, _songNote, _spotify,
+      _gym,
+      _treadmill,
+      _route,
+      _elevation,
+      _temp,
+      _wind,
+      _distance,
+      _duration,
+      _notes,
+      _songNote,
     ]) {
       c.dispose();
     }
@@ -177,8 +180,12 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   }
 
   Future<void> _saveAsMix() async {
-    final name = await showNameDialog(context,
-        title: 'Save as a Mix', label: 'Mix name', initial: _gym.text);
+    final name = await showNameDialog(
+      context,
+      title: 'Save as a Mix',
+      label: 'Mix name',
+      initial: _gym.text,
+    );
     if (name == null || name.isEmpty) return;
     final now = DateTime.now();
     final mix = SavedMix(
@@ -212,16 +219,32 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    setState(() => _date = DateTime(
-        picked.year, picked.month, picked.day, _date.hour, _date.minute));
+    setState(
+      () => _date = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _date.hour,
+        _date.minute,
+      ),
+    );
   }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
-        context: context, initialTime: TimeOfDay.fromDateTime(_date));
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_date),
+    );
     if (picked == null) return;
-    setState(() => _date = DateTime(
-        _date.year, _date.month, _date.day, picked.hour, picked.minute));
+    setState(
+      () => _date = DateTime(
+        _date.year,
+        _date.month,
+        _date.day,
+        picked.hour,
+        picked.minute,
+      ),
+    );
   }
 
   String? _blankToNull(String s) => s.trim().isEmpty ? null : s.trim();
@@ -237,17 +260,22 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     }
     final distance = _distanceValue;
     final duration = _durationValue;
-    if (distance == null || distance <= 0 || duration == null || duration <= 0) {
+    if (distance == null ||
+        distance <= 0 ||
+        duration == null ||
+        duration <= 0) {
       _snack('Add a distance and a duration.');
       return;
     }
     setState(() => _saving = true);
 
     final now = DateTime.now();
-    final title = _songTitle.text.trim();
-    final artist = _songArtist.text.trim();
+    final picked = _pickedSong;
     final weather = Weather(
-        tempF: _num(_temp), windMph: _num(_wind), conditions: _conditions);
+      tempF: _num(_temp),
+      windMph: _num(_wind),
+      conditions: _conditions,
+    );
 
     final show = Show(
       id: _existing?.id ?? const Uuid().v4(),
@@ -260,16 +288,18 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       feel: _feel,
       notes: _blankToNull(_notes.text),
       gearId: _gearId,
-      song: title.isEmpty && artist.isEmpty
+      song: picked == null
           ? null
           : SongOfTheShow(
-              title: title,
-              artist: artist,
+              title: picked.title,
+              artist: picked.artist,
               note: _blankToNull(_songNote.text),
-              // Keep anything a later music search filled in.
-              albumArtUrl: _existing?.song?.albumArtUrl,
-              spotifyUrl: normalizeSpotifyTrackLink(_spotify.text),
-              appleMusicUrl: _existing?.song?.appleMusicUrl,
+              albumArtUrl: picked.albumArtUrl,
+              spotifyUrl: picked.spotifyUrl,
+              appleMusicUrl: picked.appleMusicUrl,
+              previewUrl: picked.previewUrl,
+              clipStartSeconds: picked.clipStartSeconds,
+              clipLengthSeconds: picked.clipLengthSeconds,
             ),
       studio: venue == Venue.studio
           ? StudioDetails(
@@ -303,12 +333,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       return;
     }
     if (!mounted) return;
-    _snack(_existing == null ? 'Show booked. 🎤' : 'Show updated.');
-    context.pop();
+    _snack(_existing == null ? 'Show booked.' : 'Show updated.');
+    leaveScreen(context);
   }
 
-  void _snack(String text) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text) => ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(text), duration: const Duration(seconds: 2)),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -318,20 +349,25 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     }
     if (isEdit && _existing == null) {
       return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('That Show is no longer on the Setlist.')),
+        appBar: AppBar(leading: backButtonFor(context)),
+        body: const Center(
+          child: Text('That Show is no longer on the Setlist.'),
+        ),
       );
     }
     final venue = _venue;
     return Scaffold(
       appBar: AppBar(
+        leading: backButtonFor(context),
         title: Text(isEdit ? 'EDIT SHOW' : 'BOOK A SHOW'),
         actions: [
           if (venue != null)
             TextButton(
               onPressed: _saving ? null : _save,
-              child: const Text('SAVE',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              child: const Text(
+                'SAVE',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
         ],
       ),
@@ -485,7 +521,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               },
               title: const Text('Use Track totals for distance and time'),
               subtitle: const Text(
-                  'Turn off to type what the treadmill screen said.'),
+                'Turn off to type what the treadmill screen said.',
+              ),
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -511,7 +548,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           TextFormField(
             controller: _route,
             decoration: const InputDecoration(
-                labelText: 'Route', hintText: 'e.g. River Loop'),
+              labelText: 'Route',
+              hintText: 'e.g. River Loop',
+            ),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 12),
@@ -529,7 +568,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           TextFormField(
             controller: _elevation,
             decoration: const InputDecoration(
-                labelText: 'Elevation gain', suffixText: 'ft'),
+              labelText: 'Elevation gain',
+              suffixText: 'ft',
+            ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: decimal,
           ),
@@ -541,9 +582,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                 child: TextFormField(
                   controller: _temp,
                   decoration: const InputDecoration(
-                      labelText: 'Temperature', suffixText: '°F'),
+                    labelText: 'Temperature',
+                    suffixText: '°F',
+                  ),
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
+                    decimal: true,
+                    signed: true,
+                  ),
                   inputFormatters: decimal,
                 ),
               ),
@@ -552,9 +597,12 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                 child: TextFormField(
                   controller: _wind,
                   decoration: const InputDecoration(
-                      labelText: 'Wind', suffixText: 'mph'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: 'Wind',
+                    suffixText: 'mph',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: decimal,
                 ),
               ),
@@ -567,7 +615,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             children: [
               for (final c in Conditions.values)
                 ChoiceChip(
-                  label: Text('${c.emoji} ${c.label}'),
+                  avatar: Icon(iconForConditions(c), size: 18),
+                  label: Text(c.label),
                   selected: _conditions == c,
                   showCheckmark: false,
                   onSelected: (sel) =>
@@ -582,7 +631,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
 
   Widget _numbers() {
     final auto = _autoTotals;
-    final pace = paceSecondsPerMileFor(_distanceValue ?? 0, _durationValue ?? 0);
+    final pace = paceSecondsPerMileFor(
+      _distanceValue ?? 0,
+      _durationValue ?? 0,
+    );
     return SectionCard(
       title: 'The Numbers',
       child: Column(
@@ -596,11 +648,14 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                   controller: _distance,
                   enabled: !auto,
                   decoration: const InputDecoration(
-                      labelText: 'Distance', suffixText: 'mi'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: 'Distance',
+                    suffixText: 'mi',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                   ],
                   validator: (v) {
                     if (auto) return null;
@@ -615,9 +670,11 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                   controller: _duration,
                   enabled: !auto,
                   decoration: const InputDecoration(
-                      labelText: 'Duration', hintText: 'h:mm:ss or mm:ss'),
+                    labelText: 'Duration',
+                    hintText: 'h:mm:ss or mm:ss',
+                  ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9:]'))
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
                   ],
                   validator: (v) {
                     if (auto) return null;
@@ -631,8 +688,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           if (auto)
             const Padding(
               padding: EdgeInsets.only(top: 6),
-              child: Text('Filled in from your Tracks.',
-                  style: TextStyle(color: StageColors.textMuted, fontSize: 13)),
+              child: Text(
+                'Filled in from your Tracks.',
+                style: TextStyle(color: StageColors.textMuted, fontSize: 13),
+              ),
             ),
           const SizedBox(height: 12),
           StatTile(label: 'Pace', value: formatPace(pace)),
@@ -651,11 +710,11 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             children: [
               const _Label('Effort'),
               const Spacer(),
-              Text('$_effort / 10',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(color: StageColors.amber)),
+              Text(
+                '$_effort / 10',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(color: StageColors.amber),
+              ),
             ],
           ),
           Slider(
@@ -691,7 +750,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                           width: 2,
                         ),
                       ),
-                      child: Text(f.emoji, style: const TextStyle(fontSize: 30)),
+                      child: Text(
+                        f.emoji,
+                        style: const TextStyle(fontSize: 30),
+                      ),
                     ),
                   ),
                 ),
@@ -700,8 +762,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           Center(
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(_feel.label,
-                  style: const TextStyle(color: StageColors.textMuted)),
+              child: Text(
+                _feel.label,
+                style: const TextStyle(color: StageColors.textMuted),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -727,11 +791,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       trailing: TextButton.icon(
         onPressed: _addGear,
         icon: const Icon(Icons.add),
-        label: const Text('New'),
+        label: const Text('Add'),
       ),
       child: options.isEmpty
-          ? const Text('No Gear yet. Add your shoes to track their miles.',
-              style: TextStyle(color: StageColors.textMuted))
+          ? const Text(
+              'No Gear yet. Add your shoes to track their miles.',
+              style: TextStyle(color: StageColors.textMuted),
+            )
           : Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -754,70 +820,85 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     );
   }
 
+  Future<void> _pickSong() async {
+    final picked = await showSongPicker(context);
+    if (picked != null && mounted) setState(() => _pickedSong = picked);
+  }
+
   Widget _song() {
+    final song = _pickedSong;
     return SectionCard(
       title: 'Song of the Show',
       trailing: const Icon(Icons.music_note, color: StageColors.magenta),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
-            controller: _songTitle,
-            decoration: const InputDecoration(labelText: 'Song title'),
-            textCapitalization: TextCapitalization.words,
-            validator: (v) => (v ?? '').trim().isEmpty &&
-                    _songArtist.text.trim().isNotEmpty
-                ? 'Add the title too'
-                : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _songArtist,
-            decoration: const InputDecoration(labelText: 'Artist'),
-            textCapitalization: TextCapitalization.words,
-            validator: (v) => (v ?? '').trim().isEmpty &&
-                    _songTitle.text.trim().isNotEmpty
-                ? 'Add the artist too'
-                : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _songNote,
-            decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                hintText: 'e.g. mile 9 second wind'),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _spotify,
-            decoration: const InputDecoration(
-              labelText: 'Spotify link (optional)',
-              hintText: 'Paste from Share → Copy Song Link',
-              prefixIcon: Icon(Icons.link, color: spotifyGreen),
+      child: song == null
+          ? Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: _pickSong,
+                icon: const Icon(Icons.search),
+                label: const Text('Pick a song'),
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AlbumArt(url: song.albumArtUrl, size: 64),
+                        if (song.hasClip) ClipPlayButton(song: song, size: 36),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            song.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: StageColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Change song',
+                      onPressed: _pickSong,
+                      icon: const Icon(Icons.swap_horiz),
+                    ),
+                    IconButton(
+                      tooltip: 'Remove song',
+                      onPressed: () => setState(() => _pickedSong = null),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _songNote,
+                  decoration: const InputDecoration(
+                    labelText: 'Note (optional)',
+                    hintText: 'e.g. mile 9 second wind',
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ],
             ),
-            keyboardType: TextInputType.url,
-            validator: (v) => (v ?? '').trim().isEmpty ||
-                    normalizeSpotifyTrackLink(v!) != null
-                ? null
-                : 'That isn\'t a Spotify song link',
-          ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              style: TextButton.styleFrom(foregroundColor: spotifyGreen),
-              onPressed: _songTitle.text.trim().isEmpty &&
-                      _songArtist.text.trim().isEmpty
-                  ? null
-                  : () => openLink(context,
-                      spotifySearchUri(_songTitle.text, _songArtist.text)),
-              icon: const Icon(Icons.search),
-              label: const Text('Find it on Spotify'),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -828,17 +909,17 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-            color: StageColors.textMuted,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.2,
+        color: StageColors.textMuted,
+      ),
+    ),
+  );
 }
 
 /// First step of a new Show: two big poster cards.
@@ -855,8 +936,10 @@ class _VenuePicker extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text("WHAT KIND OF SHOW?",
-                  style: Theme.of(context).textTheme.headlineLarge),
+              Text(
+                "WHAT KIND OF SHOW?",
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
               const SizedBox(height: 16),
               for (final v in Venue.values) ...[
                 _VenueCard(venue: v, onTap: () => onPicked(v)),
@@ -897,15 +980,19 @@ class _VenueCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(venue.label.toUpperCase(),
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall
-                              ?.copyWith(color: Colors.white)),
+                      Text(
+                        venue.label.toUpperCase(),
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(color: Colors.white),
+                      ),
                       const SizedBox(height: 4),
-                      Text(blurb,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 15)),
+                      Text(
+                        blurb,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
+                      ),
                     ],
                   ),
                 ),

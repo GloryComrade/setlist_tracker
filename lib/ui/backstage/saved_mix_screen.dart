@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
@@ -63,28 +62,33 @@ class _SavedMixScreenState extends ConsumerState<SavedMixScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_tracks.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add at least one Track.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Add at least one Track.')));
       return;
     }
     final now = DateTime.now();
-    await ref.read(savedMixRepositoryProvider).save(SavedMix(
-          id: _existing?.id ?? const Uuid().v4(),
-          name: _name.text.trim(),
-          gymName: _blankToNull(_gym.text),
-          treadmillName: _blankToNull(_treadmill.text),
-          tracks: _tracks,
-          createdAt: _existing?.createdAt ?? now,
-          updatedAt: now,
-        ));
-    if (mounted) context.pop();
+    await ref
+        .read(savedMixRepositoryProvider)
+        .save(
+          SavedMix(
+            id: _existing?.id ?? const Uuid().v4(),
+            name: _name.text.trim(),
+            gymName: _blankToNull(_gym.text),
+            treadmillName: _blankToNull(_treadmill.text),
+            tracks: _tracks,
+            createdAt: _existing?.createdAt ?? now,
+            updatedAt: now,
+          ),
+        );
+    if (mounted) leaveScreen(context, fallback: '/backstage');
   }
 
   Future<void> _delete() async {
     final id = _existing?.id;
     if (id == null) return;
     await ref.read(savedMixRepositoryProvider).delete(id);
-    if (mounted) context.pop();
+    if (mounted) leaveScreen(context, fallback: '/backstage');
   }
 
   @override
@@ -94,6 +98,7 @@ class _SavedMixScreenState extends ConsumerState<SavedMixScreen> {
     }
     return Scaffold(
       appBar: AppBar(
+        leading: backButtonFor(context, fallback: '/backstage'),
         title: Text(_existing == null ? 'NEW SAVED MIX' : 'EDIT SAVED MIX'),
         actions: [
           if (_existing != null)
@@ -104,8 +109,10 @@ class _SavedMixScreenState extends ConsumerState<SavedMixScreen> {
             ),
           TextButton(
             onPressed: _save,
-            child: const Text('SAVE',
-                style: TextStyle(fontWeight: FontWeight.w800)),
+            child: const Text(
+              'SAVE',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
           ),
         ],
       ),
@@ -123,7 +130,9 @@ class _SavedMixScreenState extends ConsumerState<SavedMixScreen> {
                     TextFormField(
                       controller: _name,
                       decoration: const InputDecoration(
-                          labelText: 'Name', hintText: 'e.g. Hill Pyramid'),
+                        labelText: 'Name',
+                        hintText: 'e.g. Hill Pyramid',
+                      ),
                       textCapitalization: TextCapitalization.words,
                       validator: (v) =>
                           (v ?? '').trim().isEmpty ? 'Name the Mix' : null,
@@ -141,8 +150,9 @@ class _SavedMixScreenState extends ConsumerState<SavedMixScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _treadmill,
-                            decoration:
-                                const InputDecoration(labelText: 'Treadmill'),
+                            decoration: const InputDecoration(
+                              labelText: 'Treadmill',
+                            ),
                           ),
                         ),
                       ],

@@ -10,7 +10,7 @@ import '../repositories/repositories.dart';
 /// Shared Sembast code: each record is stored as its JSON map, keyed by id.
 class _SembastStore<T extends Entity> {
   _SembastStore(this._db, String storeName, this._fromJson, this._sort)
-      : _store = stringMapStoreFactory.store(storeName);
+    : _store = stringMapStoreFactory.store(storeName);
 
   final Database _db;
   final StoreRef<String, Map<String, Object?>> _store;
@@ -21,9 +21,10 @@ class _SembastStore<T extends Entity> {
       .query(finder: Finder(filter: Filter.isNull('deletedAt')))
       .onSnapshots(_db)
       .map((snaps) {
-    final items = snaps.map((s) => _fromJson(s.value)).toList()..sort(_sort);
-    return items;
-  });
+        final items = snaps.map((s) => _fromJson(s.value)).toList()
+          ..sort(_sort);
+        return items;
+      });
 
   Future<T?> getById(String id) async {
     final json = await _store.record(id).get(_db);
@@ -49,8 +50,12 @@ class _SembastStore<T extends Entity> {
 
 class SembastShowRepository implements ShowRepository {
   SembastShowRepository(Database db)
-      : _s = _SembastStore<Show>(
-            db, 'shows', Show.fromJson, (a, b) => b.date.compareTo(a.date));
+    : _s = _SembastStore<Show>(
+        db,
+        'shows',
+        Show.fromJson,
+        (a, b) => b.date.compareTo(a.date),
+      );
   final _SembastStore<Show> _s;
 
   @override
@@ -65,8 +70,12 @@ class SembastShowRepository implements ShowRepository {
 
 class SembastGearRepository implements GearRepository {
   SembastGearRepository(Database db)
-      : _s = _SembastStore<Gear>(db, 'gear', Gear.fromJson,
-            (a, b) => a.createdAt.compareTo(b.createdAt));
+    : _s = _SembastStore<Gear>(
+        db,
+        'gear',
+        Gear.fromJson,
+        (a, b) => a.createdAt.compareTo(b.createdAt),
+      );
   final _SembastStore<Gear> _s;
 
   @override
@@ -81,8 +90,12 @@ class SembastGearRepository implements GearRepository {
 
 class SembastSavedMixRepository implements SavedMixRepository {
   SembastSavedMixRepository(Database db)
-      : _s = _SembastStore<SavedMix>(db, 'saved_mixes', SavedMix.fromJson,
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    : _s = _SembastStore<SavedMix>(
+        db,
+        'saved_mixes',
+        SavedMix.fromJson,
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
   final _SembastStore<SavedMix> _s;
 
   @override

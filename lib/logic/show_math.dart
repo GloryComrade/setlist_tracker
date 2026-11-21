@@ -69,7 +69,9 @@ int? parseDuration(String input) {
 String formatMiles(double miles, {bool withUnit = true}) {
   var text = miles.toStringAsFixed(2);
   if (text.contains('.')) {
-    text = text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    text = text
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
   return withUnit ? '$text mi' : text;
 }
