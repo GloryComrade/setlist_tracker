@@ -7,6 +7,7 @@ import '../../data/music/music_search.dart';
 import '../../models/song.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/album_art.dart';
+import '../widgets/clip_player.dart';
 
 /// Opens the song picker: search as you type, tap a song to pick it.
 /// Returns the picked song (without a note), or null if dismissed.
@@ -41,6 +42,10 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
   bool _loading = false;
   String? _error;
   int _requestId = 0;
+
+  /// Set once a song with a preview is tapped: then the sheet shows the
+  /// "pick your part" step.
+  SongResult? _choosingPartOf;
 
   @override
   void initState() {
@@ -93,6 +98,10 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
   }
 
   void _pick(SongResult r) {
+    if (r.previewUrl != null) {
+      setState(() => _choosingPartOf = r);
+      return;
+    }
     Navigator.of(context).pop(SongOfTheShow(
       title: r.title,
       artist: r.artist,
@@ -111,6 +120,13 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final choosing = _choosingPartOf;
+    if (choosing != null) {
+      return _PartChooser(
+        song: choosing,
+        onBack: () => setState(() => _choosingPartOf = null),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
@@ -295,4 +311,185 @@ class _ManualSongDialogState extends State<_ManualSongDialog> {
       ],
     );
   }
+}
+
+
+/// Length of the part you pick, like an Instagram note.
+const double kClipLengthSeconds = 15;
+
+/// Step two: slide a 15-second window along the preview to pick your part.
+class _PartChooser extends StatefulWidget {
+  const _PartChooser({required this.song, required this.onBack});
+  final SongResult song;
+  final VoidCallback onBack;
+
+  @override
+  State<_PartChooser> createState() => _PartChooserState();
+}
+
+class _PartChooserState extends State<_PartChooser> {
+  final _player = ClipPlayer();
+  double _start = 0;
+
+  /// Apple previews are 30 seconds.
+  static const double _previewLength = 30;
+  double get _maxStart => _previewLength - kClipLengthSeconds;
+
+  @override
+  void initState() {
+    super.initState();
+    _play();
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _play() async {
+    try {
+      await _player.play(widget.song.previewUrl!, _start, kClipLengthSeconds,
+          loop: true);
+    } catch (_) {
+      // Browsers can block audio until the first tap; the play button
+      // below starts it again.
+    }
+  }
+
+  void _done() {
+    _player.stop();
+    final r = widget.song;
+    Navigator.of(context).pop(SongOfTheShow(
+      title: r.title,
+      artist: r.artist,
+      albumArtUrl: r.artworkUrl,
+      appleMusicUrl: r.appleMusicUrl,
+      previewUrl: r.previewUrl,
+      clipStartSeconds: _start,
+      clipLengthSeconds: kClipLengthSeconds,
+    ));
+  }
+
+  String _mmss(double s) =>
+      '0:${s.round().toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.song;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Back to search',
+                onPressed: () {
+                  _player.stop();
+                  widget.onBack();
+                },
+                icon: const Icon(Icons.arrow_back),
+              ),
+              Expanded(
+                child: Text('PICK YOUR PART',
+                    style: Theme.of(context).textTheme.headlineMedium),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Center(child: AlbumArt(url: r.artworkUrl, size: 180, radius: 16)),
+          const SizedBox(height: 16),
+          Text(r.title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall),
+          Text(r.artist,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: StageColors.textMuted)),
+          const Spacer(),
+          SizedBox(
+            height: 56,
+            child: CustomPaint(
+              painter: _WaveformPainter(
+                startFraction: _start / _previewLength,
+                lengthFraction: kClipLengthSeconds / _previewLength,
+              ),
+            ),
+          ),
+          Slider(
+            value: _start,
+            min: 0,
+            max: _maxStart,
+            divisions: _maxStart.round(),
+            label: _mmss(_start),
+            onChanged: (v) => setState(() => _start = v),
+            onChangeEnd: (_) => _play(),
+          ),
+          Text(
+            'Plays ${_mmss(_start)} to ${_mmss(_start + kClipLengthSeconds)} '
+            'of the preview. Slide to pick the part that carried you.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: StageColors.textMuted),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              StreamBuilder<bool>(
+                stream: _player.playing,
+                initialData: false,
+                builder: (context, snap) => IconButton.outlined(
+                  tooltip: (snap.data ?? false) ? 'Pause' : 'Play',
+                  onPressed: () =>
+                      (snap.data ?? false) ? _player.stop() : _play(),
+                  icon: Icon((snap.data ?? false) ? Icons.pause : Icons.play_arrow),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: _done,
+                icon: const Icon(Icons.check),
+                label: const Text('Use this part'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Decorative waveform bars with the picked window lit up.
+class _WaveformPainter extends CustomPainter {
+  _WaveformPainter({required this.startFraction, required this.lengthFraction});
+  final double startFraction;
+  final double lengthFraction;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const bars = 60;
+    final barWidth = size.width / bars;
+    final lit = Paint()..color = StageColors.magenta;
+    final dim = Paint()..color = StageColors.outline;
+    for (var i = 0; i < bars; i++) {
+      // Fixed pseudo-random heights so the shape doesn't jump around.
+      final h = (0.25 + 0.75 * (((i * 37) % 17) / 16)) * size.height;
+      final x = i * barWidth;
+      final f = (i + 0.5) / bars;
+      final inWindow = f >= startFraction && f <= startFraction + lengthFraction;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x + barWidth * 0.2, (size.height - h) / 2,
+              barWidth * 0.6, h),
+          const Radius.circular(2),
+        ),
+        inWindow ? lit : dim,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WaveformPainter old) =>
+      old.startFraction != startFraction || old.lengthFraction != lengthFraction;
 }

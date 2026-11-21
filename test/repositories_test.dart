@@ -18,7 +18,12 @@ Show _studioShow(String id, DateTime date) => Show(
       feel: Feel.encore,
       notes: 'Felt strong',
       song: const SongOfTheShow(
-          title: 'Mr. Brightside', artist: 'The Killers', note: 'last rep'),
+          title: 'Mr. Brightside',
+          artist: 'The Killers',
+          note: 'last rep',
+          previewUrl: 'https://example.com/p.m4a',
+          clipStartSeconds: 9,
+          clipLengthSeconds: 15),
       studio: const StudioDetails(
         gymName: 'Downtown Y',
         treadmillName: 'Lane 3',
@@ -51,6 +56,8 @@ void main() {
     expect(loaded.venue, Venue.studio);
     expect(loaded.feel, Feel.encore);
     expect(loaded.song!.artist, 'The Killers');
+    expect(loaded.song!.hasClip, isTrue);
+    expect(loaded.song!.clipStartSeconds, 9);
     expect(loaded.studio!.tracks.length, 2);
     expect(loaded.studio!.totals.distanceMiles, closeTo(4.25, 1e-9));
     expect(loaded.live, isNull);

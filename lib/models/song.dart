@@ -12,6 +12,9 @@ class SongOfTheShow {
     this.albumArtUrl,
     this.spotifyUrl,
     this.appleMusicUrl,
+    this.previewUrl,
+    this.clipStartSeconds,
+    this.clipLengthSeconds,
   });
 
   final String title;
@@ -24,6 +27,16 @@ class SongOfTheShow {
   final String? spotifyUrl;
   final String? appleMusicUrl;
 
+  /// A short preview of the song (Apple gives a 30-second clip).
+  final String? previewUrl;
+
+  /// The part of the preview the runner picked, like an Instagram note.
+  /// Seconds into [previewUrl]. Null when no part was picked.
+  final double? clipStartSeconds;
+  final double? clipLengthSeconds;
+
+  bool get hasClip => previewUrl != null && clipStartSeconds != null;
+
   Map<String, Object?> toJson() => {
         'title': title,
         'artist': artist,
@@ -31,6 +44,9 @@ class SongOfTheShow {
         'albumArtUrl': albumArtUrl,
         'spotifyUrl': spotifyUrl,
         'appleMusicUrl': appleMusicUrl,
+        'previewUrl': previewUrl,
+        'clipStartSeconds': clipStartSeconds,
+        'clipLengthSeconds': clipLengthSeconds,
       };
 
   factory SongOfTheShow.fromJson(Map<String, Object?> json) => SongOfTheShow(
@@ -40,5 +56,8 @@ class SongOfTheShow {
         albumArtUrl: asStringOrNull(json['albumArtUrl']),
         spotifyUrl: asStringOrNull(json['spotifyUrl']),
         appleMusicUrl: asStringOrNull(json['appleMusicUrl']),
+        previewUrl: asStringOrNull(json['previewUrl']),
+        clipStartSeconds: asDoubleOrNull(json['clipStartSeconds']),
+        clipLengthSeconds: asDoubleOrNull(json['clipLengthSeconds']),
       );
 }

@@ -22,6 +22,7 @@ class SongResult {
     this.album,
     this.artworkUrl,
     this.appleMusicUrl,
+    this.previewUrl,
   });
 
   final String title;
@@ -29,6 +30,9 @@ class SongResult {
   final String? album;
   final String? artworkUrl;
   final String? appleMusicUrl;
+
+  /// 30-second preview clip (m4a).
+  final String? previewUrl;
 }
 
 abstract class MusicSearch {
@@ -86,6 +90,7 @@ List<SongResult> parseITunesResults(String body) {
           ? art.replaceFirst(RegExp(r'/\d+x\d+bb\.'), '/600x600bb.')
           : null,
       appleMusicUrl: r['trackViewUrl'] as String?,
+      previewUrl: r['previewUrl'] as String?,
     ));
   }
   return out;

@@ -17,6 +17,7 @@ import '../../theme/app_theme.dart';
 import '../backstage/gear_dialog.dart';
 import '../song_picker/song_picker_sheet.dart';
 import '../widgets/album_art.dart';
+import '../widgets/clip_player.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
 
@@ -263,6 +264,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               albumArtUrl: picked.albumArtUrl,
               spotifyUrl: picked.spotifyUrl,
               appleMusicUrl: picked.appleMusicUrl,
+              previewUrl: picked.previewUrl,
+              clipStartSeconds: picked.clipStartSeconds,
+              clipLengthSeconds: picked.clipLengthSeconds,
             ),
       studio: venue == Venue.studio
           ? StudioDetails(
@@ -771,7 +775,13 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               children: [
                 Row(
                   children: [
-                    AlbumArt(url: song.albumArtUrl, size: 64),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AlbumArt(url: song.albumArtUrl, size: 64),
+                        if (song.hasClip) ClipPlayButton(song: song, size: 36),
+                      ],
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

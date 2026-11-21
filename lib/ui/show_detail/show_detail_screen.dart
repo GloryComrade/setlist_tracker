@@ -11,6 +11,7 @@ import '../../models/show.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/album_art.dart';
+import '../widgets/clip_player.dart';
 import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
@@ -198,7 +199,13 @@ class _SongCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            AlbumArt(url: song.albumArtUrl, size: 96),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                AlbumArt(url: song.albumArtUrl, size: 96),
+                if (song.hasClip) ClipPlayButton(song: song),
+              ],
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
