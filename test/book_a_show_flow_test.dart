@@ -3,11 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sembast/sembast_memory.dart';
 import 'package:setlist_tracker/app.dart';
+import 'package:setlist_tracker/data/music/music_search.dart';
 import 'package:setlist_tracker/data/providers.dart';
 
 /// Books a Live Show through the real screens and checks it lands on the
 /// Setlist and its detail page. Uses an in-memory database and a plain theme
 /// (the real theme downloads fonts, which tests can't do).
+class _FakeMusicSearch implements MusicSearch {
+  @override
+  Future<List<SongResult>> search(String query) async => const [
+        SongResult(
+            title: 'Dancing in the Dark',
+            artist: 'Bruce Springsteen',
+            album: 'Born in the U.S.A.'),
+        SongResult(title: 'Born to Run', artist: 'Bruce Springsteen'),
+      ];
+}
+
 void main() {
   testWidgets('book a Live Show and see it on the Setlist', (tester) async {
     tester.view.physicalSize = const Size(800, 2400);
@@ -18,7 +30,10 @@ void main() {
         () => newDatabaseFactoryMemory().openDatabase('flow.db'));
 
     await tester.pumpWidget(ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db!)],
+      overrides: [
+        databaseProvider.overrideWithValue(db!),
+        musicSearchProvider.overrideWithValue(_FakeMusicSearch()),
+      ],
       child: MaterialApp.router(
         theme: ThemeData.dark(),
         routerConfig: appRouter,
@@ -46,8 +61,19 @@ void main() {
     await type('Wind', '8');
     await type('Distance', '16');
     await type('Duration', '2:20:00');
-    await type('Song title', 'Dancing in the Dark');
-    await type('Artist', 'Bruce Springsteen');
+
+    // Pick the Song of the Show from search results.
+    final pick = find.text('Pick a song');
+    await tester.ensureVisible(pick);
+    await tester.tap(pick);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'springsteen');
+    await tester.pump(const Duration(milliseconds: 400)); // debounce
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dancing in the Dark'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bruce Springsteen'), findsOneWidget);
+    await type('Note (optional)', 'mile 14 second wind');
 
     // Pace preview: 140 min / 16 mi = 8:45 /mi
     expect(find.text('8:45 /mi'), findsOneWidget);

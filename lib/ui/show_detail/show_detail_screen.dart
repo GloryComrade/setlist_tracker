@@ -10,6 +10,7 @@ import '../../models/gear.dart';
 import '../../models/show.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
+import '../widgets/album_art.dart';
 import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
@@ -197,15 +198,7 @@ class _SongCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: StageColors.headlineGradient,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.album, color: Colors.white, size: 36),
-            ),
+            AlbumArt(url: song.albumArtUrl, size: 96),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -228,25 +221,33 @@ class _SongCard extends StatelessWidget {
                           style: const TextStyle(fontStyle: FontStyle.italic)),
                     ),
                   const SizedBox(height: 8),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: spotifyGreen,
-                      foregroundColor: Colors.black,
-                    ),
-                    // A saved song link plays the exact track; otherwise
-                    // fall back to a Spotify search for title + artist.
-                    onPressed: () => openLink(
-                      context,
-                      song.spotifyUrl != null
-                          ? Uri.parse(song.spotifyUrl!)
-                          : spotifySearchUri(song.title, song.artist),
-                    ),
-                    icon: Icon(song.spotifyUrl != null
-                        ? Icons.play_arrow
-                        : Icons.search),
-                    label: Text(song.spotifyUrl != null
-                        ? 'Play on Spotify'
-                        : 'Find on Spotify'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: spotifyGreen,
+                          foregroundColor: Colors.black,
+                        ),
+                        // An exact track link when we have one; otherwise
+                        // Spotify's search for title + artist.
+                        onPressed: () => openLink(
+                          context,
+                          song.spotifyUrl != null
+                              ? Uri.parse(song.spotifyUrl!)
+                              : spotifySearchUri(song.title, song.artist),
+                        ),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Open in Spotify'),
+                      ),
+                      if (song.appleMusicUrl != null)
+                        OutlinedButton(
+                          onPressed: () => openLink(
+                              context, Uri.parse(song.appleMusicUrl!)),
+                          child: const Text('Apple Music'),
+                        ),
+                    ],
                   ),
                 ],
               ),

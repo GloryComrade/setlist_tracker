@@ -6,7 +6,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
-import '../../logic/spotify_links.dart';
 import '../../models/enums.dart';
 import '../../models/gear.dart';
 import '../../models/saved_mix.dart';
@@ -16,7 +15,8 @@ import '../../models/track.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
 import '../backstage/gear_dialog.dart';
-import '../widgets/open_link.dart';
+import '../song_picker/song_picker_sheet.dart';
+import '../widgets/album_art.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
 
@@ -69,10 +69,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   String? _gearId;
 
   // Song of the Show
-  final _songTitle = TextEditingController();
-  final _songArtist = TextEditingController();
+  /// Picked from the song search (or typed in). The note is separate.
+  SongOfTheShow? _pickedSong;
   final _songNote = TextEditingController();
-  final _spotify = TextEditingController();
 
   @override
   void initState() {
@@ -80,8 +79,6 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     // Pace preview updates as you type.
     _distance.addListener(_refresh);
     _duration.addListener(_refresh);
-    _songTitle.addListener(_refresh);
-    _songArtist.addListener(_refresh);
     _load();
   }
 
@@ -107,10 +104,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     _feel = s.feel;
     _notes.text = s.notes ?? '';
     _gearId = s.gearId;
-    _songTitle.text = s.song?.title ?? '';
-    _songArtist.text = s.song?.artist ?? '';
+    _pickedSong = s.song;
     _songNote.text = s.song?.note ?? '';
-    _spotify.text = s.song?.spotifyUrl ?? '';
     final st = s.studio;
     if (st != null) {
       _gym.text = st.gymName ?? '';
@@ -137,7 +132,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   void dispose() {
     for (final c in [
       _gym, _treadmill, _route, _elevation, _temp, _wind, _distance,
-      _duration, _notes, _songTitle, _songArtist, _songNote, _spotify,
+      _duration, _notes, _songNote,
     ]) {
       c.dispose();
     }
@@ -244,8 +239,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     setState(() => _saving = true);
 
     final now = DateTime.now();
-    final title = _songTitle.text.trim();
-    final artist = _songArtist.text.trim();
+    final picked = _pickedSong;
     final weather = Weather(
         tempF: _num(_temp), windMph: _num(_wind), conditions: _conditions);
 
@@ -260,16 +254,15 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       feel: _feel,
       notes: _blankToNull(_notes.text),
       gearId: _gearId,
-      song: title.isEmpty && artist.isEmpty
+      song: picked == null
           ? null
           : SongOfTheShow(
-              title: title,
-              artist: artist,
+              title: picked.title,
+              artist: picked.artist,
               note: _blankToNull(_songNote.text),
-              // Keep anything a later music search filled in.
-              albumArtUrl: _existing?.song?.albumArtUrl,
-              spotifyUrl: normalizeSpotifyTrackLink(_spotify.text),
-              appleMusicUrl: _existing?.song?.appleMusicUrl,
+              albumArtUrl: picked.albumArtUrl,
+              spotifyUrl: picked.spotifyUrl,
+              appleMusicUrl: picked.appleMusicUrl,
             ),
       studio: venue == Venue.studio
           ? StudioDetails(
@@ -754,70 +747,71 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     );
   }
 
+  Future<void> _pickSong() async {
+    final picked = await showSongPicker(context);
+    if (picked != null && mounted) setState(() => _pickedSong = picked);
+  }
+
   Widget _song() {
+    final song = _pickedSong;
     return SectionCard(
       title: 'Song of the Show',
       trailing: const Icon(Icons.music_note, color: StageColors.magenta),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
-            controller: _songTitle,
-            decoration: const InputDecoration(labelText: 'Song title'),
-            textCapitalization: TextCapitalization.words,
-            validator: (v) => (v ?? '').trim().isEmpty &&
-                    _songArtist.text.trim().isNotEmpty
-                ? 'Add the title too'
-                : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _songArtist,
-            decoration: const InputDecoration(labelText: 'Artist'),
-            textCapitalization: TextCapitalization.words,
-            validator: (v) => (v ?? '').trim().isEmpty &&
-                    _songTitle.text.trim().isNotEmpty
-                ? 'Add the artist too'
-                : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _songNote,
-            decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                hintText: 'e.g. mile 9 second wind'),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _spotify,
-            decoration: const InputDecoration(
-              labelText: 'Spotify link (optional)',
-              hintText: 'Paste from Share → Copy Song Link',
-              prefixIcon: Icon(Icons.link, color: spotifyGreen),
+      child: song == null
+          ? Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: _pickSong,
+                icon: const Icon(Icons.search),
+                label: const Text('Pick a song'),
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    AlbumArt(url: song.albumArtUrl, size: 64),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(song.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800, fontSize: 16)),
+                          Text(song.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(color: StageColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Change song',
+                      onPressed: _pickSong,
+                      icon: const Icon(Icons.swap_horiz),
+                    ),
+                    IconButton(
+                      tooltip: 'Remove song',
+                      onPressed: () => setState(() => _pickedSong = null),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _songNote,
+                  decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
+                      hintText: 'e.g. mile 9 second wind'),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ],
             ),
-            keyboardType: TextInputType.url,
-            validator: (v) => (v ?? '').trim().isEmpty ||
-                    normalizeSpotifyTrackLink(v!) != null
-                ? null
-                : 'That isn\'t a Spotify song link',
-          ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              style: TextButton.styleFrom(foregroundColor: spotifyGreen),
-              onPressed: _songTitle.text.trim().isEmpty &&
-                      _songArtist.text.trim().isEmpty
-                  ? null
-                  : () => openLink(context,
-                      spotifySearchUri(_songTitle.text, _songArtist.text)),
-              icon: const Icon(Icons.search),
-              label: const Text('Find it on Spotify'),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

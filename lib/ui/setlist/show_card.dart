@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../logic/show_math.dart';
 import '../../models/show.dart';
 import '../../theme/app_theme.dart';
+import '../widgets/album_art.dart';
 import '../widgets/stage_widgets.dart';
 
 /// One Show on the Setlist, styled like a ticket stub.
@@ -95,9 +96,15 @@ class ShowCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.music_note,
-                                size: 16, color: StageColors.magenta),
-                            const SizedBox(width: 4),
+                            if (song.albumArtUrl != null) ...[
+                              AlbumArt(
+                                  url: song.albumArtUrl, size: 22, radius: 4),
+                              const SizedBox(width: 6),
+                            ] else ...[
+                              const Icon(Icons.music_note,
+                                  size: 16, color: StageColors.magenta),
+                              const SizedBox(width: 4),
+                            ],
                             Expanded(
                               child: Text(
                                 '${song.title} — ${song.artist}',
