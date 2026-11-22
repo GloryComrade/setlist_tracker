@@ -123,6 +123,12 @@ export default {
     // visit to the https address first. 308 keeps the method (Apple's POST).
     if (url.protocol === "http:" && !isLocalHost(url.hostname)) {
       url.protocol = "https:";
+      // A sign-in started from an http page asks to come back to that http
+      // page; point it at the https copy so the return check accepts it.
+      const ret = url.searchParams.get("return");
+      if (ret?.startsWith(`http://${url.host}/`)) {
+        url.searchParams.set("return", `https://${ret.slice("http://".length)}`);
+      }
       return new Response(null, {
         status: 308,
         headers: { Location: url.toString() },

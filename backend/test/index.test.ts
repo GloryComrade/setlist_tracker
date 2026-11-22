@@ -39,6 +39,40 @@ describe("routing", () => {
     }
   });
 
+  it("an http page visit goes to https before the website's assets", async () => {
+    let assetCalls = 0;
+    const assets = {
+      fetch: async () => {
+        assetCalls++;
+        return new Response("<html>");
+      },
+    } as unknown as Fetcher;
+    const http = ORIGIN.replace("https://", "http://");
+    const res = await worker.fetch(new Request(`${http}/crew?x=1`), { ...env, ASSETS: assets } as Env);
+    expect(res.status).toBe(308);
+    expect(res.headers.get("Location")).toBe(`${ORIGIN}/crew?x=1`);
+    expect(assetCalls).toBe(0);
+  });
+
+  it("a sign-in started from an http page comes back to the https page", async () => {
+    const http = ORIGIN.replace("https://", "http://");
+    const ret = encodeURIComponent(`${http}/#/backstage`);
+    const res = await worker.fetch(new Request(`${http}/api/auth/google/start?return=${ret}`), env as Env);
+    expect(res.status).toBe(308);
+    const loc = new URL(res.headers.get("Location")!);
+    expect(loc.origin).toBe(ORIGIN);
+    expect(loc.searchParams.get("return")).toBe(`${ORIGIN}/#/backstage`);
+    const next = await worker.fetch(new Request(loc.toString(), { redirect: "manual" }), env as Env);
+    expect(next.headers.get("Location")).toMatch(/^https:\/\/accounts\.google\.com\//);
+  });
+
+  it("an off-site http return address is left alone", async () => {
+    const http = ORIGIN.replace("https://", "http://");
+    const ret = encodeURIComponent("http://evil.example/");
+    const res = await worker.fetch(new Request(`${http}/api/auth/google/start?return=${ret}`), env as Env);
+    expect(new URL(res.headers.get("Location")!).searchParams.get("return")).toBe("http://evil.example/");
+  });
+
   it("local http (wrangler dev) is not redirected", async () => {
     const res = await worker.fetch(
       new Request("http://localhost:8787/api/nothing"),
