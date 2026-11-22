@@ -18,6 +18,8 @@ const TABLES: [string, string][] = [
   ["crew_blocks", "?1 IN (blocker, blocked)"],
   ["crew_invites", "owner = ?1"],
   ["crew_invite_misses", "user_id = ?1"],
+  ["crew_posts", "owner = ?1"],
+  ["crew_encores", "user_id = ?1"],
   ["crew_encores_v2", "?1 IN (user_id, owner)"],
   ["crew_reports", "?1 IN (reporter, reported_user)"],
   ["crew_tour_invites", "?1 IN (from_user, to_user)"],
@@ -84,6 +86,17 @@ describe("DELETE /api/me", () => {
     await env.DB.prepare(
       "INSERT INTO crew_avatars (user_id, jpeg, updated_at) VALUES (?, ?, ?)",
     ).bind(me.user.id, photo, new Date().toISOString()).run();
+    // Build 1 shared posts: one of mine with a friend's Encore, and my
+    // Encore on the friend's post.
+    const now = new Date().toISOString();
+    const oldPost = async (id: string, owner: string) =>
+      env.DB.prepare(
+        "INSERT INTO crew_posts (id, owner, show_id, data, show_updated_at, created_at, updated_at) VALUES (?, ?, ?, '{}', ?, ?, ?)",
+      ).bind(id, owner, crypto.randomUUID(), now, now, now).run();
+    await oldPost("old-mine", me.user.id);
+    await oldPost("old-theirs", friend.user.id);
+    await env.DB.prepare("INSERT INTO crew_encores (post_id, user_id, created_at) VALUES ('old-mine', ?, ?)").bind(friend.user.id, now).run();
+    await env.DB.prepare("INSERT INTO crew_encores (post_id, user_id, created_at) VALUES ('old-theirs', ?, ?)").bind(me.user.id, now).run();
     // A login code, an Apple token.
     await createLoginCode(env.DB, me.user.id);
     await env.DB.prepare(

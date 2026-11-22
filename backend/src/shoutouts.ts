@@ -8,7 +8,8 @@
 //   characters after trimming; at most MAX_PER_HOUR per runner.
 // - DELETE /api/crew/shoutouts/{id}: its writer or the Show's owner.
 // - POST /api/crew/shoutouts/{id}/report {reason}: copies the text into
-//   crew_reports (post_id 'shoutout:<id>') and hides it from you.
+//   crew_reports (post_id 'shoutout:<id>'), hides it from you and alerts
+//   the developer (src/reports.ts).
 // - Feed posts carry `shoutouts`, the count you would see.
 //
 // A writer's photo address is only given to you when they are you or in
@@ -235,6 +236,7 @@ export async function shoutoutRoute(
   db: D1Database,
   me: string,
   parts: string[],
+  notify: (reason: unknown) => Promise<unknown> = async () => {},
 ): Promise<Response | null> {
   const [id, what] = parts;
   if (parts.length === 1 && request.method === "DELETE") {
@@ -242,7 +244,9 @@ export async function shoutoutRoute(
     return noContent();
   }
   if (parts.length === 2 && what === "report" && request.method === "POST") {
-    await reportShoutout(db, me, id, (await readJson(request)).reason);
+    const reason = (await readJson(request)).reason;
+    await reportShoutout(db, me, id, reason);
+    await notify(reason);
     return noContent();
   }
   return null;
