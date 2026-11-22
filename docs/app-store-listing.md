@@ -131,6 +131,7 @@ For every type below:
 | Health & Fitness | Fitness | Shows, Tours and Gear you log and sync |
 | Health & Fitness | Health | runs imported from Apple Health, stored as Shows |
 | User Content | Other User Content | stage name, Shows and Tour your Crew sees, reports |
+| User Content | Photos or Videos | profile photo, if you upload one (only your Crew sees it) |
 | Identifiers | User ID | account id |
 
 Not collected: location, contacts, browsing or search history (song

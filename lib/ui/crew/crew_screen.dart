@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/crew/crew_controller.dart';
+import '../../data/crew/tour_invites_controller.dart';
 import '../../models/crew.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
 import 'crew_post_card.dart';
 import 'crew_sheets.dart';
 import 'crew_widgets.dart';
+import 'tour_invite_cards.dart';
 
 /// The Crew tab: your running friends and the Shows they share.
 class CrewScreen extends ConsumerStatefulWidget {
@@ -216,7 +218,10 @@ class _CrewHome extends ConsumerWidget {
     final n = crew.length;
 
     return RefreshIndicator(
-      onRefresh: c.refresh,
+      onRefresh: () => Future.wait([
+        c.refresh(),
+        ref.read(tourInvitesProvider.notifier).refresh(),
+      ]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
@@ -252,12 +257,8 @@ class _CrewHome extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Crew settings',
-                        color: Colors.white,
-                        onPressed: () => showCrewSettingsSheet(context),
-                        icon: const Icon(Icons.tune),
-                      ),
+                      // Settings (stage name, picture, blocked runners).
+                      ?PosterCornerAction.maybeOf(context),
                     ],
                   ),
                 ),
@@ -289,6 +290,7 @@ class _CrewHome extends ConsumerWidget {
                     ],
                   ),
                 ],
+                const TourInviteCards(),
                 const SizedBox(height: 16),
                 _CrewCard(crew: crew),
                 const SizedBox(height: 24),
@@ -457,7 +459,13 @@ class _MateChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 4),
-              CrewAvatar(name: mate.stageName, color: mate.color, size: 48),
+              CrewAvatar(
+                name: mate.stageName,
+                color: mate.color,
+                size: 48,
+                badge: mate.avatarBadge,
+                photoUrl: mate.avatarUrl,
+              ),
               const SizedBox(height: 6),
               Text(
                 mate.stageName,

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
+import '../../data/settings/app_settings.dart';
 import '../../logic/show_math.dart';
 import '../../logic/tour_logging.dart';
 import '../../models/enums.dart';
@@ -97,6 +98,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
 
   Future<void> _load() async {
     final id = widget.showId;
+    if (id == null && ref.read(crewControllerProvider).profile != null) {
+      _crewPrivate = ref.read(appSettingsProvider).newShowsOffCrew;
+    }
     if (id != null) {
       final show = await ref.read(showRepositoryProvider).getById(id);
       if (show != null) _fill(show);

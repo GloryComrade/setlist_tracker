@@ -1,15 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/crew/crew_controller.dart';
+import '../../data/crew/tour_invites_controller.dart';
 import '../../data/providers.dart';
+import '../../data/settings/app_settings.dart';
 import '../../logic/show_math.dart';
 import '../../logic/spoken.dart';
 import '../../logic/tour_builder.dart';
+import '../../models/crew.dart';
 import '../../models/tour.dart';
 import '../../theme/app_theme.dart';
+import '../crew/tour_invite_picker.dart';
 import '../widgets/stage_widgets.dart';
 import 'tour_widgets.dart';
 
@@ -69,9 +76,15 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   int _headlinerDay = DateTime.sunday;
   VenuePreference? _venue;
 
+  /// Crew mates ticked under "Bring your Crew", invited once it's booked.
+  final _invite = <String>{};
+
   @override
   void initState() {
     super.initState();
+    final defaults = ref.read(tourQuizDefaultsProvider);
+    _headlinerDay = defaults.headlinerWeekday;
+    _venue = defaults.venue;
     final f = widget.featuring;
     if (f != null) {
       _distance = f.raceDistance;
@@ -259,6 +272,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
             updatedAt: built.updatedAt,
           )
         : built;
+    final invitees = _invitees(tour);
     setState(() => _saving = true);
     try {
       await ref.read(tourRepositoryProvider).save(tour);
@@ -272,9 +286,40 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
       return;
     }
     if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final invites = ref.read(tourInvitesProvider.notifier);
     context.go('/tour');
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('${tour.name} booked.')));
+    messenger.showSnackBar(SnackBar(content: Text('${tour.name} booked.')));
+    if (invitees.isNotEmpty) {
+      // Sent from the controller: this screen is gone by the time the new
+      // Tour is backstage.
+      unawaited(
+        sendTourInvites(
+          controller: invites,
+          messenger: messenger,
+          tourId: tour.id,
+          mates: invitees,
+        ),
+      );
+    }
+  }
+
+  /// The ticked Crew mates who can still be invited onto [tour].
+  List<CrewMate> _invitees(Tour tour) {
+    if (_invite.isEmpty || ref.read(crewServiceProvider) == null) {
+      return const [];
+    }
+    final crew = ref.read(crewControllerProvider).crew;
+    final unavailable = tourInviteUnavailable(
+      crew,
+      raceDate: tour.setup.raceDate,
+      raceDistance: tour.setup.raceDistance,
+      featuringId: tour.featuring?.userId,
+    );
+    return [
+      for (final m in crew)
+        if (_invite.contains(m.userId) && !unavailable.containsKey(m.userId)) m,
+    ];
   }
 
   @override
@@ -780,6 +825,17 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                 ),
                 const SizedBox(height: 16),
                 _phaseSummary(tour),
+                const SizedBox(height: 16),
+                BringYourCrewSection(
+                  raceDate: tour.setup.raceDate,
+                  raceDistance: tour.setup.raceDistance,
+                  featuringId: _stillFeaturing
+                      ? widget.featuring?.userId
+                      : null,
+                  selected: _invite,
+                  onChanged: (id, on) =>
+                      setState(() => on ? _invite.add(id) : _invite.remove(id)),
+                ),
               ],
               for (final c in build.checks) ...[
                 const SizedBox(height: 10),

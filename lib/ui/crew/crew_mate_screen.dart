@@ -221,6 +221,8 @@ class _Poster extends StatelessWidget {
               name: mate.stageName,
               color: mate.color,
               size: 56,
+              badge: mate.avatarBadge,
+              photoUrl: mate.avatarUrl,
             ),
           ),
           const SizedBox(height: 12),

@@ -20,6 +20,8 @@ class CrewProfile {
     required this.stageName,
     this.color = 0,
     this.allActivityPending = false,
+    this.avatarBadge,
+    this.avatarUrl,
   });
 
   final String userId;
@@ -32,17 +34,46 @@ class CrewProfile {
   /// they OK the change, their Crew sees only the Shows they had shared.
   final bool allActivityPending;
 
+  /// A drawn tour-art badge id (`kAvatarBadges` in the UI), or null.
+  final String? avatarBadge;
+
+  /// Where the uploaded photo is fetched from, or null without one. A new
+  /// photo gets a new address.
+  final String? avatarUrl;
+
+  /// Pass null as [avatarBadge] or [avatarUrl] to clear it.
   CrewProfile copyWith({
     String? stageName,
     int? color,
     bool? allActivityPending,
+    Object? avatarBadge = _keep,
+    Object? avatarUrl = _keep,
   }) => CrewProfile(
     userId: userId,
     stageName: stageName ?? this.stageName,
     color: color ?? this.color,
     allActivityPending: allActivityPending ?? this.allActivityPending,
+    avatarBadge: identical(avatarBadge, _keep)
+        ? this.avatarBadge
+        : avatarBadge as String?,
+    avatarUrl: identical(avatarUrl, _keep)
+        ? this.avatarUrl
+        : avatarUrl as String?,
+  );
+
+  /// `{userId, stageName, color, allActivityPending, avatarBadge, avatarUrl}`.
+  factory CrewProfile.fromJson(Map<String, Object?> r) => CrewProfile(
+    userId: '${r['userId']}',
+    stageName: '${r['stageName']}',
+    color: asInt(r['color']),
+    allActivityPending: r['allActivityPending'] == true,
+    avatarBadge: asStringOrNull(r['avatarBadge']),
+    avatarUrl: asStringOrNull(r['avatarUrl']),
   );
 }
+
+/// "Leave as it is" for nullable copyWith arguments.
+const _keep = Object();
 
 /// A Crew mate's active Tour, as the mates list carries it.
 class CrewTourSummary {
@@ -103,12 +134,20 @@ class CrewMate {
     required this.since,
     this.tour,
     this.blocked = false,
+    this.avatarBadge,
+    this.avatarUrl,
   });
 
   final String userId;
   final String stageName;
   final int color;
   final DateTime since;
+
+  /// See [CrewProfile.avatarBadge]. Always null on runners you blocked.
+  final String? avatarBadge;
+
+  /// See [CrewProfile.avatarUrl]. Always null on runners you blocked.
+  final String? avatarUrl;
 
   /// Their active Tour, or null when they have none.
   final CrewTourSummary? tour;
@@ -121,6 +160,8 @@ class CrewMate {
     since: parseDate(m['since']) ?? DateTime.now(),
     tour: CrewTourSummary.fromJson(asMap(m['tour'])),
     blocked: m['blocked'] == true,
+    avatarBadge: asStringOrNull(m['avatarBadge']),
+    avatarUrl: asStringOrNull(m['avatarUrl']),
   );
 }
 
@@ -153,7 +194,13 @@ class CrewPost {
     this.encores = 0,
     this.encoredByMe = false,
     this.mine = false,
+    this.avatarBadge,
+    this.avatarUrl,
   });
+
+  /// The owner's picture: see [CrewProfile.avatarBadge].
+  final String? avatarBadge;
+  final String? avatarUrl;
 
   /// `<ownerId>:<showId>`.
   final String id;
@@ -175,6 +222,22 @@ class CrewPost {
 
   static String idFor(String ownerId, String showId) => '$ownerId:$showId';
 
+  /// The same post with the owner's new picture.
+  CrewPost withPicture(String? badge, String? url) => CrewPost(
+    id: id,
+    ownerId: ownerId,
+    stageName: stageName,
+    color: color,
+    show: show,
+    gearName: gearName,
+    sharedAt: sharedAt,
+    encores: encores,
+    encoredByMe: encoredByMe,
+    mine: mine,
+    avatarBadge: badge,
+    avatarUrl: url,
+  );
+
   CrewPost withEncore(bool on) => CrewPost(
     id: id,
     ownerId: ownerId,
@@ -186,6 +249,8 @@ class CrewPost {
     encores: encores - (encoredByMe ? 1 : 0) + (on ? 1 : 0),
     encoredByMe: on,
     mine: mine,
+    avatarBadge: avatarBadge,
+    avatarUrl: avatarUrl,
   );
 
   /// `{id, ownerId, stageName, color, showId, show, gearName, sharedAt,
@@ -207,6 +272,8 @@ class CrewPost {
       encores: asInt(p['encores']),
       encoredByMe: p['encoredByMe'] == true,
       mine: p['mine'] == true,
+      avatarBadge: asStringOrNull(p['avatarBadge']),
+      avatarUrl: asStringOrNull(p['avatarUrl']),
     );
   }
 }
@@ -281,6 +348,71 @@ class CrewWeekProgress {
       showsPlanned: planned.length,
       miles: inWeek.fold(0.0, (t, s) => t + s.distanceMiles),
       plannedMiles: week.plannedMiles,
+    );
+  }
+}
+
+/// "Ryan invited you on the Spring 2027 Half Tour": a Crew mate asking you
+/// to book a Tour for the same Opening Night.
+class CrewTourInvite {
+  const CrewTourInvite({
+    required this.id,
+    required this.fromUserId,
+    required this.fromStageName,
+    required this.tourId,
+    required this.tourName,
+    required this.raceDate,
+    required this.createdAt,
+    this.fromColor = 0,
+    this.raceDistance = RaceDistance.marathon,
+  });
+
+  final String id;
+  final String fromUserId;
+  final String fromStageName;
+  final int fromColor;
+  final String tourId;
+  final String tourName;
+
+  /// Opening Night, a local calendar date.
+  final DateTime raceDate;
+  final RaceDistance raceDistance;
+  final DateTime createdAt;
+
+  /// What "Join the Tour" hands to Book The Tour.
+  TourFeaturing get featuring => TourFeaturing(
+    userId: fromUserId,
+    stageName: fromStageName,
+    raceDate: raceDate,
+    raceDistance: raceDistance,
+    tourName: tourName,
+  );
+
+  /// True when [tour] races the same Opening Night.
+  bool sameRaceAs(Tour tour) => sameRace(
+    raceDate,
+    raceDistance,
+    tour.setup.raceDate,
+    tour.setup.raceDistance,
+  );
+
+  /// `{id, from: {userId, stageName, color}, tourId, tourName,
+  /// raceDate: "YYYY-MM-DD", raceDistance, createdAt}`. Null without a
+  /// race date.
+  static CrewTourInvite? fromJson(Map<String, Object?> json) {
+    final date = parseDateOnly(json['raceDate']);
+    if (date == null) return null;
+    final from = asMap(json['from']) ?? const {};
+    return CrewTourInvite(
+      id: '${json['id']}',
+      fromUserId: '${from['userId']}',
+      fromStageName: asStringOrNull(from['stageName']) ?? 'Runner',
+      fromColor: asInt(from['color']),
+      tourId: '${json['tourId']}',
+      tourName: asStringOrNull(json['tourName']) ?? 'The Tour',
+      raceDate: date,
+      raceDistance: RaceDistance.fromName(asStringOrNull(json['raceDistance'])),
+      createdAt: parseDate(json['createdAt'])?.toLocal() ?? DateTime.now(),
     );
   }
 }

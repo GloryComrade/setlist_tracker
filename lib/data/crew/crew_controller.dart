@@ -269,6 +269,42 @@ class CrewController extends Notifier<CrewState> {
     if (block) await this.block(post.ownerId);
   }
 
+  // ---- Profile pictures ----
+
+  /// Picks a drawn badge, or none with null.
+  Future<void> setAvatarBadge(String? badge) async {
+    final p = state.profile;
+    if (p == null) return;
+    _showMyPicture(await _s.saveAvatarBadge(p, badge));
+  }
+
+  /// [jpeg] is already square and small (see `avatar_photo.dart`).
+  Future<void> uploadAvatar(Uint8List jpeg) async =>
+      _showMyPicture(await _s.uploadAvatar(jpeg));
+
+  Future<void> removeAvatar() async => _showMyPicture(await _s.removeAvatar());
+
+  /// Reports a Crew mate's photo, and blocks them too when asked.
+  Future<void> reportAvatar(
+    CrewMate mate,
+    String reason, {
+    bool block = false,
+  }) async {
+    await _s.reportAvatar(mate.userId, reason);
+    if (block) await this.block(mate.userId);
+  }
+
+  /// Your own posts on the feed wear the new picture straight away.
+  void _showMyPicture(CrewProfile saved) {
+    state = state.copyWith(
+      profile: saved,
+      posts: [
+        for (final p in state.posts)
+          p.mine ? p.withPicture(saved.avatarBadge, saved.avatarUrl) : p,
+      ],
+    );
+  }
+
   Future<void> _reloadFeed() async {
     try {
       state = state.copyWith(posts: await _s.feed());
@@ -307,6 +343,8 @@ class CrewController extends Notifier<CrewState> {
           encores: p.encores,
           encoredByMe: p.encoredByMe,
           mine: true,
+          avatarBadge: p.avatarBadge,
+          avatarUrl: p.avatarUrl,
         ),
       );
     }

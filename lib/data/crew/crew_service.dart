@@ -5,6 +5,8 @@
 /// [MemoryCrewService] keeps everything in memory for tests and previews.
 library;
 
+import 'dart:typed_data';
+
 import '../../models/crew.dart';
 
 /// Something the server refused, in words a runner can read.
@@ -15,7 +17,7 @@ class CrewException implements Exception {
   String toString() => message;
 }
 
-abstract class CrewService {
+abstract class CrewService implements CrewTourInvites {
   /// Null until a stage name is picked.
   Future<CrewProfile?> myProfile();
 
@@ -53,4 +55,45 @@ abstract class CrewService {
 
   /// Reports a Crew mate's Show to the app's owner and hides it from your feed.
   Future<void> report(CrewPost post, String reason);
+
+  // ---- Profile pictures ----
+
+  /// Saves [badge] (one of `kAvatarBadges`, or null for none) on [profile].
+  Future<CrewProfile> saveAvatarBadge(CrewProfile profile, String? badge);
+
+  /// Uploads your photo: a square JPEG of at most [kMaxAvatarBytes].
+  Future<CrewProfile> uploadAvatar(Uint8List jpeg);
+
+  Future<CrewProfile> removeAvatar();
+
+  /// The photo at an `avatarUrl` (yours or a Crew mate's).
+  Future<Uint8List> avatarBytes(String url);
+
+  /// Reports a Crew mate's photo to the app's owner.
+  Future<void> reportAvatar(String userId, String reason);
 }
+
+/// The server doesn't have that Tour yet (it hasn't synced). Sync, then try
+/// again.
+class TourNotSyncedException extends CrewException {
+  const TourNotSyncedException()
+    : super('That Tour isn’t backstage yet. Try again in a moment.');
+}
+
+/// Tour invites: ask Crew mates onto your Tour. Part of [CrewService].
+abstract interface class CrewTourInvites {
+  /// Invites [userIds] onto your synced Tour [tourId]. Returns who is
+  /// invited now: Crew mates only, anyone else is skipped. Throws
+  /// [TourNotSyncedException] while the server doesn't have the Tour.
+  Future<List<String>> inviteToTour(String tourId, List<String> userIds);
+
+  /// Invites to you that you haven't dismissed, from your Crew, whose
+  /// Opening Night is still to come. Soonest first.
+  Future<List<CrewTourInvite>> tourInvites();
+
+  /// "Not this time": the invite goes away for good.
+  Future<void> dismissTourInvite(String id);
+}
+
+/// The biggest photo the server takes.
+const kMaxAvatarBytes = 64 * 1024;

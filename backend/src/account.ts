@@ -18,6 +18,7 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
   const db = env.DB;
   const one = (sql: string) => db.prepare(sql).bind(userId);
   await db.batch([
+    one("DELETE FROM crew_tour_invites WHERE from_user = ?1 OR to_user = ?1"),
     one("DELETE FROM crew_encores_v2 WHERE user_id = ?1 OR owner = ?1"),
     one("DELETE FROM crew_reports WHERE reporter = ?1 OR reported_user = ?1"),
     one("DELETE FROM crew_invites WHERE owner = ?1"),
@@ -25,6 +26,7 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
     one("DELETE FROM crew_blocks WHERE blocker = ?1 OR blocked = ?1"),
     one("DELETE FROM crew_links WHERE user_a = ?1 OR user_b = ?1"),
     one("DELETE FROM crew_profiles WHERE user_id = ?1"),
+    one("DELETE FROM crew_avatars WHERE user_id = ?1"),
     one("DELETE FROM records WHERE user_id = ?1"),
     one("DELETE FROM sessions WHERE user_id = ?1"),
     one("DELETE FROM login_codes WHERE user_id = ?1"),

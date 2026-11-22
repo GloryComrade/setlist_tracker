@@ -313,6 +313,7 @@ class _StageNameFormState extends ConsumerState<StageNameForm> {
                     child: CrewAvatar(
                       name: _name.text.isEmpty ? '?' : _name.text,
                       color: i,
+                      badge: widget.existing?.avatarBadge,
                       size: 40,
                     ),
                   ),
@@ -330,107 +331,6 @@ class _StageNameFormState extends ConsumerState<StageNameForm> {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ---- Settings ----
-
-Future<void> showCrewSettingsSheet(BuildContext context) =>
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => const _SettingsSheet(),
-    );
-
-class _SettingsSheet extends ConsumerWidget {
-  const _SettingsSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(crewControllerProvider);
-    final p = state.profile;
-    if (p == null) return const SizedBox(height: 120);
-    final c = ref.read(crewControllerProvider.notifier);
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          0,
-          20,
-          20 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'CREW SETTINGS',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            StageNameForm(
-              existing: p,
-              buttonLabel: 'Save',
-              onSaved: () {
-                if (context.mounted) crewSnack(context, 'Stage name saved.');
-              },
-            ),
-            const SizedBox(height: 20),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.visibility_outlined,
-                    size: 18,
-                    color: StageColors.textMuted,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      p.allActivityPending
-                          ? kCrewSeesShared
-                          : kCrewSeesEverything,
-                      style: const TextStyle(
-                        color: StageColors.textMuted,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (state.blocked.isNotEmpty) ...[
-              const Divider(),
-              const SizedBox(height: 8),
-              const CrewLabel('Blocked'),
-              for (final m in state.blocked)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CrewAvatar(name: m.stageName, color: m.color),
-                  title: Text(m.stageName),
-                  trailing: TextButton(
-                    onPressed: () async {
-                      try {
-                        await c.unblock(m);
-                      } catch (_) {
-                        if (context.mounted) {
-                          crewSnack(context, 'Couldn’t reach the Crew.');
-                        }
-                      }
-                    },
-                    child: const Text('Unblock'),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }
@@ -464,7 +364,13 @@ class _MateSheet extends ConsumerWidget {
           children: [
             Row(
               children: [
-                CrewAvatar(name: mate.stageName, color: mate.color, size: 56),
+                CrewAvatar(
+                  name: mate.stageName,
+                  color: mate.color,
+                  size: 56,
+                  badge: mate.avatarBadge,
+                  photoUrl: mate.avatarUrl,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -547,6 +453,15 @@ class _MateSheet extends ConsumerWidget {
               },
               child: Text('Block ${mate.stageName}'),
             ),
+            if (mate.avatarUrl != null)
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                onPressed: () => showReportPhotoSheet(context, mate),
+                child: const Text('Report photo'),
+              ),
           ],
         ),
       ),

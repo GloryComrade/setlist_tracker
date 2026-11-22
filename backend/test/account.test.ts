@@ -20,6 +20,8 @@ const TABLES: [string, string][] = [
   ["crew_invite_misses", "user_id = ?1"],
   ["crew_encores_v2", "?1 IN (user_id, owner)"],
   ["crew_reports", "?1 IN (reporter, reported_user)"],
+  ["crew_tour_invites", "?1 IN (from_user, to_user)"],
+  ["crew_avatars", "user_id = ?1"],
 ];
 
 async function rowsOf(userId: string): Promise<Record<string, number>> {
@@ -61,6 +63,20 @@ describe("DELETE /api/me", () => {
     await call("PUT", `/api/crew/posts/${mine}/encore`, { token: friend.token });
     await call("POST", `/api/crew/posts/${theirs}/report`, { token: me.token, body: { reason: "a" } });
     await call("POST", `/api/crew/posts/${mine}/report`, { token: friend.token, body: { reason: "b" } });
+    // A Tour invite to the friend.
+    const tourId = crypto.randomUUID();
+    const raceDate = new Date(Date.now() + 60 * 86400_000).toISOString().slice(0, 10);
+    await call("POST", "/api/sync/tours", {
+      token: me.token,
+      body: { rows: [{ id: tourId, data: { id: tourId, name: "Spring Tour", setup: { raceDate, raceDistance: "half" } }, updatedAt: "2026-11-21T08:00:00.000Z", deletedAt: null }] },
+    });
+    await call("POST", "/api/crew/tour-invites", { token: me.token, body: { tourId, to: [friend.user.id] } });
+    // A profile photo.
+    const photo = new Uint8Array(64).fill(1);
+    photo.set([0xff, 0xd8, 0xff]);
+    await env.DB.prepare(
+      "INSERT INTO crew_avatars (user_id, jpeg, updated_at) VALUES (?, ?, ?)",
+    ).bind(me.user.id, photo, new Date().toISOString()).run();
     // A login code, an Apple token.
     await createLoginCode(env.DB, me.user.id);
     await env.DB.prepare(
@@ -97,6 +113,7 @@ describe("DELETE /api/me", () => {
     expect(friendAfter.crew_profiles).toBe(1);
     expect(friendAfter.crew_links).toBe(0);
     expect(friendAfter.crew_encores_v2).toBe(0);
+    expect(friendAfter.crew_tour_invites).toBe(0);
 
     // The old token no longer works.
     expect((await call("GET", "/api/me", { token: me.token })).status).toBe(401);

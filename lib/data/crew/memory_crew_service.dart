@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import '../../models/avatar_badge.dart';
 import '../../models/crew.dart';
 import '../../models/show.dart';
 import '../../models/tour.dart';
@@ -108,6 +111,9 @@ class MemoryCrewService implements CrewService {
       color: saved.color,
       // Saving a name doesn't OK the change; only acceptAllActivity does.
       allActivityPending: profiles[me]?.allActivityPending ?? false,
+      // The picture has its own calls.
+      avatarBadge: profiles[me]?.avatarBadge,
+      avatarUrl: profiles[me]?.avatarUrl,
     );
     return profiles[me]!;
   }
@@ -176,6 +182,8 @@ class MemoryCrewService implements CrewService {
           color: p?.color ?? 0,
           since: e.value,
           tour: _tourSummary(other),
+          avatarBadge: p?.avatarBadge,
+          avatarUrl: p?.avatarUrl,
         ),
       );
     }
@@ -226,6 +234,8 @@ class MemoryCrewService implements CrewService {
     encores: encores[id]?.length ?? 0,
     encoredByMe: encores[id]?.contains(me) ?? false,
     mine: p.owner == me,
+    avatarBadge: profiles[p.owner]?.avatarBadge,
+    avatarUrl: profiles[p.owner]?.avatarUrl,
   );
 
   List<CrewPost> _posts(bool Function(_Post) where, int cap) {
@@ -251,6 +261,8 @@ class MemoryCrewService implements CrewService {
         stageName: p?.stageName ?? 'Runner',
         color: p?.color ?? 0,
         since: links[_pair(me, userId)] ?? _clock,
+        avatarBadge: p?.avatarBadge,
+        avatarUrl: p?.avatarUrl,
       ),
       // Through JSON, like the server's copy.
       tour: switch (activeTour(userId)) {
@@ -274,6 +286,189 @@ class MemoryCrewService implements CrewService {
     reports.add((postId: post.id, reason: reason));
     reported.add(post.id);
   }
+
+  // ---- Tour invites ----
+
+  /// Every Tour invite, sent and received.
+  final tourInviteRows = <MemoryTourInvite>[];
+
+  /// Finds [me]'s own Tour by id, the way the server finds a synced one.
+  /// Defaults to the Tours given to [addTour]; tests and previews point it
+  /// at the Tour repository.
+  Future<Tour?> Function(String tourId)? myTour;
+
+  /// [from] (a Crew mate) invites [me] onto [tour] (test and preview setup).
+  /// Also books [tour] for [from].
+  MemoryTourInvite addTourInvite(String from, Tour tour, {DateTime? at}) {
+    if (!(tours[from]?.any((t) => t.id == tour.id) ?? false)) {
+      addTour(from, tour);
+    }
+    final row = MemoryTourInvite(
+      id: 'invite-${tourInviteRows.length + 1}',
+      from: from,
+      to: me,
+      tour: tour,
+      createdAt: at ?? _tick(),
+    );
+    tourInviteRows.add(row);
+    return row;
+  }
+
+  DateTime get _today {
+    final n = (today ?? DateTime.now()).toUtc();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  @override
+  Future<List<String>> inviteToTour(String tourId, List<String> userIds) async {
+    _needProfile();
+    final tour = myTour != null
+        ? await myTour!(tourId)
+        : tours[me]?.where((t) => t.id == tourId).firstOrNull;
+    if (tour == null || tour.isDeleted) throw const TourNotSyncedException();
+    if (tour.setup.raceDate.isBefore(_today)) {
+      throw const CrewException('That Tour’s Opening Night has passed.');
+    }
+    final invited = <String>[];
+    for (final id in {...userIds}) {
+      if (id == me || !isCrew(me, id) || _blocked(me, id)) continue;
+      invited.add(id);
+      final i = tourInviteRows.indexWhere(
+        (r) => r.from == me && r.to == id && r.tour.id == tourId,
+      );
+      if (i < 0) {
+        tourInviteRows.add(
+          MemoryTourInvite(
+            id: 'invite-${tourInviteRows.length + 1}',
+            from: me,
+            to: id,
+            tour: tour,
+            createdAt: _tick(),
+          ),
+        );
+      } else {
+        tourInviteRows[i].tour = tour;
+      }
+    }
+    return invited;
+  }
+
+  @override
+  Future<List<CrewTourInvite>> tourInvites() async {
+    final out = <CrewTourInvite>[];
+    for (final r in tourInviteRows) {
+      if (r.to != me || r.dismissed || !isCrew(me, r.from)) continue;
+      if (_blocked(me, r.from)) continue;
+      // The sender's latest copy of the Tour, as the server reads it.
+      final tour =
+          tours[r.from]?.where((t) => t.id == r.tour.id).firstOrNull ?? r.tour;
+      if (tour.isDeleted || tour.setup.raceDate.isBefore(_today)) continue;
+      final p = profiles[r.from];
+      out.add(
+        CrewTourInvite(
+          id: r.id,
+          fromUserId: r.from,
+          fromStageName: p?.stageName ?? 'Runner',
+          fromColor: p?.color ?? 0,
+          tourId: tour.id,
+          tourName: tour.name,
+          raceDate: tour.setup.raceDate,
+          raceDistance: tour.setup.raceDistance,
+          createdAt: r.createdAt,
+        ),
+      );
+    }
+    out.sort((a, b) => a.raceDate.compareTo(b.raceDate));
+    return out;
+  }
+
+  @override
+  Future<void> dismissTourInvite(String id) async {
+    for (final r in tourInviteRows) {
+      if (r.id == id && r.to == me) r.dismissed = true;
+    }
+  }
+  // ---- Profile pictures ----
+
+  /// Runner id → their photo. URLs are `memory://avatar/<id>?v=<n>`.
+  final photos = <String, Uint8List>{};
+  final photoReports = <({String userId, String reason})>[];
+  var _photoVersion = 0;
+
+  /// Gives [userId] a photo (test and preview setup).
+  void addPhoto(String userId, Uint8List jpeg) {
+    photos[userId] = jpeg;
+    final p = profiles[userId];
+    if (p != null) {
+      profiles[userId] = p.copyWith(
+        avatarUrl: 'memory://avatar/$userId?v=${++_photoVersion}',
+      );
+    }
+  }
+
+  @override
+  Future<CrewProfile> saveAvatarBadge(
+    CrewProfile profile,
+    String? badge,
+  ) async {
+    _needProfile();
+    if (badge != null && !isAvatarBadge(badge)) {
+      throw const CrewException('Pick one of the badges.');
+    }
+    return profiles[me] = profiles[me]!.copyWith(avatarBadge: badge);
+  }
+
+  @override
+  Future<CrewProfile> uploadAvatar(Uint8List jpeg) async {
+    _needProfile();
+    if (jpeg.length > kMaxAvatarBytes ||
+        jpeg.length < 3 ||
+        jpeg[0] != 0xff ||
+        jpeg[1] != 0xd8) {
+      throw const CrewException('That photo didn’t work. Try another one.');
+    }
+    addPhoto(me, jpeg);
+    return profiles[me]!;
+  }
+
+  @override
+  Future<CrewProfile> removeAvatar() async {
+    _needProfile();
+    photos.remove(me);
+    return profiles[me] = profiles[me]!.copyWith(avatarUrl: null);
+  }
+
+  @override
+  Future<Uint8List> avatarBytes(String url) async {
+    final id = Uri.parse(url).pathSegments.last;
+    final bytes = photos[id];
+    if (bytes == null || (id != me && (!isCrew(me, id) || _blocked(me, id)))) {
+      throw const CrewException('That photo isn’t there anymore.');
+    }
+    return bytes;
+  }
+
+  @override
+  Future<void> reportAvatar(String userId, String reason) async =>
+      photoReports.add((userId: userId, reason: reason));
+}
+
+/// One Tour invite in [MemoryCrewService].
+class MemoryTourInvite {
+  MemoryTourInvite({
+    required this.id,
+    required this.from,
+    required this.to,
+    required this.tour,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String from;
+  final String to;
+  Tour tour;
+  final DateTime createdAt;
+  bool dismissed = false;
 }
 
 class _Post {
