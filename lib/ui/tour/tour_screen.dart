@@ -329,6 +329,12 @@ class _Header extends StatelessWidget {
                   ),
                 ),
               ),
+              IconButton(
+                tooltip: 'The Calendar',
+                color: Colors.white,
+                icon: const Icon(Icons.calendar_month_outlined),
+                onPressed: () => context.push('/calendar'),
+              ),
               PopupMenuButton<String>(
                 tooltip: 'Tour options',
                 iconColor: Colors.white,

@@ -10,6 +10,7 @@ import 'theme/app_theme.dart';
 import 'theme/stage_art.dart';
 import 'ui/backstage/backstage_screen.dart';
 import 'ui/backstage/saved_mix_screen.dart';
+import 'ui/calendar/calendar_screen.dart';
 import 'ui/charts/charts_screen.dart';
 import 'ui/crew/crew_mate_screen.dart';
 import 'ui/crew/crew_screen.dart';
@@ -111,6 +112,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/backstage/mix/:id',
       builder: (_, state) => SavedMixScreen(mixId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/calendar',
+      builder: (_, state) => CalendarScreen(
+        initialMonth: CalendarScreen.parseMonth(
+          state.uri.queryParameters['month'],
+        ),
+      ),
     ),
   ],
 );

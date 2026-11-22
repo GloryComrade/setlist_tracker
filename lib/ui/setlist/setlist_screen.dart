@@ -184,17 +184,29 @@ class _Header extends StatelessWidget {
       title: 'THE SETLIST',
       children: [
         const SizedBox(height: 8),
-        Text(
-          shows.isEmpty
-              ? 'Every run is a Show. Book your first one.'
-              : '${formatMiles(miles)} this week across $n '
-                    '${n == 1 ? 'Show' : 'Shows'}',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.92),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFeatures: StageFonts.tabular,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                shows.isEmpty
+                    ? 'Every run is a Show. Book your first one.'
+                    : '${formatMiles(miles)} this week across $n '
+                          '${n == 1 ? 'Show' : 'Shows'}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: StageFonts.tabular,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'The Calendar',
+              color: Colors.white,
+              icon: const Icon(Icons.calendar_month_outlined),
+              onPressed: () => context.push('/calendar'),
+            ),
+          ],
         ),
       ],
     );
