@@ -12,6 +12,7 @@ import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
 import 'crew_post_card.dart';
 import 'crew_widgets.dart';
+import 'mate_tour_card.dart';
 
 // ---- Invite ----
 
@@ -354,14 +355,6 @@ class _SettingsSheet extends ConsumerWidget {
     if (p == null) return const SizedBox(height: 120);
     final c = ref.read(crewControllerProvider.notifier);
 
-    Future<void> set(CrewProfile next) async {
-      try {
-        await c.saveProfile(next);
-      } catch (_) {
-        if (context.mounted) crewSnack(context, 'Couldn’t save. Try again.');
-      }
-    }
-
     return SafeArea(
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
@@ -387,24 +380,27 @@ class _SettingsSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             const Divider(),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: p.alwaysShare,
-              onChanged: (v) => set(p.copyWith(alwaysShare: v)),
-              title: const Text('Share every new Show'),
-              subtitle: const Text(
-                'New Shows go to your Crew as soon as you book them. Notes '
-                'stay private.',
-              ),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: p.showOpeningNight,
-              onChanged: (v) => set(p.copyWith(showOpeningNight: v)),
-              title: const Text('Show my Opening Night'),
-              subtitle: const Text(
-                'Your Crew sees your Tour’s name and the countdown to race '
-                'day.',
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.visibility_outlined,
+                    size: 18,
+                    color: StageColors.textMuted,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      kCrewSeesEverything,
+                      style: TextStyle(
+                        color: StageColors.textMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (state.blocked.isNotEmpty) ...[
@@ -443,6 +439,7 @@ Future<void> showMateSheet(BuildContext context, CrewMate mate) =>
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
+      isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => _MateSheet(mate: mate),
     );
@@ -454,15 +451,10 @@ class _MateSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final shared = ref
-        .watch(crewControllerProvider)
-        .posts
-        .where((p) => p.ownerId == mate.userId)
-        .toList();
-    final miles = shared.fold<double>(0, (t, p) => t + p.show.distanceMiles);
-    final countdown = openingNightLine(mate.openingNight);
+    final router = GoRouter.of(context);
+    void close() => Navigator.of(context).pop();
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -477,7 +469,7 @@ class _MateSheet extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        mate.stageName.toUpperCase(),
+                        mate.stageName,
                         style: theme.textTheme.headlineMedium,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -490,50 +482,29 @@ class _MateSheet extends ConsumerWidget {
                 ),
               ],
             ),
-            if (countdown != null) ...[
+            if (mate.tour != null) ...[
               const SizedBox(height: 16),
-              PosterSurface(
-                gradient: StageColors.headlineGradient,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      countdown.toUpperCase(),
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                    if (mate.tourName != null)
-                      Text(
-                        mate.tourName!,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                  ],
-                ),
+              MateTourCard(
+                mate: mate,
+                onBook: () => bookTourFeaturing(context, mate, before: close),
               ),
             ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: StatTile(
-                    label: 'Shows shared',
-                    value: '${shared.length}',
-                  ),
-                ),
-                Expanded(
-                  child: StatTile(
-                    label: 'Miles shared',
-                    value: miles.toStringAsFixed(1),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton(
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
+              ),
+              onPressed: () {
+                close();
+                router.push('/crew/mate/${mate.userId}');
+              },
+              icon: const Icon(Icons.queue_music),
+              label: Text('See ${mate.stageName}’s Setlist'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
               ),
               onPressed: () async {
                 final ok = await confirmCrew(

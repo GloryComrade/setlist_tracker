@@ -26,6 +26,7 @@ class Show implements Entity {
     this.live,
     this.plannedShowId,
     this.healthWorkoutId,
+    this.crewPrivate = false,
   });
 
   @override
@@ -60,6 +61,10 @@ class Show implements Entity {
   /// same run from being imported twice.
   final String? healthWorkoutId;
 
+  /// "Keep off the Crew": the runner's Crew never sees this Show. Everything
+  /// else on the Setlist is visible to the Crew.
+  final bool crewPrivate;
+
   @override
   final DateTime createdAt;
   @override
@@ -74,7 +79,11 @@ class Show implements Entity {
   double? get paceSecondsPerMile =>
       paceSecondsPerMileFor(distanceMiles, durationSeconds);
 
-  Show copyWith({DateTime? updatedAt, DateTime? deletedAt}) => Show(
+  Show copyWith({
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    bool? crewPrivate,
+  }) => Show(
     id: id,
     date: date,
     venue: venue,
@@ -90,6 +99,7 @@ class Show implements Entity {
     live: live,
     plannedShowId: plannedShowId,
     healthWorkoutId: healthWorkoutId,
+    crewPrivate: crewPrivate ?? this.crewPrivate,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt ?? this.deletedAt,
@@ -120,6 +130,8 @@ class Show implements Entity {
     'live': live?.toJson(),
     'plannedShowId': plannedShowId,
     'healthWorkoutId': healthWorkoutId,
+    // Absent means false, so Shows saved before the Crew read the same.
+    if (crewPrivate) 'crewPrivate': true,
     'createdAt': utcString(createdAt),
     'updatedAt': utcString(updatedAt),
     'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
@@ -156,6 +168,7 @@ class Show implements Entity {
       live: live == null ? null : LiveDetails.fromJson(live),
       plannedShowId: asStringOrNull(json['plannedShowId']),
       healthWorkoutId: asStringOrNull(json['healthWorkoutId']),
+      crewPrivate: json['crewPrivate'] == true,
       createdAt: created,
       updatedAt: parseDate(json['updatedAt']) ?? created,
       deletedAt: parseDate(json['deletedAt']),

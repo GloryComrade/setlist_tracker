@@ -193,82 +193,96 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a Crew post speaks its numbers, song and Gold Records', (
-    tester,
-  ) async {
-    final handle = tester.ensureSemantics();
-    final db = await newDatabaseFactoryMemory().openDatabase(
-      'a11y${DateTime.now().microsecondsSinceEpoch}.db',
-    );
-    const me = PassHolder(id: 'me', name: 'Ryan Runner', email: 'r@x.com');
-    final post = CrewPost(
-      id: 'p1',
-      ownerId: 'maya',
-      stageName: 'Maya',
-      color: 1,
-      showId: 'h1',
-      sharedAt: DateTime(2026, 11, 22, 10),
-      show: SharedShow(
-        date: DateTime(2026, 11, 22, 7),
-        venue: Venue.live,
-        workoutType: WorkoutType.long,
-        distanceMiles: 15,
-        durationSeconds: 8400,
-        song: const SongOfTheShow(
-          title: 'Lose Yourself',
-          artist: 'Eminem',
-          note: 'mile 12',
-          spotifyUrl: 'https://open.spotify.com/track/x',
+  testWidgets(
+    'a Crew post speaks its numbers, effort, Gear, song and Gold Records',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      final db = await newDatabaseFactoryMemory().openDatabase(
+        'a11y${DateTime.now().microsecondsSinceEpoch}.db',
+      );
+      const me = PassHolder(id: 'me', name: 'Ryan Runner', email: 'r@x.com');
+      final post = CrewPost(
+        id: 'p1',
+        ownerId: 'maya',
+        stageName: 'Maya',
+        color: 1,
+        sharedAt: DateTime(2026, 11, 22, 10),
+        show: Show(
+          id: 'h1',
+          date: DateTime(2026, 11, 22, 7),
+          venue: Venue.live,
+          workoutType: WorkoutType.long,
+          distanceMiles: 15,
+          durationSeconds: 8400,
+          effort: 6,
+          feel: Feel.fine,
+          song: const SongOfTheShow(
+            title: 'Lose Yourself',
+            artist: 'Eminem',
+            note: 'mile 12',
+            spotifyUrl: 'https://open.spotify.com/track/x',
+          ),
+          createdAt: DateTime.utc(2026, 11, 22),
+          updatedAt: DateTime.utc(2026, 11, 22),
         ),
-        goldRecords: const ['Longest Headliner'],
-      ),
-    );
-    tester.view.physicalSize = const Size(375, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          authServiceProvider.overrideWithValue(FakeAuth(me)),
-          remoteStoreProvider.overrideWithValue(FakeRemote()),
-          crewServiceProvider.overrideWithValue(MemoryCrewService(me: 'me')),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.dark(),
-          home: Scaffold(
-            body: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                CrewPostCard(post: post, now: DateTime(2026, 11, 22, 12)),
-              ],
+        gearName: 'Pegasus 41',
+      );
+      tester.view.physicalSize = const Size(375, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            authServiceProvider.overrideWithValue(FakeAuth(me)),
+            remoteStoreProvider.overrideWithValue(FakeRemote()),
+            crewServiceProvider.overrideWithValue(MemoryCrewService(me: 'me')),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  CrewPostCard(
+                    post: post,
+                    now: DateTime(2026, 11, 22, 12),
+                    goldRecords: const ['Longest Headliner'],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await _settle(tester);
+      );
+      await _settle(tester);
 
-    expect(
-      find.bySemanticsLabel(
-        'Sunday 22. Headliner, Live Show. 15 miles, 9 minutes 20 seconds '
-        'per mile, 2 hours 20 minutes.',
-      ),
-      findsOneWidget,
-    );
-    final song = tester.getSemantics(
-      find.bySemanticsLabel('Song: Lose Yourself by Eminem. “mile 12”'),
-    );
-    expect(song.flagsCollection.isLink, isTrue);
-    expect(song.hint, 'Opens in Spotify');
-    expect(
-      find.bySemanticsLabel('Gold Record: Longest Headliner'),
-      findsOneWidget,
-    );
-    expect(find.text('15 mi'), findsOneWidget);
-    handle.dispose();
-    await tester.pumpWidget(const SizedBox());
-    await _settle(tester);
-    await tester.runAsync(db.close);
-  });
+      expect(
+        find.bySemanticsLabel(
+          'Sunday 22. Headliner, Live Show. 15 miles, 9 minutes 20 seconds '
+          'per mile, 2 hours 20 minutes.',
+        ),
+        findsOneWidget,
+      );
+      final song = tester.getSemantics(
+        find.bySemanticsLabel('Song: Lose Yourself by Eminem. “mile 12”'),
+      );
+      expect(song.flagsCollection.isLink, isTrue);
+      expect(song.hint, 'Opens in Spotify');
+      expect(
+        find.bySemanticsLabel('Gold Record: Longest Headliner'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Effort 6 of 10, felt Fine.'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Gear: Pegasus 41.'), findsOneWidget);
+      expect(find.text('15 mi'), findsOneWidget);
+      handle.dispose();
+      await tester.pumpWidget(const SizedBox());
+      await _settle(tester);
+      await tester.runAsync(db.close);
+    },
+  );
 }

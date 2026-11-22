@@ -1,29 +1,24 @@
-/// The Crew: running friends who share Shows with each other.
+/// The Crew: running friends who see each other's Shows.
 ///
-/// Everything here lives on the server (the Cloudflare Worker), not on the device: a
-/// shared Show is a snapshot copied out of the Setlist, so friends never see
-/// anything that wasn't picked for them.
+/// Everything here comes from the server (the Cloudflare Worker), which reads
+/// the Setlists the app already syncs. Your Crew sees every Show you log,
+/// except the ones marked "Keep off the Crew" ([Show.crewPrivate]), and your
+/// active Tour.
 library;
 
-import '../logic/gold_records.dart';
-import 'enums.dart';
 import 'json_utils.dart';
 import 'show.dart';
-import 'song.dart';
+import 'tour.dart';
 
 /// How many avatar colors there are (see `crewColor` in the UI).
 const kCrewColors = 4;
 
-/// Your stage name and what you show the Crew.
+/// Your stage name and avatar color.
 class CrewProfile {
   const CrewProfile({
     required this.userId,
     required this.stageName,
     this.color = 0,
-    this.openingNight,
-    this.tourName,
-    this.alwaysShare = false,
-    this.showOpeningNight = false,
   });
 
   final String userId;
@@ -32,34 +27,60 @@ class CrewProfile {
   /// 0 to [kCrewColors] - 1.
   final int color;
 
-  /// Race day of your active Tour, when [showOpeningNight] is on.
-  final DateTime? openingNight;
-  final String? tourName;
-
-  /// Share every new Show with the Crew without asking.
-  final bool alwaysShare;
-
-  /// Let the Crew see your Opening Night countdown.
-  final bool showOpeningNight;
-
-  CrewProfile copyWith({
-    String? stageName,
-    int? color,
-    bool? alwaysShare,
-    bool? showOpeningNight,
-    DateTime? openingNight,
-    String? tourName,
-    bool clearOpeningNight = false,
-  }) => CrewProfile(
+  CrewProfile copyWith({String? stageName, int? color}) => CrewProfile(
     userId: userId,
     stageName: stageName ?? this.stageName,
     color: color ?? this.color,
-    alwaysShare: alwaysShare ?? this.alwaysShare,
-    showOpeningNight: showOpeningNight ?? this.showOpeningNight,
-    openingNight: clearOpeningNight
-        ? null
-        : (openingNight ?? this.openingNight),
-    tourName: clearOpeningNight ? null : (tourName ?? this.tourName),
+  );
+}
+
+/// A Crew mate's active Tour, as the mates list carries it.
+class CrewTourSummary {
+  const CrewTourSummary({
+    required this.id,
+    required this.name,
+    required this.raceDate,
+    this.raceDistance = RaceDistance.marathon,
+    this.featuring,
+  });
+
+  final String id;
+  final String name;
+
+  /// Opening Night, a local calendar date.
+  final DateTime raceDate;
+  final RaceDistance raceDistance;
+
+  /// Who that Tour was booked featuring, if anyone.
+  final ({String userId, String stageName})? featuring;
+
+  factory CrewTourSummary.fromTour(Tour t) => CrewTourSummary(
+    id: t.id,
+    name: t.name,
+    raceDate: t.setup.raceDate,
+    raceDistance: t.setup.raceDistance,
+    featuring: t.featuring,
+  );
+
+  /// `{id, name, raceDate: "YYYY-MM-DD", raceDistance, featuring}`.
+  static CrewTourSummary? fromJson(Map<String, Object?>? json) {
+    final date = parseDateOnly(json?['raceDate']);
+    if (json == null || date == null) return null;
+    return CrewTourSummary(
+      id: '${json['id']}',
+      name: asStringOrNull(json['name']) ?? 'The Tour',
+      raceDate: date,
+      raceDistance: RaceDistance.fromName(asStringOrNull(json['raceDistance'])),
+      featuring: TourFeaturing.fromJson(asMap(json['featuring'])),
+    );
+  }
+
+  /// True when [tour] races the same Opening Night as this one.
+  bool sameRaceAs(Tour tour) => sameRace(
+    raceDate,
+    raceDistance,
+    tour.setup.raceDate,
+    tour.setup.raceDistance,
   );
 }
 
@@ -70,8 +91,7 @@ class CrewMate {
     required this.stageName,
     required this.color,
     required this.since,
-    this.openingNight,
-    this.tourName,
+    this.tour,
     this.blocked = false,
   });
 
@@ -79,9 +99,19 @@ class CrewMate {
   final String stageName;
   final int color;
   final DateTime since;
-  final DateTime? openingNight;
-  final String? tourName;
+
+  /// Their active Tour, or null when they have none.
+  final CrewTourSummary? tour;
   final bool blocked;
+
+  factory CrewMate.fromJson(Map<String, Object?> m) => CrewMate(
+    userId: '${m['userId']}',
+    stageName: asStringOrNull(m['stageName']) ?? 'Runner',
+    color: asInt(m['color']),
+    since: parseDate(m['since']) ?? DateTime.now(),
+    tour: CrewTourSummary.fromJson(asMap(m['tour'])),
+    blocked: m['blocked'] == true,
+  );
 }
 
 /// Who sent an invite code.
@@ -99,149 +129,148 @@ class CrewInvitePreview {
   final bool ownInvite;
 }
 
-/// The part of a Show that goes to the Crew. Effort, feel, Gear, Tracks and
-/// the route stay on your Setlist; notes go only when you tick them.
-class SharedShow {
-  const SharedShow({
-    required this.date,
-    required this.venue,
-    required this.workoutType,
-    required this.distanceMiles,
-    required this.durationSeconds,
-    this.song,
-    this.goldRecords = const [],
-    this.notes,
-  });
-
-  final DateTime date;
-  final Venue venue;
-  final WorkoutType workoutType;
-  final double distanceMiles;
-  final int durationSeconds;
-  final SongOfTheShow? song;
-
-  /// Titles of the Gold Records this Show set, e.g. "Fastest 5K".
-  final List<String> goldRecords;
-  final String? notes;
-
-  bool get includesNotes => notes != null;
-
-  /// Snapshot of [show]. [allShows] works out which Gold Records it holds.
-  factory SharedShow.fromShow(
-    Show show, {
-    required List<Show> allShows,
-    bool includeNotes = false,
-  }) {
-    final records = computeGoldRecords(allShows).values
-        .where((r) => r.show?.id == show.id)
-        .map((r) => r.kind.title)
-        .toList();
-    final song = show.song;
-    return SharedShow(
-      date: show.date,
-      venue: show.venue,
-      workoutType: show.workoutType,
-      distanceMiles: show.distanceMiles,
-      durationSeconds: show.durationSeconds,
-      // The clip and its preview stay: friends can hear the part you picked.
-      song: song == null
-          ? null
-          : SongOfTheShow(
-              title: song.title,
-              artist: song.artist,
-              note: song.note,
-              albumArtUrl: song.albumArtUrl,
-              spotifyUrl: song.spotifyUrl,
-              appleMusicUrl: song.appleMusicUrl,
-              previewUrl: song.previewUrl,
-              clipStartSeconds: song.clipStartSeconds,
-              clipLengthSeconds: song.clipLengthSeconds,
-            ),
-      goldRecords: records,
-      notes: includeNotes ? show.notes : null,
-    );
-  }
-
-  Map<String, Object?> toJson() => {
-    'date': DateTime(
-      date.year,
-      date.month,
-      date.day,
-      date.hour,
-      date.minute,
-    ).toIso8601String(),
-    'venue': venue.name,
-    'workoutType': workoutType.name,
-    'distanceMiles': distanceMiles,
-    'durationSeconds': durationSeconds,
-    'song': song?.toJson(),
-    'goldRecords': goldRecords,
-    'notes': notes,
-  };
-
-  factory SharedShow.fromJson(Map<String, Object?> json) {
-    final d = parseDate(json['date']) ?? DateTime.now();
-    final song = asMap(json['song']);
-    final records = json['goldRecords'];
-    return SharedShow(
-      date: DateTime(d.year, d.month, d.day, d.hour, d.minute),
-      venue: Venue.fromName(asStringOrNull(json['venue'])),
-      workoutType: WorkoutType.fromName(asStringOrNull(json['workoutType'])),
-      distanceMiles: asDouble(json['distanceMiles']),
-      durationSeconds: asInt(json['durationSeconds']),
-      song: song == null ? null : SongOfTheShow.fromJson(song),
-      goldRecords: records is List
-          ? records.map((r) => '$r').toList()
-          : const [],
-      notes: asStringOrNull(json['notes']),
-    );
-  }
-}
-
-/// A Show someone in the Crew shared (or you did).
+/// A Show on the Crew feed (or on a Crew mate's page): the whole Show, as
+/// its owner logged it.
 class CrewPost {
   const CrewPost({
     required this.id,
     required this.ownerId,
     required this.stageName,
     required this.color,
-    required this.showId,
     required this.show,
     required this.sharedAt,
+    this.gearName,
     this.encores = 0,
     this.encoredByMe = false,
     this.mine = false,
   });
 
+  /// `<ownerId>:<showId>`.
   final String id;
   final String ownerId;
   final String stageName;
   final int color;
-  final String showId;
-  final SharedShow show;
+  final Show show;
+
+  /// The name of the Gear the Show was run in, if any.
+  final String? gearName;
+
+  /// When the Show was last saved.
   final DateTime sharedAt;
   final int encores;
   final bool encoredByMe;
   final bool mine;
+
+  String get showId => show.id;
+
+  static String idFor(String ownerId, String showId) => '$ownerId:$showId';
 
   CrewPost withEncore(bool on) => CrewPost(
     id: id,
     ownerId: ownerId,
     stageName: stageName,
     color: color,
-    showId: showId,
     show: show,
+    gearName: gearName,
     sharedAt: sharedAt,
     encores: encores - (encoredByMe ? 1 : 0) + (on ? 1 : 0),
     encoredByMe: on,
     mine: mine,
   );
+
+  /// `{id, ownerId, stageName, color, showId, show, gearName, sharedAt,
+  /// encores, encoredByMe, mine}`.
+  factory CrewPost.fromJson(Map<String, Object?> p) {
+    final ownerId = '${p['ownerId']}';
+    final showJson = {...?asMap(p['show'])};
+    // The record id wins when the Show JSON lacks one.
+    showJson['id'] ??= p['showId'];
+    final show = Show.fromJson(showJson);
+    return CrewPost(
+      id: asStringOrNull(p['id']) ?? idFor(ownerId, show.id),
+      ownerId: ownerId,
+      stageName: asStringOrNull(p['stageName']) ?? 'Runner',
+      color: asInt(p['color']),
+      show: show,
+      gearName: asStringOrNull(p['gearName']),
+      sharedAt: parseDate(p['sharedAt'])?.toLocal() ?? DateTime.now(),
+      encores: asInt(p['encores']),
+      encoredByMe: p['encoredByMe'] == true,
+      mine: p['mine'] == true,
+    );
+  }
 }
 
-/// One of your Shows on the Crew feed: when it was copied and whether the
-/// notes went with it.
-class SharedInfo {
-  const SharedInfo({required this.showUpdatedAt, required this.includesNotes});
-  final DateTime showUpdatedAt;
-  final bool includesNotes;
+/// Everything on a Crew mate's page: who they are, their active Tour and
+/// their whole Setlist (minus Shows kept off the Crew).
+class CrewMateDetail {
+  const CrewMateDetail({required this.mate, this.tour, this.shows = const []});
+
+  final CrewMate mate;
+  final Tour? tour;
+
+  /// Newest first.
+  final List<CrewPost> shows;
+
+  /// `{mate: {userId, stageName, color, since}, tour: Tour|null, shows: [Post]}`.
+  factory CrewMateDetail.fromJson(Map<String, Object?> json) {
+    final tour = asMap(json['tour']);
+    return CrewMateDetail(
+      mate: CrewMate.fromJson(asMap(json['mate']) ?? const {}),
+      tour: tour == null ? null : Tour.fromJson(tour),
+      shows: asMapList(json['shows']).map(CrewPost.fromJson).toList(),
+    );
+  }
+}
+
+/// How a Crew mate's current Tour week is going.
+class CrewWeekProgress {
+  const CrewWeekProgress({
+    required this.week,
+    required this.showsDone,
+    required this.showsPlanned,
+    required this.miles,
+    required this.plannedMiles,
+  });
+
+  final TourWeek week;
+  final int showsDone;
+  final int showsPlanned;
+
+  /// Miles logged so far this week.
+  final double miles;
+  final double plannedMiles;
+
+  /// Their week containing [today], or null before or after the Tour.
+  /// A planned Show counts as done when a Show was logged for it, or logged
+  /// on its day (the same rule as the Tour tab's checkmarks).
+  static CrewWeekProgress? of(Tour tour, List<Show> shows, DateTime today) {
+    final week = tour.weekContaining(today);
+    if (week == null) return null;
+    final inWeek = shows
+        .where((s) => !s.isDeleted && week.contains(s.date))
+        .toList();
+    final planned = week.shows.where((p) => !p.skipped).toList();
+    final linked = {for (final s in inWeek) ?s.plannedShowId};
+    final freeDays = [
+      for (final s in inWeek)
+        if (s.plannedShowId == null)
+          DateTime(s.date.year, s.date.month, s.date.day),
+    ];
+    var done = 0;
+    for (final p in planned) {
+      if (linked.contains(p.id)) {
+        done++;
+      } else if (freeDays.remove(p.date)) {
+        done++;
+      }
+    }
+    return CrewWeekProgress(
+      week: week,
+      showsDone: done,
+      showsPlanned: planned.length,
+      miles: inWeek.fold(0.0, (t, s) => t + s.distanceMiles),
+      plannedMiles: week.plannedMiles,
+    );
+  }
 }

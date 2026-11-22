@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -78,6 +76,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
 
   String? _gearId;
 
+  /// "Keep off the Crew".
+  bool _crewPrivate = false;
+
   // Song of the Show
   /// Picked from the song search (or typed in). The note is separate.
   SongOfTheShow? _pickedSong;
@@ -118,6 +119,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     _feel = s.feel;
     _notes.text = s.notes ?? '';
     _gearId = s.gearId;
+    _crewPrivate = s.crewPrivate;
     _pickedSong = s.song;
     _songNote.text = s.song?.note ?? '';
     final st = s.studio;
@@ -354,6 +356,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           : null,
       plannedShowId: _plannedShowId ?? _existing?.plannedShowId,
       healthWorkoutId: _existing?.healthWorkoutId,
+      crewPrivate: _crewPrivate,
       createdAt: _existing?.createdAt ?? now,
       updatedAt: now,
     );
@@ -361,15 +364,6 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     try {
       final repo = ref.read(showRepositoryProvider);
       await repo.save(show);
-      if (_existing == null) {
-        // Read it back for the saved updatedAt, so it isn't shared twice.
-        final saved = await repo.getById(show.id);
-        if (saved != null) {
-          unawaited(
-            ref.read(crewControllerProvider.notifier).shareIfAlways(saved),
-          );
-        }
-      }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -438,6 +432,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                         _gear(),
                         const SizedBox(height: 12),
                         _song(),
+                        ?_crew(),
                         const SizedBox(height: 24),
                         Center(
                           child: GradientButton(
@@ -859,6 +854,38 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                   ),
               ],
             ),
+    );
+  }
+
+  /// The "Keep off the Crew" switch, for runners in a Crew (and on any Show
+  /// already kept off it).
+  Widget? _crew() {
+    final crew = ref.watch(crewControllerProvider);
+    if (!_crewPrivate && (!crew.signedIn || crew.profile == null)) return null;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SectionCard(
+        title: 'The Crew',
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _crewPrivate,
+          onChanged: (v) => setState(() => _crewPrivate = v),
+          secondary: Icon(
+            _crewPrivate
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            color: StageColors.textMuted,
+          ),
+          title: const Text(
+            'Keep off the Crew',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: const Text(
+            'Your Crew sees every Show you log. Turn this on to keep this '
+            'one to yourself.',
+          ),
+        ),
+      ),
     );
   }
 

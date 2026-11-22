@@ -23,6 +23,7 @@ class CloudflareCrewService implements CrewService {
     'too_many_tries': 'Too many codes tried. Wait an hour, then try again.',
     'cant_block': 'That runner can’t be blocked.',
     'not_signed_in': 'Sign in to join the Crew.',
+    'not_found': 'That Show isn’t in your Crew’s feed anymore.',
   };
 
   /// Runs [call], turning every failure into a [CrewException].
@@ -48,10 +49,6 @@ class CloudflareCrewService implements CrewService {
     userId: '${r['userId']}',
     stageName: '${r['stageName']}',
     color: asInt(r['color']),
-    openingNight: parseDateOnly(r['openingNight']),
-    tourName: asStringOrNull(r['tourName']),
-    alwaysShare: r['alwaysShare'] == true,
-    showOpeningNight: r['showOpeningNight'] == true,
   );
 
   @override
@@ -64,16 +61,7 @@ class CloudflareCrewService implements CrewService {
   Future<CrewProfile> saveProfile(CrewProfile p) => _guard(() async {
     final r = await _api.put(
       '/api/crew/profile',
-      body: {
-        'stageName': p.stageName.trim(),
-        'color': p.color,
-        'alwaysShare': p.alwaysShare,
-        'showOpeningNight': p.showOpeningNight,
-        'openingNight': p.showOpeningNight && p.openingNight != null
-            ? dateOnlyString(p.openingNight!)
-            : null,
-        'tourName': p.showOpeningNight ? p.tourName : null,
-      },
+      body: {'stageName': p.stageName.trim(), 'color': p.color},
     );
     return _profile(_map(r));
   });
@@ -109,18 +97,7 @@ class CloudflareCrewService implements CrewService {
   @override
   Future<List<CrewMate>> crew() => _guard(() async {
     final r = _map(await _api.get('/api/crew/mates'));
-    return [
-      for (final m in asMapList(r['mates']))
-        CrewMate(
-          userId: '${m['userId']}',
-          stageName: '${m['stageName']}',
-          color: asInt(m['color']),
-          since: parseDate(m['since']) ?? DateTime.now(),
-          openingNight: parseDateOnly(m['openingNight']),
-          tourName: asStringOrNull(m['tourName']),
-          blocked: m['blocked'] == true,
-        ),
-    ];
+    return asMapList(r['mates']).map(CrewMate.fromJson).toList();
   });
 
   @override
@@ -138,51 +115,20 @@ class CloudflareCrewService implements CrewService {
   @override
   Future<List<CrewPost>> feed() => _guard(() async {
     final r = _map(await _api.get('/api/crew/feed'));
-    return [
-      for (final p in asMapList(r['posts']))
-        CrewPost(
-          id: '${p['id']}',
-          ownerId: '${p['ownerId']}',
-          stageName: asStringOrNull(p['stageName']) ?? 'Runner',
-          color: asInt(p['color']),
-          showId: '${p['showId']}',
-          show: SharedShow.fromJson(asMap(p['show']) ?? const {}),
-          sharedAt: parseDate(p['sharedAt'])?.toLocal() ?? DateTime.now(),
-          encores: asInt(p['encores']),
-          encoredByMe: p['encoredByMe'] == true,
-          mine: p['mine'] == true,
-        ),
-    ];
+    return asMapList(r['posts']).map(CrewPost.fromJson).toList();
   });
 
   @override
-  Future<Map<String, SharedInfo>> mySharedShows() => _guard(() async {
-    final shared = asMap(_map(await _api.get('/api/crew/shared'))['shared']);
-    return {
-      for (final MapEntry(:key, :value) in (shared ?? const {}).entries)
-        if (asMap(value) case final info?)
-          key: SharedInfo(
-            showUpdatedAt: DateTime.parse('${info['showUpdatedAt']}').toUtc(),
-            includesNotes: info['includesNotes'] == true,
-          ),
-    };
+  Future<CrewMateDetail?> mate(String userId) => _guard(() async {
+    final Object? json;
+    try {
+      json = await _api.get('/api/crew/mates/${_seg(userId)}');
+    } on ApiException catch (e) {
+      if (e.status == 404) return null;
+      rethrow;
+    }
+    return CrewMateDetail.fromJson(_map(json));
   });
-
-  @override
-  Future<void> share(String showId, SharedShow show, DateTime showUpdatedAt) =>
-      _guard(
-        () => _api.put(
-          '/api/crew/shared/${_seg(showId)}',
-          body: {
-            'show': show.toJson(),
-            'showUpdatedAt': apiTime(showUpdatedAt),
-          },
-        ),
-      );
-
-  @override
-  Future<void> unshare(String showId) =>
-      _guard(() => _api.delete('/api/crew/shared/${_seg(showId)}'));
 
   @override
   Future<void> encore(String postId, {required bool on}) => _guard(() {

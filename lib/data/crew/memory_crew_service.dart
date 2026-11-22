@@ -1,8 +1,11 @@
 import '../../models/crew.dart';
+import '../../models/show.dart';
+import '../../models/tour.dart';
 import 'crew_service.dart';
 
 /// [CrewService] that keeps everything in memory, with the same rules as the
-/// server: only your Crew sees what you share, and a block cuts both ways.
+/// server: only your Crew sees your Shows, Shows kept off the Crew stay
+/// hidden, and a block cuts both ways.
 ///
 /// Used by the tests and by `tool/crew_preview.dart`.
 class MemoryCrewService implements CrewService {
@@ -21,13 +24,20 @@ class MemoryCrewService implements CrewService {
 
   /// Blocker → blocked.
   final blocks = <String, Set<String>>{};
+
+  /// Post id (`<owner>:<showId>`) → the Show.
   final posts = <String, _Post>{};
+
+  /// Owner → their Tours.
+  final tours = <String, List<Tour>>{};
   final encores = <String, Set<String>>{};
   final reported = <String>{};
   final reports = <({String postId, String reason})>[];
 
   var _clock = DateTime.utc(2026, 11, 1);
-  var _ids = 0;
+
+  /// The day "active Tour" is measured from. Defaults to today.
+  DateTime? today;
   DateTime _tick() => _clock = _clock.add(const Duration(minutes: 1));
 
   static String _pair(String a, String b) =>
@@ -44,18 +54,42 @@ class MemoryCrewService implements CrewService {
     links[_pair(me, other.userId)] = since ?? _tick();
   }
 
-  /// A Show shared by someone else (test and preview setup).
-  String addPost(
+  /// A Show on [owner]'s Setlist (test and preview setup). Returns the
+  /// post id.
+  String addShow(
     String owner,
-    String showId,
-    SharedShow show, {
+    Show show, {
+    String? gearName,
     DateTime? at,
     int encoreCount = 0,
   }) {
-    final id = 'post${_ids++}';
-    posts[id] = _Post(id, owner, showId, show, at ?? _tick(), _clock);
+    final id = CrewPost.idFor(owner, show.id);
+    posts[id] = _Post(owner, show, gearName, at ?? _tick());
     encores[id] = {for (var i = 0; i < encoreCount; i++) 'fan$i'};
     return id;
+  }
+
+  /// Books a Tour for [owner] (test and preview setup).
+  void addTour(String owner, Tour tour) =>
+      tours.putIfAbsent(owner, () => []).add(tour);
+
+  /// The non-deleted Tour with the latest Opening Night still to come.
+  Tour? activeTour(String owner) {
+    final n = (today ?? DateTime.now()).toUtc();
+    final day = DateTime(n.year, n.month, n.day);
+    Tour? best;
+    for (final t in tours[owner] ?? const <Tour>[]) {
+      if (t.isDeleted || t.setup.raceDate.isBefore(day)) continue;
+      if (best == null || t.setup.raceDate.isAfter(best.setup.raceDate)) {
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  CrewTourSummary? _tourSummary(String owner) {
+    final t = activeTour(owner);
+    return t == null ? null : CrewTourSummary.fromTour(t);
   }
 
   @override
@@ -72,10 +106,6 @@ class MemoryCrewService implements CrewService {
       userId: me,
       stageName: saved.stageName,
       color: saved.color,
-      alwaysShare: saved.alwaysShare,
-      showOpeningNight: saved.showOpeningNight,
-      openingNight: saved.showOpeningNight ? saved.openingNight : null,
-      tourName: saved.showOpeningNight ? saved.tourName : null,
     );
     return profiles[me]!;
   }
@@ -137,8 +167,7 @@ class MemoryCrewService implements CrewService {
           stageName: p?.stageName ?? 'Runner',
           color: p?.color ?? 0,
           since: e.value,
-          openingNight: p?.openingNight,
-          tourName: p?.tourName,
+          tour: _tourSummary(other),
         ),
       );
     }
@@ -173,82 +202,61 @@ class MemoryCrewService implements CrewService {
   @override
   Future<void> unblock(String userId) async => blocks[me]?.remove(userId);
 
-  @override
-  Future<List<CrewPost>> feed() async {
+  bool _visible(_Post p) =>
+      !p.show.isDeleted &&
+      !p.show.crewPrivate &&
+      (p.owner == me || isCrew(me, p.owner));
+
+  CrewPost _toPost(String id, _Post p) => CrewPost(
+    id: id,
+    ownerId: p.owner,
+    stageName: profiles[p.owner]?.stageName ?? 'Runner',
+    color: profiles[p.owner]?.color ?? 0,
+    show: p.show,
+    gearName: p.gearName,
+    sharedAt: p.at,
+    encores: encores[id]?.length ?? 0,
+    encoredByMe: encores[id]?.contains(me) ?? false,
+    mine: p.owner == me,
+  );
+
+  List<CrewPost> _posts(bool Function(_Post) where, int cap) {
     final visible =
-        posts.values
-            .where((p) => p.owner == me || isCrew(me, p.owner))
-            .where((p) => !reported.contains(p.id))
+        posts.entries
+            .where((e) => _visible(e.value) && where(e.value))
+            .where((e) => !reported.contains(e.key))
             .toList()
-          ..sort((a, b) => b.at.compareTo(a.at));
-    return [
-      for (final p in visible)
-        CrewPost(
-          id: p.id,
-          ownerId: p.owner,
-          stageName: profiles[p.owner]?.stageName ?? 'Runner',
-          color: profiles[p.owner]?.color ?? 0,
-          showId: p.showId,
-          show: p.show,
-          sharedAt: p.at,
-          encores: encores[p.id]?.length ?? 0,
-          encoredByMe: encores[p.id]?.contains(me) ?? false,
-          mine: p.owner == me,
-        ),
-    ];
+          ..sort((a, b) => b.value.show.date.compareTo(a.value.show.date));
+    return [for (final e in visible.take(cap)) _toPost(e.key, e.value)];
   }
 
   @override
-  Future<Map<String, SharedInfo>> mySharedShows() async => {
-    for (final p in posts.values)
-      if (p.owner == me)
-        p.showId: SharedInfo(
-          showUpdatedAt: p.showUpdatedAt,
-          includesNotes: p.show.includesNotes,
-        ),
-  };
+  Future<List<CrewPost>> feed() async => _posts((_) => true, 60);
 
   @override
-  Future<void> share(
-    String showId,
-    SharedShow show,
-    DateTime showUpdatedAt,
-  ) async {
-    _needProfile();
-    final existing = posts.values
-        .where((p) => p.owner == me && p.showId == showId)
-        .firstOrNull;
-    if (existing != null) {
-      posts[existing.id] = _Post(
-        existing.id,
-        me,
-        showId,
-        show,
-        existing.at,
-        showUpdatedAt,
-      );
-      return;
-    }
-    final id = 'post${_ids++}';
-    posts[id] = _Post(id, me, showId, show, _tick(), showUpdatedAt);
-  }
-
-  @override
-  Future<void> unshare(String showId) async {
-    final ids = posts.values
-        .where((p) => p.owner == me && p.showId == showId)
-        .map((p) => p.id)
-        .toList();
-    for (final id in ids) {
-      posts.remove(id);
-      encores.remove(id);
-    }
+  Future<CrewMateDetail?> mate(String userId) async {
+    if (userId != me && !isCrew(me, userId)) return null;
+    final p = profiles[userId];
+    return CrewMateDetail(
+      mate: CrewMate(
+        userId: userId,
+        stageName: p?.stageName ?? 'Runner',
+        color: p?.color ?? 0,
+        since: links[_pair(me, userId)] ?? _clock,
+      ),
+      // Through JSON, like the server's copy.
+      tour: switch (activeTour(userId)) {
+        final t? => Tour.fromJson(t.toJson()),
+        null => null,
+      },
+      shows: _posts((s) => s.owner == userId, 500),
+    );
   }
 
   @override
   Future<void> encore(String postId, {required bool on}) async {
     final p = posts[postId];
-    if (p == null || p.owner == me || !isCrew(me, p.owner)) return;
+    if (p == null || p.owner == me || !_visible(p)) return;
     final set = encores.putIfAbsent(postId, () => {});
     on ? set.add(me) : set.remove(me);
   }
@@ -261,18 +269,9 @@ class MemoryCrewService implements CrewService {
 }
 
 class _Post {
-  _Post(
-    this.id,
-    this.owner,
-    this.showId,
-    this.show,
-    this.at,
-    this.showUpdatedAt,
-  );
-  final String id;
+  _Post(this.owner, this.show, this.gearName, this.at);
   final String owner;
-  final String showId;
-  final SharedShow show;
+  final Show show;
+  final String? gearName;
   final DateTime at;
-  final DateTime showUpdatedAt;
 }

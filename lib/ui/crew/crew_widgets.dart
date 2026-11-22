@@ -4,6 +4,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../theme/app_theme.dart';
 
+/// What the Crew sees, said once the same way everywhere.
+const kCrewSeesEverything =
+    'Your Crew sees every Show you log. Mark a Show “Keep off the Crew” to '
+    'keep it to yourself.';
+
 /// Avatar fills. All deep shades, so the white initial stays readable.
 const crewColors = [
   StageColors.magentaDeep,

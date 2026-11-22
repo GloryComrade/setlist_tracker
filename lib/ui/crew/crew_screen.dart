@@ -45,7 +45,7 @@ class _CrewScreenState extends ConsumerState<CrewScreen> {
           icon: Icons.groups_outlined,
           title: 'The Crew is coming',
           message:
-              'Sharing Shows with friends turns on with the Backstage Pass. '
+              'Training with friends turns on with the Backstage Pass. '
               'Your Setlist is saved on this device.',
         ),
       );
@@ -55,8 +55,8 @@ class _CrewScreenState extends ConsumerState<CrewScreen> {
           icon: Icons.groups_outlined,
           title: 'Join the Crew',
           message:
-              'Sign in with your Backstage Pass to share Shows with running '
-              'friends and cheer theirs.',
+              'Sign in with your Backstage Pass to see your running friends’ '
+              'Shows and cheer them on.',
           actionLabel: 'Go Backstage',
           actionIcon: Icons.badge_outlined,
           onAction: () => context.go('/backstage'),
@@ -116,7 +116,7 @@ class _FirstRun extends StatelessWidget {
                 children: [
                   SizedBox(height: 6),
                   Text(
-                    'Share Shows with running friends and cheer theirs.',
+                    'See your running friends’ Shows and cheer them on.',
                     style: TextStyle(color: Colors.white, fontSize: 15),
                   ),
                 ],
@@ -149,9 +149,14 @@ class _HowItWorks extends StatelessWidget {
       ),
       (
         Icons.confirmation_number_outlined,
-        'You pick what’s shared',
-        'Turn on Share with your Crew on any Show. Effort, feel and Gear stay '
-            'private.',
+        'Every Show, unless you say so',
+        kCrewSeesEverything,
+      ),
+      (
+        Icons.event_outlined,
+        'Tour together',
+        'See your Crew’s Tours, and book one featuring a friend for the same '
+            'Opening Night.',
       ),
       (
         Icons.celebration_outlined,
@@ -236,10 +241,10 @@ class _CrewHome extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(
                               n == 0
-                                  ? 'Only people you invite see what you share.'
+                                  ? 'Only people you invite see your Shows.'
                                   : '$n ${n == 1 ? 'runner' : 'runners'} in '
-                                        'your Crew. Only they see what you '
-                                        'share.',
+                                        'your Crew. They see every Show you '
+                                        'log.',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
@@ -288,10 +293,10 @@ class _CrewHome extends ConsumerWidget {
                     icon: Icons.confirmation_number_outlined,
                     title: crew.isEmpty ? 'No Shows yet' : 'Quiet night',
                     message: crew.isEmpty
-                        ? 'Shared Shows land here once your Crew is together. '
-                              'Share yours from any Show on your Setlist.'
-                        : 'When your Crew shares a Show, it lands here. Share '
-                              'yours from any Show on your Setlist.',
+                        ? 'Your Crew’s Shows land here once you’re together. '
+                              'Invite a running friend to start.'
+                        : 'When your Crew logs a Show, it lands here. So do '
+                              'yours.',
                   )
                 else ...[
                   const Padding(
@@ -330,8 +335,8 @@ class _CrewCard extends StatelessWidget {
         children: [
           if (crew.isEmpty)
             const Text(
-              'Invite a running friend. When they join, you’ll see the Shows '
-              'they share and they’ll see yours.',
+              'Invite a running friend. When they join, you’ll see each '
+              'other’s Shows and Tours.',
               style: TextStyle(color: StageColors.textMuted, height: 1.4),
             )
           else
@@ -368,9 +373,8 @@ class _MateChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = mate.openingNight == null
-        ? null
-        : daysUntil(mate.openingNight!);
+    final night = mate.tour?.raceDate;
+    final days = night == null ? null : daysUntil(night);
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => showMateSheet(context, mate),
