@@ -5,11 +5,13 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
+import '../../logic/tour_logging.dart';
 import '../../models/enums.dart';
 import '../../models/gear.dart';
 import '../../models/saved_mix.dart';
 import '../../models/show.dart';
 import '../../models/song.dart';
+import '../../models/tour.dart';
 import '../../models/track.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
@@ -22,10 +24,14 @@ import '../widgets/track_editor.dart';
 
 /// "Book a Show": logs a new Show or edits an existing one.
 class ShowFormScreen extends ConsumerStatefulWidget {
-  const ShowFormScreen({super.key, this.showId});
+  const ShowFormScreen({super.key, this.showId, this.plannedShowId});
 
   /// Null for a new Show.
   final String? showId;
+
+  /// A new Show logged for this Planned Show on The Tour. The form starts
+  /// filled in from the plan.
+  final String? plannedShowId;
 
   @override
   ConsumerState<ShowFormScreen> createState() => _ShowFormScreenState();
@@ -36,6 +42,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   bool _loading = true;
   bool _saving = false;
   Show? _existing;
+  String? _plannedShowId;
 
   // The Basics
   Venue? _venue;
@@ -89,6 +96,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     if (id != null) {
       final show = await ref.read(showRepositoryProvider).getById(id);
       if (show != null) _fill(show);
+    } else if (widget.plannedShowId != null) {
+      final tour = await ref.read(activeTourProvider.future);
+      final plan = tour?.showById(widget.plannedShowId!);
+      if (plan != null) _fillFromPlan(plan);
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -122,6 +133,25 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       _temp.text = _numText(lv.weather?.tempF);
       _wind.text = _numText(lv.weather?.windMph);
       _conditions = lv.weather?.conditions;
+    }
+  }
+
+  /// Starts a new Show from the Tour's plan, as if it went exactly to plan.
+  void _fillFromPlan(PlannedShow p) {
+    final planned = showFromPlan(p, id: '', now: DateTime.now());
+    _plannedShowId = p.id;
+    _venue = planned.venue;
+    _date = planned.date;
+    _workout = planned.workoutType;
+    _distance.text = formatMiles(planned.distanceMiles, withUnit: false);
+    if (planned.durationSeconds > 0) {
+      _duration.text = formatDuration(planned.durationSeconds);
+    }
+    _effort = planned.effort;
+    final st = planned.studio;
+    if (st != null) {
+      _tracks = [...st.tracks];
+      _useTrackTotals = st.useTrackTotals;
     }
   }
 
@@ -319,6 +349,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               gpxFileId: _existing?.live?.gpxFileId,
             )
           : null,
+      plannedShowId: _plannedShowId ?? _existing?.plannedShowId,
       createdAt: _existing?.createdAt ?? now,
       updatedAt: now,
     );

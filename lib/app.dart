@@ -7,6 +7,9 @@ import 'ui/backstage/saved_mix_screen.dart';
 import 'ui/setlist/setlist_screen.dart';
 import 'ui/show_detail/show_detail_screen.dart';
 import 'ui/show_form/show_form_screen.dart';
+import 'ui/tour/book_tour_screen.dart';
+import 'ui/tour/planned_show_screen.dart';
+import 'ui/tour/tour_screen.dart';
 
 /// Every screen has a URL, so links work on web and deep links on iOS later.
 final appRouter = GoRouter(
@@ -22,6 +25,11 @@ final appRouter = GoRouter(
         ),
         StatefulShellBranch(
           routes: [
+            GoRoute(path: '/tour', builder: (_, _) => const TourScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
             GoRoute(
               path: '/backstage',
               builder: (_, _) => const BackstageScreen(),
@@ -30,7 +38,17 @@ final appRouter = GoRouter(
         ),
       ],
     ),
-    GoRoute(path: '/show/new', builder: (_, _) => const ShowFormScreen()),
+    GoRoute(
+      path: '/show/new',
+      builder: (_, state) =>
+          ShowFormScreen(plannedShowId: state.uri.queryParameters['plan']),
+    ),
+    GoRoute(path: '/tour/book', builder: (_, _) => const BookTourScreen()),
+    GoRoute(
+      path: '/tour/show/:id',
+      builder: (_, state) =>
+          PlannedShowScreen(plannedShowId: state.pathParameters['id']!),
+    ),
     GoRoute(
       path: '/show/:id',
       builder: (_, state) =>
@@ -78,6 +96,11 @@ class _TabShell extends StatelessWidget {
       icon: Icons.queue_music_outlined,
       active: Icons.queue_music,
       label: 'Setlist',
+    ),
+    (
+      icon: Icons.confirmation_number_outlined,
+      active: Icons.confirmation_number,
+      label: 'Tour',
     ),
     (
       icon: Icons.inventory_2_outlined,

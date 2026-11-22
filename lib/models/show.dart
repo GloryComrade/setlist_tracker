@@ -24,6 +24,7 @@ class Show implements Entity {
     this.song,
     this.studio,
     this.live,
+    this.plannedShowId,
   });
 
   @override
@@ -50,6 +51,9 @@ class Show implements Entity {
 
   /// Set only on Live Shows.
   final LiveDetails? live;
+
+  /// The Tour's Planned Show this run was logged for, if any.
+  final String? plannedShowId;
 
   @override
   final DateTime createdAt;
@@ -79,6 +83,7 @@ class Show implements Entity {
     song: song,
     studio: studio,
     live: live,
+    plannedShowId: plannedShowId,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt ?? this.deletedAt,
@@ -107,6 +112,7 @@ class Show implements Entity {
     'song': song?.toJson(),
     'studio': studio?.toJson(),
     'live': live?.toJson(),
+    'plannedShowId': plannedShowId,
     'createdAt': utcString(createdAt),
     'updatedAt': utcString(updatedAt),
     'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
@@ -141,6 +147,7 @@ class Show implements Entity {
       song: song == null ? null : SongOfTheShow.fromJson(song),
       studio: studio == null ? null : StudioDetails.fromJson(studio),
       live: live == null ? null : LiveDetails.fromJson(live),
+      plannedShowId: asStringOrNull(json['plannedShowId']),
       createdAt: created,
       updatedAt: parseDate(json['updatedAt']) ?? created,
       deletedAt: parseDate(json['deletedAt']),

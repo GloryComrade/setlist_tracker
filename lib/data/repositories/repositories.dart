@@ -8,6 +8,7 @@ library;
 import '../../models/gear.dart';
 import '../../models/saved_mix.dart';
 import '../../models/show.dart';
+import '../../models/tour.dart';
 
 /// Basic save / load / delete for one kind of record.
 abstract class Repository<T> {
@@ -31,3 +32,6 @@ abstract class GearRepository implements Repository<Gear> {}
 
 /// Saved Mixes, sorted by name.
 abstract class SavedMixRepository implements Repository<SavedMix> {}
+
+/// Tours, newest first. The newest one is the active Tour.
+abstract class TourRepository implements Repository<Tour> {}
