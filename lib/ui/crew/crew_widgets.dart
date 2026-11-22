@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/crew/crew_photos.dart';
 import '../../theme/app_theme.dart';
+import 'avatar_badges.dart';
 
 /// What the Crew sees, said once the same way everywhere.
 const kCrewSeesEverything =
@@ -24,42 +27,79 @@ const kCrewSeesShared =
 
 Color crewColor(int i) => crewColors[i.clamp(0, crewColors.length - 1)];
 
-/// A runner's initial on their color.
-class CrewAvatar extends StatelessWidget {
+/// A runner's picture: their photo, else their tour-art badge, else their
+/// initial, on their color.
+class CrewAvatar extends ConsumerWidget {
   const CrewAvatar({
     super.key,
     required this.name,
     required this.color,
     this.size = 40,
+    this.badge,
+    this.photoUrl,
   });
 
   final String name;
   final int color;
   final double size;
 
+  /// A badge id from `kAvatarBadges`, or null.
+  final String? badge;
+
+  /// An `avatarUrl` from the server, or null.
+  final String? photoUrl;
+
   @override
-  Widget build(BuildContext context) {
-    final initial = name.trim().isEmpty
-        ? '?'
-        : name.trim().characters.first.toUpperCase();
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: crewColor(color),
-        shape: BoxShape.circle,
-      ),
-      // The name is always said next to the avatar; the initial is art.
+  Widget build(BuildContext context, WidgetRef ref) {
+    final url = photoUrl;
+    final photo = url == null ? null : ref.watch(crewPhotoProvider(url)).value;
+    final badge = this.badge;
+    final Widget mark;
+    if (badge != null && hasBadgeArt(badge)) {
+      mark = BadgeGlyph(badge, size: size * 0.58);
+    } else {
+      final initial = name.trim().isEmpty
+          ? '?'
+          : name.trim().characters.first.toUpperCase();
+      mark = Text(
+        initial,
+        style: TextStyle(
+          fontFamily: StageFonts.display,
+          fontSize: size * 0.55,
+          height: 1.05,
+          color: Colors.white,
+        ),
+      );
+    }
+    final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 2;
+    return SizedBox.square(
+      dimension: size,
+      // The name is always said next to the avatar; the picture is art.
       child: ExcludeSemantics(
-        child: Text(
-          initial,
-          style: TextStyle(
-            fontFamily: StageFonts.display,
-            fontSize: size * 0.55,
-            height: 1.05,
-            color: Colors.white,
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: crewColor(color),
+                shape: BoxShape.circle,
+              ),
+              child: Center(child: mark),
+            ),
+            // The photo lands on top once it's here; until then (or if it
+            // never comes) the badge or initial shows.
+            if (photo != null)
+              ClipOval(
+                child: Image.memory(
+                  photo,
+                  key: ValueKey(url),
+                  fit: BoxFit.cover,
+                  cacheWidth: (size * dpr).ceil(),
+                  gaplessPlayback: true,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+          ],
         ),
       ),
     );

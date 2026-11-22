@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../../models/crew.dart';
@@ -45,12 +47,7 @@ class CloudflareCrewService implements CrewService {
   static Map<String, Object?> _map(Object? json) =>
       asMap(json) ?? (throw const FormatException('Expected an object'));
 
-  CrewProfile _profile(Map<String, Object?> r) => CrewProfile(
-    userId: '${r['userId']}',
-    stageName: '${r['stageName']}',
-    color: asInt(r['color']),
-    allActivityPending: r['allActivityPending'] == true,
-  );
+  CrewProfile _profile(Map<String, Object?> r) => CrewProfile.fromJson(r);
 
   @override
   Future<CrewProfile?> myProfile() => _guard(() async {
@@ -155,6 +152,54 @@ class CloudflareCrewService implements CrewService {
     () => _api.post(
       '/api/crew/posts/${_seg(post.id)}/report',
       body: {'reason': reason},
+    ),
+  );
+
+  // ---- Profile pictures ----
+
+  @override
+  Future<CrewProfile> saveAvatarBadge(CrewProfile p, String? badge) =>
+      _guard(() async {
+        final r = await _api.put(
+          '/api/crew/profile',
+          body: {
+            'stageName': p.stageName.trim(),
+            'color': p.color,
+            'avatarBadge': badge,
+          },
+        );
+        return _profile(_map(r));
+      });
+
+  @override
+  Future<CrewProfile> uploadAvatar(Uint8List jpeg) => _guard(() async {
+    final Object? r;
+    try {
+      r = await _api.put(
+        '/api/crew/avatar',
+        body: ApiBytes(jpeg, 'image/jpeg'),
+      );
+    } on ApiException catch (e) {
+      if (e.code == 'bad_request') throw const CrewException(badPhoto);
+      rethrow;
+    }
+    return _profile(_map(r));
+  });
+
+  static const badPhoto = 'That photo didn’t work. Try another one.';
+
+  @override
+  Future<CrewProfile> removeAvatar() =>
+      _guard(() async => _profile(_map(await _api.delete('/api/crew/avatar'))));
+
+  @override
+  Future<Uint8List> avatarBytes(String url) => _guard(() => _api.getBytes(url));
+
+  @override
+  Future<void> reportAvatar(String userId, String reason) => _guard(
+    () => _api.post(
+      '/api/crew/report-avatar',
+      body: {'userId': userId, 'reason': reason},
     ),
   );
 }

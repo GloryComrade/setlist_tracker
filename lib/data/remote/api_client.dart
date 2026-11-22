@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:sembast/sembast.dart';
@@ -85,6 +86,13 @@ class ApiUser {
 }
 
 String? _nonEmpty(Object? v) => v is String && v.isNotEmpty ? v : null;
+
+/// A request body sent as it is (a photo), not as JSON.
+class ApiBytes {
+  const ApiBytes(this.bytes, this.contentType);
+  final Uint8List bytes;
+  final String contentType;
+}
 
 /// What every sign-in and refresh ends with.
 class ApiSession {
@@ -243,7 +251,21 @@ class ApiClient {
       uri = uri.replace(queryParameters: {...uri.queryParameters, ...query});
     }
     if (!auth) return _decode(await _request(method, uri, body, null));
+    return _decode(await _authed(method, uri, body));
+  }
 
+  /// Fetches [path] (which may carry its own query) as raw bytes, signed
+  /// in. Throws [ApiException] like [send] when the Worker says no.
+  Future<Uint8List> getBytes(String path) async {
+    final res = await _authed('GET', Uri.parse('$baseUrl$path'), null);
+    if (res.statusCode >= 200 && res.statusCode < 300) return res.bodyBytes;
+    _decode(res);
+    throw ApiException(res.statusCode, 'http_${res.statusCode}');
+  }
+
+  /// Sends a signed-in request, refreshing the token and retrying once
+  /// after a 401.
+  Future<http.Response> _authed(String method, Uri uri, Object? body) async {
     String? token = await _freshToken();
     var res = await _request(method, uri, body, token);
     if (res.statusCode == 401) {
@@ -258,7 +280,7 @@ class ApiClient {
       }
       res = await _request(method, uri, body, token);
     }
-    return _decode(res);
+    return res;
   }
 
   Future<http.Response> _request(
@@ -270,7 +292,10 @@ class ApiClient {
     final req = http.Request(method, uri);
     req.headers['Accept'] = 'application/json';
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
-    if (body != null) {
+    if (body is ApiBytes) {
+      req.headers['Content-Type'] = body.contentType;
+      req.bodyBytes = body.bytes;
+    } else if (body != null) {
       req.headers['Content-Type'] = 'application/json';
       req.body = jsonEncode(body);
     }

@@ -5,6 +5,8 @@
 /// [MemoryCrewService] keeps everything in memory for tests and previews.
 library;
 
+import 'dart:typed_data';
+
 import '../../models/crew.dart';
 
 /// Something the server refused, in words a runner can read.
@@ -53,4 +55,23 @@ abstract class CrewService {
 
   /// Reports a Crew mate's Show to the app's owner and hides it from your feed.
   Future<void> report(CrewPost post, String reason);
+
+  // ---- Profile pictures ----
+
+  /// Saves [badge] (one of `kAvatarBadges`, or null for none) on [profile].
+  Future<CrewProfile> saveAvatarBadge(CrewProfile profile, String? badge);
+
+  /// Uploads your photo: a square JPEG of at most [kMaxAvatarBytes].
+  Future<CrewProfile> uploadAvatar(Uint8List jpeg);
+
+  Future<CrewProfile> removeAvatar();
+
+  /// The photo at an `avatarUrl` (yours or a Crew mate's).
+  Future<Uint8List> avatarBytes(String url);
+
+  /// Reports a Crew mate's photo to the app's owner.
+  Future<void> reportAvatar(String userId, String reason);
 }
+
+/// The biggest photo the server takes.
+const kMaxAvatarBytes = 64 * 1024;

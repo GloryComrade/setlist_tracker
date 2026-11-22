@@ -53,6 +53,8 @@ dependencies:
   health: ^14.0.0
   share_plus: ^13.3.1
   flutter_web_auth_2: ^6.0.0
+  image_picker: ^1.2.4
+  image: ^4.13.1
 
 dev_dependencies:
   flutter_test:

@@ -20,6 +20,15 @@ Uri spotifySearchUri(String title, String artist) {
   );
 }
 
+/// Apple Music's search for "title artist" (opens the Music app on iPhone).
+Uri appleMusicSearchUri(String title, String artist) {
+  final query = [
+    title.trim(),
+    artist.trim(),
+  ].where((s) => s.isNotEmpty).join(' ');
+  return Uri.https('music.apple.com', '/us/search', {'term': query});
+}
+
 final _trackLink = RegExp(
   r'^https?://open\.spotify\.com/(?:intl-[a-z-]+/)?track/([A-Za-z0-9]{22})',
 );

@@ -252,12 +252,8 @@ class _CrewHome extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Crew settings',
-                        color: Colors.white,
-                        onPressed: () => showCrewSettingsSheet(context),
-                        icon: const Icon(Icons.tune),
-                      ),
+                      // Settings (stage name, picture, blocked runners).
+                      ?PosterCornerAction.maybeOf(context),
                     ],
                   ),
                 ),
@@ -457,7 +453,13 @@ class _MateChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 4),
-              CrewAvatar(name: mate.stageName, color: mate.color, size: 48),
+              CrewAvatar(
+                name: mate.stageName,
+                color: mate.color,
+                size: 48,
+                badge: mate.avatarBadge,
+                photoUrl: mate.avatarUrl,
+              ),
               const SizedBox(height: 6),
               Text(
                 mate.stageName,

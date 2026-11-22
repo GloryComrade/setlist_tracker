@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/health/health_import_prefs.dart';
 import '../../data/health/health_source.dart';
 import '../../data/providers.dart';
+import '../../data/settings/app_settings.dart';
 import '../../logic/health_import.dart';
 import '../../logic/show_math.dart';
 import '../../logic/spoken.dart';
@@ -28,7 +29,8 @@ class _AppleHealthCardState extends ConsumerState<AppleHealthCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (!ref.watch(healthSourceProvider).available) {
+    if (!ref.watch(healthSourceProvider).available ||
+        !ref.watch(appSettingsProvider.select((s) => s.healthImport))) {
       return const SizedBox.shrink();
     }
     return Padding(

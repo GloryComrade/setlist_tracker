@@ -1,5 +1,9 @@
 // Made-up Crew mates for tool/crew_preview.dart and tool/store_preview.dart.
 // Not part of the app.
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'package:image/image.dart' as img;
 import 'package:setlist_tracker/data/crew/memory_crew_service.dart';
 import 'package:setlist_tracker/logic/tour_builder.dart';
 import 'package:setlist_tracker/models/crew.dart';
@@ -68,7 +72,13 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
   final crew = MemoryCrewService(me: 'me')
     ..profiles['me'] = const CrewProfile(userId: 'me', stageName: 'Ryan')
     ..addMate(
-      const CrewProfile(userId: 'maya', stageName: 'Maya', color: 2),
+      // A badge.
+      const CrewProfile(
+        userId: 'maya',
+        stageName: 'Maya',
+        color: 2,
+        avatarBadge: 'vinyl',
+      ),
       since: DateTime(2026, 11, 2),
     )
     ..addMate(
@@ -79,6 +89,13 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
       const CrewProfile(userId: 'priya', stageName: 'Priya', color: 3),
       since: DateTime(2026, 11, 15),
     );
+
+  // A photo (a made-up placeholder, not a real person).
+  crew.addPhoto('jordan', placeholderPhoto());
+  // Ryan picked the headphones badge.
+  crew.profiles['me'] = crew.profiles['me']!.copyWith(
+    avatarBadge: 'headphones',
+  );
 
   final maya = _tour(
     today,
@@ -223,4 +240,32 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
     encoreCount: 1,
   );
   return crew;
+}
+
+/// A stand-in profile photo: a soft violet-to-teal ground with a pale head
+/// and shoulders, drawn in code. 256 px JPEG, like the app makes.
+Uint8List placeholderPhoto() {
+  const size = 256;
+  final image = img.Image(width: size, height: size);
+  for (final p in image) {
+    final t = (p.x + p.y) / (2 * size);
+    var r = 109 + (14 - 109) * t;
+    var g = 40 + (116 - 40) * t;
+    var b = 217 + (144 - 217) * t;
+    // Head and shoulders.
+    final head = math.sqrt(math.pow(p.x - 128, 2) + math.pow(p.y - 104, 2));
+    final shoulders = math.sqrt(
+      math.pow((p.x - 128) / 1.5, 2) + math.pow(p.y - 262, 2),
+    );
+    if (head < 46 || shoulders < 86) {
+      r = 236;
+      g = 231;
+      b = 218;
+    }
+    p
+      ..r = r
+      ..g = g
+      ..b = b;
+  }
+  return img.encodeJpg(image, quality: 85);
 }
