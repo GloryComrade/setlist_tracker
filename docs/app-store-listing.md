@@ -48,17 +48,18 @@ Free, in all countries.
 > • Import runs from Apple Health, save Shows back to it, see heart rate
 >
 > SONG OF THE SHOW
-> • Pick the song that carried each run, with album art, from Spotify or
->   Apple Music
+> • Pick the song that carried each run, with album art and a preview,
+>   from Apple Music
 > • Save the exact moment of the song that hit, like "mile 9 second wind"
 > • See every song on The Record Wall, with your top artists, and export
 >   them as a playlist
 >
 > BOOK YOUR TOUR
-> • Answer a few questions and get a 16 to 20 week marathon plan: Rehearsals,
->   On the Road, the Headline Leg and Soundcheck
+> • Answer a few questions and get a plan for a 5K, 10K, half or full
+>   marathon: Rehearsals, On the Road, the Headline Leg and Soundcheck
 > • Paces from your recent race time, Rest Stop weeks, and Headliners that
->   build to 20 miles
+>   build week by week
+> • See every Show and Tour day on The Calendar
 > • Studio Session days come with ready-made treadmill settings
 > • Missed a Show? It's rescheduled across the week, not piled onto
 >   tomorrow
@@ -90,23 +91,34 @@ marathon,running,training plan,run log,treadmill,half marathon,playlist,music,ra
 ```
 
 **Support URL**: `https://setlisttracker.com/support.html`
+
+**License Agreement** (App Information): keep Apple's standard EULA. The
+app's own terms and Crew rules are at `https://setlisttracker.com/terms.html`
+and point to it.
 **Marketing URL** (optional): `https://setlisttracker.com`
 
 **Copyright**: `2026 Ryan Cheng`
 
 ## Screenshots
 
-Upload the 6.9-inch iPhone set (1320 × 2868) from
-`/mnt/project-files/phase6/app-store/` in the project files, in the numbered
-order. App Store Connect scales them down for smaller iPhones.
+Upload the 6.9-inch iPhone set (1320 × 2868), in the numbered order. App
+Store Connect scales them down for smaller iPhones. The app is iPhone only
+(no iPad screenshots needed).
+
+The set in the project files at `build2/app-store/` shows build 2. Retake it
+for build 3 once the flat-colors restyle is merged, so the screenshots match
+the app (Guideline 2.3.3), and add one of Go Live. Tooling:
+`build2/tooling/` (440 × 956 at 3x).
 
 ## Age Rating questionnaire
 
 Answer **None** or **No** to every content question (violence, sexual
 content, gambling, alcohol, medical treatment and so on), except these:
 
-- **User-generated content**: Yes. Friends share run summaries with each
-  other, invite-only, with block and report.
+- **User-generated content**: Yes. Friends share run summaries, stage
+  names and profile photos with each other, invite-only, with block and
+  report. Joining a Crew means agreeing to the Crew rules
+  (`https://setlisttracker.com/terms.html`).
 - **Messaging and chat**: No. There's no free-text chat; shared notes
   appear only on a friend's own Show.
 - **Health or wellness topics**: Yes (fitness training), with no medical
@@ -157,8 +169,11 @@ account.
 > The Crew (friend sharing) is invite-only: The Crew tab → Invite a friend
 > makes a code. To see a shared Show from another runner, use invite code
 > DEMO-CODE (from our test account "Review Crew"), via The Crew → Enter a
-> code. Every shared Show has ⋯ → Report this Show / Block. Reports go to
-> the developer, who reviews them within 24 hours.
+> code. Every shared Show has ⋯ → Report this Show / Block, and a friend's
+> profile photo has Report photo. Joining The Crew means agreeing to the
+> Crew rules (https://setlisttracker.com/terms.html), which have zero
+> tolerance for objectionable content. Each report alerts the developer,
+> who reviews it within 24 hours and removes the content and the account.
 >
 > Apple Health: Backstage → Apple Health → Import runs reads running
 > workouts on request. Shows you book are saved to Health as running

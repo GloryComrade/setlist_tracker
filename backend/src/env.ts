@@ -15,4 +15,6 @@ export interface Env {
   APPLE_PRIVATE_KEY?: string;
   SPOTIFY_CLIENT_ID?: string;
   SPOTIFY_CLIENT_SECRET?: string;
+  /** Discord or Slack webhook told about each new Crew report (optional). */
+  REPORT_WEBHOOK_URL?: string;
 }

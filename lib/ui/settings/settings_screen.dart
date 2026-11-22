@@ -405,6 +405,7 @@ class _AboutSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final privacy = sitePage('privacy.html');
     final support = sitePage('support.html');
+    final terms = sitePage('terms.html');
     return SectionCard(
       title: 'About',
       child: Column(
@@ -421,6 +422,12 @@ class _AboutSection extends StatelessWidget {
               icon: Icons.help_outline,
               label: 'Support',
               onTap: () => openLink(context, support),
+            ),
+          if (terms != null)
+            _LinkRow(
+              icon: Icons.gavel_outlined,
+              label: 'Terms and Crew rules',
+              onTap: () => openLink(context, terms),
             ),
           if (privacy != null || support != null) const SizedBox(height: 12),
           const TourDisclaimer(),

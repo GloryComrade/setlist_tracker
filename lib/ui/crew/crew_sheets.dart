@@ -9,6 +9,8 @@ import '../../data/crew/crew_service.dart';
 import '../../data/sync/sync_controller.dart';
 import '../../models/crew.dart';
 import '../../theme/app_theme.dart';
+import '../settings/settings_screen.dart' show sitePage;
+import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
 import 'crew_post_card.dart';
 import 'crew_widgets.dart';
@@ -324,12 +326,49 @@ class _StageNameFormState extends ConsumerState<StageNameForm> {
           ],
         ),
         const SizedBox(height: 20),
+        // Joining is agreeing to the Crew rules (App Review Guideline 1.2).
+        if (widget.existing == null) ...[
+          const CrewRulesNote(),
+          const SizedBox(height: 12),
+        ],
         Center(
           child: GradientButton(
             label: widget.buttonLabel ?? 'Save stage name',
             onPressed: _saving ? null : _save,
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// "By joining you agree to the Crew rules", above the first Join button.
+class CrewRulesNote extends StatelessWidget {
+  const CrewRulesNote({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final terms = sitePage('terms.html');
+    const style = TextStyle(color: StageColors.textMuted, height: 1.4);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'By joining, you agree to the Crew rules: no harassment, hate, '
+          'nudity or spam. Reports are read within 24 hours, and accounts '
+          'that break the rules are removed.',
+          style: style,
+        ),
+        if (terms != null)
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(44, 44),
+              alignment: Alignment.centerLeft,
+            ),
+            onPressed: () => openLink(context, terms),
+            child: const Text('Read the Crew rules'),
+          ),
       ],
     );
   }
