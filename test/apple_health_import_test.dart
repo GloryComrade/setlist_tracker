@@ -29,6 +29,12 @@ class FakeHealth implements HealthSource {
     if (deny) throw const HealthAccessDenied();
     return runs;
   }
+
+  @override
+  Future<String?> saveRun(HealthRunToSave run) async => null;
+
+  @override
+  Future<HeartRateSummary?> heartRate(DateTime from, DateTime to) async => null;
 }
 
 HealthRun _run(String id, int daysAgo, double miles, {bool? indoor}) {

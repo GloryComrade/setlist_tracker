@@ -1,8 +1,10 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:health/health.dart';
 
+import '../../models/gps_track.dart';
 import 'health_source.dart';
 
 /// Native builds. Only iPhone has Apple Health.
@@ -12,14 +14,25 @@ HealthSource createHealthSource() =>
 const _metersPerMile = 1609.344;
 const _feetPerMeter = 3.28084;
 
-/// Reads running workouts through the `health` plugin (HealthKit). Asks for
-/// read access to workouts only, and never writes.
+/// Apple Health through the `health` plugin (HealthKit): reads running
+/// workouts and heart rate, saves Shows as running workouts with routes.
 class AppleHealthSource implements HealthSource {
   final _health = Health();
   bool _configured = false;
 
   static const _types = [HealthDataType.WORKOUT];
-  static const _readOnly = [HealthDataAccess.READ];
+
+  /// Everything the app asks for, in one Apple permission sheet.
+  static const _askTypes = [
+    HealthDataType.WORKOUT,
+    HealthDataType.HEART_RATE,
+    HealthDataType.WORKOUT_ROUTE,
+  ];
+  static const _askAccess = [
+    HealthDataAccess.READ_WRITE,
+    HealthDataAccess.READ,
+    HealthDataAccess.WRITE,
+  ];
 
   @override
   bool get available => true;
@@ -34,7 +47,10 @@ class AppleHealthSource implements HealthSource {
   Future<bool> requestAccess() async {
     await _configure();
     try {
-      return await _health.requestAuthorization(_types, permissions: _readOnly);
+      return await _health.requestAuthorization(
+        _askTypes,
+        permissions: _askAccess,
+      );
     } on PlatformException {
       return false;
     }
@@ -86,5 +102,89 @@ class AppleHealthSource implements HealthSource {
       );
     }
     return runs;
+  }
+
+  @override
+  Future<String?> saveRun(HealthRunToSave run) async {
+    await _configure();
+    try {
+      final uuid = await _health.writeWorkoutDataUUID(
+        activityType: run.indoor
+            ? HealthWorkoutActivityType.RUNNING_TREADMILL
+            : HealthWorkoutActivityType.RUNNING,
+        start: run.start,
+        end: run.end,
+        totalDistance: (run.distanceMiles * _metersPerMile).round(),
+        metadata: WorkoutMetadata(indoorWorkout: run.indoor),
+        recordingMethod: run.route.isEmpty
+            ? RecordingMethod.manual
+            : RecordingMethod.automatic,
+      );
+      if (uuid == null || uuid.isEmpty || uuid == 'null') return null;
+      if (run.route.length >= 2) await _saveRoute(uuid, run.route);
+      return uuid;
+    } on PlatformException catch (e) {
+      debugPrint('Apple Health save: $e');
+      return null;
+    }
+  }
+
+  Future<void> _saveRoute(String workoutUuid, List<GpsPoint> route) async {
+    String? builder;
+    try {
+      builder = await _health.startWorkoutRoute();
+      // HealthKit takes routes in batches.
+      for (var i = 0; i < route.length; i += 500) {
+        final batch = route.skip(i).take(500);
+        await _health.insertWorkoutRouteData(
+          builderId: builder,
+          locations: [
+            for (final p in batch)
+              WorkoutRouteLocation(
+                latitude: p.lat,
+                longitude: p.lng,
+                timestamp: p.time,
+                altitude: p.altitudeM,
+                horizontalAccuracy: p.accuracyM,
+              ),
+          ],
+        );
+      }
+      await _health.finishWorkoutRoute(
+        builderId: builder,
+        workoutUuid: workoutUuid,
+      );
+    } on PlatformException catch (e) {
+      // The workout is saved either way; only the map is missing.
+      debugPrint('Apple Health route: $e');
+      if (builder != null) {
+        try {
+          await _health.discardWorkoutRoute(builder);
+        } on PlatformException {
+          // Nothing more to do.
+        }
+      }
+    }
+  }
+
+  @override
+  Future<HeartRateSummary?> heartRate(DateTime from, DateTime to) async {
+    await _configure();
+    try {
+      final points = await _health.getHealthDataFromTypes(
+        types: const [HealthDataType.HEART_RATE],
+        startTime: from,
+        endTime: to,
+      );
+      return summarizeHeartRate([
+        for (final p in points)
+          if (p.value case NumericHealthValue(:final numericValue))
+            numericValue,
+      ]);
+    } on HealthPlatformException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
   }
 }

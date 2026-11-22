@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/crew/crew_controller.dart';
+import '../../logic/gps_math.dart';
 import '../../logic/show_math.dart';
 import '../../logic/spoken.dart';
 import '../../models/crew.dart';
 import '../../models/enums.dart';
 import '../../models/show.dart';
 import '../../theme/app_theme.dart';
+import '../live_show/route_poster.dart';
 import '../widgets/album_art.dart';
 import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
@@ -165,6 +167,19 @@ class CrewPostCard extends ConsumerWidget {
                           spacing: 14,
                           runSpacing: 4,
                           children: [for (final f in facts) _FactChip(f)],
+                        ),
+                      ),
+                    ],
+                    if (s.venue == Venue.live &&
+                        s.live?.gps != null &&
+                        !s.live!.gps!.isEmpty) ...[
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: RouteView(
+                          segments: trackSegments(s.live!.gps!),
+                          aspect: 16 / 9,
+                          semanticLabel: 'Route map of this Show',
                         ),
                       ),
                     ],

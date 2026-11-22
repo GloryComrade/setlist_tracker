@@ -44,7 +44,8 @@ Free, in all countries.
 >   save favorite setups as Saved Mixes you can load in one tap
 > • Live Shows: route, surface, elevation and weather
 > • Track the miles on every pair of shoes (your Gear)
-> • Import runs from Apple Health
+> • Go Live: record outdoor runs with GPS, route, splits and pace in mph
+> • Import runs from Apple Health, save Shows back to it, see heart rate
 >
 > SONG OF THE SHOW
 > • Pick the song that carried each run, with album art, from Spotify or
@@ -129,12 +130,13 @@ For every type below:
 | Contact Info | Name | Backstage Pass (from Google or Apple sign-in) |
 | Contact Info | Email Address | Backstage Pass |
 | Health & Fitness | Fitness | Shows, Tours and Gear you log and sync |
-| Health & Fitness | Health | runs imported from Apple Health, stored as Shows |
+| Health & Fitness | Health | runs imported from Apple Health, stored as Shows (heart rate is read on the phone only and not collected) |
+| Location | Precise Location | the GPS route of a Show recorded with Go Live, synced with the Show |
 | User Content | Other User Content | stage name, Shows and Tour your Crew sees, reports |
 | User Content | Photos or Videos | profile photo, if you upload one (only your Crew sees it) |
 | Identifiers | User ID | account id |
 
-Not collected: location, contacts, browsing or search history (song
+Not collected: coarse location, location outside a Go Live run, contacts, browsing or search history (song
 searches aren't stored), usage data, diagnostics, purchases.
 
 ## App Review notes
@@ -158,8 +160,17 @@ account.
 > code. Every shared Show has ⋯ → Report this Show / Block. Reports go to
 > the developer, who reviews them within 24 hours.
 >
-> Apple Health: Backstage → Apple Health → Import runs. The app reads
-> running workouts only, on request, and never writes to Health.
+> Apple Health: Backstage → Apple Health → Import runs reads running
+> workouts on request. Shows you book are saved to Health as running
+> workouts (with the GPS route for Go Live runs); Settings → Apple Health
+> turns this off. A Show's page reads heart rate for that run; it stays on
+> the device and is never sent to our server or shown to friends.
+>
+> Background location: the Setlist tab → Go Live records an outdoor run
+> with GPS. Location is used only between Go Live and End Show, and keeps
+> running with the screen locked so the route and distance are complete
+> (the app asks for "While Using" only; iOS shows the blue location
+> indicator). There is no location use outside a run you started.
 
 Before submitting, sign in on https://setlisttracker.com with a second account, pick the
 stage name "Review Crew", log a Show or two, make an invite (The Crew →

@@ -1,5 +1,6 @@
 import '../logic/show_math.dart';
 import 'enums.dart';
+import 'gps_track.dart';
 import 'json_utils.dart';
 import 'track.dart';
 
@@ -75,6 +76,7 @@ class LiveDetails {
     this.elevationGainFt,
     this.weather,
     this.gpxFileId,
+    this.gps,
   });
 
   final String? routeName;
@@ -85,22 +87,28 @@ class LiveDetails {
   /// Reserved for GPX import (later phase). Always null in Phase 1.
   final String? gpxFileId;
 
+  /// The GPS route, when the Show was recorded with Go Live.
+  final GpsTrack? gps;
+
   Map<String, Object?> toJson() => {
     'routeName': routeName,
     'surface': surface.name,
     'elevationGainFt': elevationGainFt,
     'weather': weather?.toJson(),
     'gpxFileId': gpxFileId,
+    if (gps != null) 'gps': gps!.toJson(),
   };
 
   factory LiveDetails.fromJson(Map<String, Object?> json) {
     final weather = asMap(json['weather']);
+    final gps = asMap(json['gps']);
     return LiveDetails(
       routeName: asStringOrNull(json['routeName']),
       surface: Surface.fromName(asStringOrNull(json['surface'])),
       elevationGainFt: asDoubleOrNull(json['elevationGainFt']),
       weather: weather == null ? null : Weather.fromJson(weather),
       gpxFileId: asStringOrNull(json['gpxFileId']),
+      gps: gps == null ? null : GpsTrack.fromJson(gps),
     );
   }
 }
