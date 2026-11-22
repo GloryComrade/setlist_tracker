@@ -186,7 +186,7 @@ class StageGlow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        const Positioned(
+        Positioned(
           top: 0,
           left: 0,
           right: 0,
@@ -200,7 +200,10 @@ class StageGlow extends StatelessWidget {
                     gradient: RadialGradient(
                       center: Alignment(-0.85, -1.15),
                       radius: 1.1,
-                      colors: [Color(0x38E0157A), Color(0x00E0157A)],
+                      colors: [
+                        StageColors.glowMagenta,
+                        StageColors.magentaDeep.withValues(alpha: 0),
+                      ],
                     ),
                   ),
                 ),
@@ -209,7 +212,10 @@ class StageGlow extends StatelessWidget {
                     gradient: RadialGradient(
                       center: Alignment(0.9, -1.2),
                       radius: 1.0,
-                      colors: [Color(0x406D28D9), Color(0x006D28D9)],
+                      colors: [
+                        StageColors.glowViolet,
+                        StageColors.violetDeep.withValues(alpha: 0),
+                      ],
                     ),
                   ),
                 ),

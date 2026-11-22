@@ -16,6 +16,13 @@ colors:
   orange-deep: "#C2410C"
   violet-deep: "#6D28D9"
   teal-deep: "#0E7490"
+  gold-light: "#FFE9A8"
+  gold-mid: "#F5C451"
+  gold-deep: "#B7791F"
+  gold-ink: "#1A1206"
+  glow-magenta: "#E0157A38"
+  glow-violet: "#6D28D940"
+  spotify-green: "#1DB954"
 typography:
   display:
     fontFamily: "ArchivoCondensed"
@@ -161,11 +168,26 @@ A near-black, slightly violet stage lit by four bright lights, each with a deepe
 - **Spotlight White** (`spotlight-white`): all primary text (17.9:1 on the stage).
 - **House Lights Grey** (`house-lights-grey`): secondary text, micro labels, hints, durations next to bright numbers (6.6:1 or better on every surface).
 
+### Gold Foil
+Gold Records only, never body text on the dark stage (amber does that job).
+- **Gold Light** (`gold-light`, `StageColors.goldLight`) and **Gold Mid** (`gold-mid`, `goldMid`): the bright faces of the foil and the pressed disc.
+- **Gold Deep** (`gold-deep`, `goldDeep`): the shadowed fold of the foil and the halftone dots on it.
+- **Gold Ink** (`gold-ink`, `goldInk`): the only text color on the foil, a near-black brown (15.4:1 on Gold Light, 11.4:1 on Gold Mid, 5.1:1 on Gold Deep). Also the disc grooves.
+
+### Stage Glow
+- **Glow Magenta** (`glow-magenta`, `StageColors.glowMagenta`): Magenta Deep at 22%.
+- **Glow Violet** (`glow-violet`, `StageColors.glowViolet`): Violet Deep at 25%.
+Both fade to their own deep shade at 0% (`magentaDeep.withValues(alpha: 0)`), never to transparent black, so the falloff stays clean. Used only by `StageGlow`.
+
+### Brand
+- **Spotify Green** (`spotify-green`, `StageColors.spotifyGreen`): the one brand color allowed in the app, and only as the fill of the "Open in Spotify" button on the Show page, always with black text (8.1:1). Song picker rows, badges and everything else stay brand-free.
+
 ### Gradients
 All run top-left to bottom-right, built only from the deep shades:
 - **Live gradient:** Magenta Deep → Orange Deep. Live Show badges, ticket stubs, Live posters.
 - **Studio gradient:** Violet Deep → Teal Deep. Studio Session badges, stubs, posters.
 - **Headline gradient:** Violet Deep → Magenta Deep → Orange Deep. Screen poster headers and the primary Gradient Button.
+- **Gold foil** (`goldFoil`): Gold Light → Gold Mid → Gold Deep → Gold Mid (stops 0, 0.35, 0.75, 1). Gold Records only.
 
 ### Named Rules
 **The Two Twins Rule.** Each light has a bright twin and a deep twin. Bright shades (magenta, amber, cyan) are for text and marks on the dark stage. Deep shades are for fills that carry white text. Never put white text on a bright shade or bright text on a deep fill. Every white-on-fill pairing must stay at 4.5:1 or better.
@@ -193,7 +215,7 @@ All run top-left to bottom-right, built only from the deep shades:
 
 **The Poster Numbers Rule.** Distances, paces and durations are shown in the display face with tabular figures (`StageFonts.tabular`) so columns line up. Never set a stat in Archivo at body size when it is the point of the card.
 
-**The Shout Sparingly Rule.** Uppercase is for Archivo Condensed titles and tiny tracked labels only. Body copy, buttons other than the Gradient Button, and helper text stay in sentence case.
+**The Shout Sparingly Rule.** Uppercase is for Archivo Condensed titles and tiny tracked labels only. Body copy, buttons other than the Gradient Button (app bar "Save" included), and helper text stay in sentence case.
 
 ## Layout
 
@@ -207,7 +229,7 @@ Every screen has its own URL (go_router), and detail screens provide a back butt
 
 Flat. Cards, app bars and dialogs have elevation 0. Depth comes from tonal steps (stage black → surface → surface high) plus a 1px outline border, and from the gradients, which read as light rather than shadow. No drop shadows anywhere in the system, including the Gold Records foil.
 
-**Stage Glow.** The four main tabs sit under two soft house lights (`StageGlow` in the tab shell): a Magenta Deep light at 22% from the top-left and a Violet Deep light at 25% from the top-right, each fading to nothing within about 440px. The tab screens keep their own Scaffold transparent so the glow shows through. Detail screens, forms and dialogs stay on plain Stage Black.
+**Stage Glow.** The four main tabs sit under two soft house lights (`StageGlow` in the tab shell): a Magenta Deep light at 22% from the top-left (`glowMagenta`) and a Violet Deep light at 25% from the top-right (`glowViolet`), each fading to nothing within about 440px. The tab screens keep their own Scaffold transparent so the glow shows through. Detail screens, forms and dialogs stay on plain Stage Black.
 
 **The Lit, Not Lifted Rule.** To make something stand out, light it (a gradient fill or a bright accent) instead of raising it with a shadow.
 
@@ -221,7 +243,8 @@ Soft, generous rounding, never sharp corners. Small art and thumbnails 4–8px; 
 Confident and loud for the one main action, quiet for the rest.
 - **Gradient Button (primary):** headline gradient, pill shape (28px), 14px × 24px padding, white Archivo 800 uppercase label tracked +1.2px, optional white leading icon. Disabled is the same button at 50% opacity. One per screen at most.
 - **Filled:** Magenta Deep with white Archivo 700 text.
-- **Text and Outlined:** Neon Magenta text; outlined adds a Stage Outline border.
+- **Text and Outlined:** Neon Magenta text; outlined adds a Stage Outline border. Labels in sentence case, including app bar actions ("Save", not "SAVE").
+- **Open in Spotify:** a filled button in Spotify Green with black text and icon, on the Show page only. The one place a brand color appears.
 - **Floating action:** "Book a Show" extended FAB in Magenta Deep with white Archivo 800 text, only on the Setlist tab.
 
 ### Chips
@@ -312,3 +335,5 @@ Detail screens name the kind of screen ("THE SHOW", "TOUR DATE · WEEK 3", "BOOK
 - **Don't** switch inputs to outlined borders.
 - **Don't** use generic fitness words ("workout log", "run history", "PRs", "shoes") in the UI.
 - **Don't** use more than one Gradient Button on a screen.
+- **Don't** use brand colors; Spotify Green on the Open in Spotify button is the only exception.
+- **Don't** wrap widgets in hover-only `Tooltip`s; they do nothing on iPhone. Give icon-only buttons a `tooltip:` (it is also their screen reader label) and anything else a `Semantics` label.
