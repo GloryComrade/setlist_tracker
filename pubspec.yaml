@@ -76,6 +76,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Venue prints drawn by tool/sample_art.py.
+  assets:
+    - assets/images/
+
   fonts:
     # Bundled so type works offline and on iOS (licenses in assets/fonts).
     # ArchivoCondensed: a static instance of Archivo's variable font at width
