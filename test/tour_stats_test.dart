@@ -32,12 +32,16 @@ void main() {
   final now = DateTime(2026, 11, 22, 9);
 
   test('weekly mileage splits Studio and Live and skips deleted Shows', () {
-    final weeks = weeklyMileage([
-      _show('a', DateTime(2026, 11, 16, 7), miles: 4, venue: Venue.studio),
-      _show('b', DateTime(2026, 11, 21, 7), miles: 10),
-      _show('c', DateTime(2026, 11, 10, 7), miles: 6),
-      _show('d', DateTime(2026, 11, 18, 7), deletedAt: DateTime.utc(2026)),
-    ], now: now, weeks: 3);
+    final weeks = weeklyMileage(
+      [
+        _show('a', DateTime(2026, 11, 16, 7), miles: 4, venue: Venue.studio),
+        _show('b', DateTime(2026, 11, 21, 7), miles: 10),
+        _show('c', DateTime(2026, 11, 10, 7), miles: 6),
+        _show('d', DateTime(2026, 11, 18, 7), deletedAt: DateTime.utc(2026)),
+      ],
+      now: now,
+      weeks: 3,
+    );
     expect(weeks.length, 3);
     expect(weeks.last.weekStart, DateTime(2026, 11, 16));
     expect(weeks.last.studioMiles, 4);

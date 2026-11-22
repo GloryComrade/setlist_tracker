@@ -758,3 +758,98 @@ String _dateText(DateTime d) {
   ];
   return '${months[d.month - 1]} ${d.day}, ${d.year}';
 }
+
+// ---------------------------------------------------------------------------
+// Replanning (used by the Tour Manager)
+// ---------------------------------------------------------------------------
+
+/// Rebuilds [p] as a [type] run of [miles], with fresh detail, target pace,
+/// expected time and Track list. Headliners come back as all-easy (no
+/// Opening Night pace finish), which is what a Rest Stop week wants.
+PlannedShow replanShow(
+  PlannedShow p, {
+  required WorkoutType type,
+  required double miles,
+  TourPaces? paces,
+}) {
+  final w = switch (type) {
+    WorkoutType.long => _headliner(miles, 0),
+    WorkoutType.tempo => _tempo(miles),
+    WorkoutType.intervals => _intervals(miles),
+    WorkoutType.recovery => _easy(miles, recovery: true),
+    WorkoutType.race => _race(),
+    WorkoutType.easy => _easy(miles),
+  };
+  final program = _program(w, paces, p.venue);
+  return PlannedShow(
+    id: p.id,
+    date: p.date,
+    workoutType: w.type,
+    distanceMiles: w.miles,
+    venue: p.venue,
+    title: w.title,
+    detail: w.detail,
+    targetPaceSecondsPerMile: _paceOf(w.mainEffort, paces),
+    plannedDurationSeconds: program.seconds,
+    tracks: program.tracks,
+    rescheduledFrom: p.rescheduledFrom,
+    skipped: p.skipped,
+  );
+}
+
+/// Every pace [secondsFaster] seconds per mile quicker.
+TourPaces fasterPaces(TourPaces p, double secondsFaster) => TourPaces(
+  predictedMarathonSeconds:
+      (p.predictedMarathonSeconds - secondsFaster * kMarathonMiles).round(),
+  marathon: p.marathon - secondsFaster,
+  easySlow: p.easySlow - secondsFaster,
+  easyFast: p.easyFast - secondsFaster,
+  tempo: p.tempo - secondsFaster,
+  interval: p.interval - secondsFaster,
+  source: p.source,
+);
+
+/// [p] with every stretch [secondsFaster] sec/mi quicker. Distances stay the
+/// same; treadmill speeds are re-rounded to the tenth of a mph and Track
+/// times to 5 seconds, just like a freshly built plan.
+PlannedShow speedUpShow(PlannedShow p, double secondsFaster) {
+  final pace = p.targetPaceSecondsPerMile;
+  if (pace == null) return p;
+  if (p.tracks.isEmpty) {
+    final secs = p.plannedDurationSeconds;
+    return p.copyWith(
+      targetPaceSecondsPerMile: pace - secondsFaster,
+      plannedDurationSeconds: secs == null
+          ? null
+          : (secs - secondsFaster * p.distanceMiles).round(),
+    );
+  }
+  final tracks = <Track>[];
+  var clock = 0;
+  for (final t in p.tracks) {
+    final miles = t.distanceMiles;
+    final oldPace = paceFromMph(t.speedMph);
+    if (oldPace == null || miles <= 0) {
+      final len = t.endSeconds - t.startSeconds;
+      tracks.add(t.copyWith(startSeconds: clock, endSeconds: clock + len));
+      clock += len;
+      continue;
+    }
+    final mph = studioMphFor(oldPace - secondsFaster);
+    final secs = (miles / mph * 3600 / 5).round() * 5;
+    tracks.add(
+      Track(
+        startSeconds: clock,
+        endSeconds: clock + secs,
+        speedMph: mph,
+        inclinePercent: t.inclinePercent,
+      ),
+    );
+    clock += secs;
+  }
+  return p.copyWith(
+    targetPaceSecondsPerMile: pace - secondsFaster,
+    plannedDurationSeconds: clock,
+    tracks: tracks,
+  );
+}

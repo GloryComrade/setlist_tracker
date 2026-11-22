@@ -109,7 +109,11 @@ List<HeadlinerPoint> headlinerProgression(
     for (final s in _live(shows))
       if (s.workoutType == WorkoutType.long &&
           (from == null || !_day(s.date).isBefore(from)))
-        HeadlinerPoint(date: _day(s.date), miles: s.distanceMiles, planned: false),
+        HeadlinerPoint(
+          date: _day(s.date),
+          miles: s.distanceMiles,
+          planned: false,
+        ),
   ]..sort((a, b) => a.date.compareTo(b.date));
   final upcoming = <HeadlinerPoint>[
     if (tour != null)
@@ -140,10 +144,8 @@ class VenueSplit {
   int get totalShows => studioShows + liveShows;
 
   /// 0 to 1. Zero when nothing is logged.
-  double get studioMilesShare =>
-      totalMiles == 0 ? 0 : studioMiles / totalMiles;
-  double get studioShowsShare =>
-      totalShows == 0 ? 0 : studioShows / totalShows;
+  double get studioMilesShare => totalMiles == 0 ? 0 : studioMiles / totalMiles;
+  double get studioShowsShare => totalShows == 0 ? 0 : studioShows / totalShows;
 }
 
 VenueSplit venueSplit(Iterable<Show> shows, {DateTime? since}) {
@@ -207,9 +209,11 @@ WeekStreak weekStreak(
   final first = counts.keys.reduce((a, b) => a.isBefore(b) ? a : b);
 
   var longest = 0, run = 0;
-  for (var w = first;
-      !w.isAfter(thisWeek);
-      w = DateTime(w.year, w.month, w.day + 7)) {
+  for (
+    var w = first;
+    !w.isAfter(thisWeek);
+    w = DateTime(w.year, w.month, w.day + 7)
+  ) {
     if (counts_(w)) {
       run++;
       if (run > longest) longest = run;
@@ -239,6 +243,8 @@ int longestDailyStreak(Iterable<Show> shows) {
 /// Days until Opening Night: 0 on race day, negative after it.
 int daysToOpeningNight(Tour tour, DateTime now) =>
     // Built from dates, not Durations, so daylight saving can't shave a day.
-    DateTime.utc(tour.raceDate.year, tour.raceDate.month, tour.raceDate.day)
-        .difference(DateTime.utc(now.year, now.month, now.day))
-        .inDays;
+    DateTime.utc(
+      tour.raceDate.year,
+      tour.raceDate.month,
+      tour.raceDate.day,
+    ).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
