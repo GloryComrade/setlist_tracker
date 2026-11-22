@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/crew/crew_controller.dart';
 import '../../data/crew/crew_service.dart';
 import '../../models/crew.dart';
-import '../../theme/app_theme.dart';
 import '../backstage/backstage_pass_card.dart';
 import '../widgets/stage_widgets.dart';
 import 'crew_sheets.dart';
@@ -164,7 +163,7 @@ class _JoinCrewScreenState extends ConsumerState<JoinCrewScreen> {
               ),
               const SizedBox(height: 24),
               Center(
-                child: GradientButton(
+                child: StageButton(
                   label: 'Join the Crew',
                   icon: Icons.groups,
                   onPressed: _joining ? null : () => _join(p),
@@ -209,7 +208,6 @@ class _InvitePoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PosterSurface(
-      gradient: StageColors.headlineGradient,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

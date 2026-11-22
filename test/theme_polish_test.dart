@@ -70,10 +70,10 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(GradientButton), findsNothing);
+    expect(find.byType(StageButton), findsNothing);
   });
 
-  testWidgets('the halftone paints without errors at any poster size', (
+  testWidgets('the grain paints without errors at any poster size', (
     tester,
   ) async {
     await tester.pumpWidget(_wrap(const PosterHeader(title: 'THE SETLIST')));

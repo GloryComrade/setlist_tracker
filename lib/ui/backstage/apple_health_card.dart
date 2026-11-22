@@ -220,7 +220,7 @@ class _HealthImportSheetState extends ConsumerState<HealthImportSheet> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: GradientButton(
+          child: StageButton(
             label: n == 0
                 ? 'Pick a run to add'
                 : 'Add $n ${n == 1 ? 'Show' : 'Shows'}',

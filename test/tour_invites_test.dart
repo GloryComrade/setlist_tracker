@@ -456,7 +456,7 @@ void main() {
       }
 
       Future<void> next() async {
-        await tester.tap(find.byType(GradientButton));
+        await tester.tap(find.byType(StageButton));
         await tester.pumpAndSettle();
       }
 
@@ -502,7 +502,7 @@ void main() {
       expect(find.text('Featuring'), findsOneWidget);
       await tester.tap(find.text('Jo'));
       await tester.pump();
-      await tester.tap(find.byType(GradientButton));
+      await tester.tap(find.byType(StageButton));
       await _settle(tester);
 
       final saved = (await tester.runAsync(
@@ -525,11 +525,11 @@ void main() {
       await pump(tester, initial: '/tour/book', realBooking: true);
       await tester.tap(find.text('Half Marathon'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(GradientButton));
+      await tester.tap(find.byType(StageButton));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Help me pick'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(GradientButton));
+      await tester.tap(find.byType(StageButton));
       await tester.pumpAndSettle();
       await finishQuiz(tester);
       await tester.ensureVisible(find.text('BRING YOUR CREW'));

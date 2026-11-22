@@ -33,7 +33,7 @@ class SettingsAvatarButton extends ConsumerWidget {
     } else {
       face = const Icon(Icons.person_outline, color: Colors.white, size: 26);
     }
-    // A white ring keeps the picture apart from the gradient behind it.
+    // A white ring keeps the picture apart from the poster behind it.
     final ringed = profile == null && holder == null
         ? face
         : DecoratedBox(

@@ -159,14 +159,12 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the Gradient Button is a button in its own case', (
-    tester,
-  ) async {
+  testWidgets('the Stage Button is a button in its own case', (tester) async {
     final handle = tester.ensureSemantics();
     var taps = 0;
     await _pumpRouted(
       tester,
-      GradientButton(label: 'Join the Crew', onPressed: () => taps++),
+      StageButton(label: 'Join the Crew', onPressed: () => taps++),
     );
     expect(find.text('JOIN THE CREW'), findsOneWidget);
     final node = tester.getSemantics(find.bySemanticsLabel('Join the Crew'));

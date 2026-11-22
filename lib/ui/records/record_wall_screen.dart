@@ -264,12 +264,12 @@ class _WallHeading extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.ios_share, size: 18, color: StageColors.magenta),
+                Icon(Icons.ios_share, size: 18, color: StageColors.amber),
                 SizedBox(width: 6),
                 Text(
                   'Export playlist',
                   style: TextStyle(
-                    color: StageColors.magenta,
+                    color: StageColors.amber,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -416,7 +416,7 @@ void _showRecordSheet(BuildContext context, WallRecord record) {
             for (final show in record.shows)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(iconFor(show.venue), color: StageColors.magenta),
+                leading: Icon(iconFor(show.venue), color: markFor(show.venue)),
                 title: Text(
                   _day.format(show.date),
                   style: const TextStyle(fontWeight: FontWeight.w700),

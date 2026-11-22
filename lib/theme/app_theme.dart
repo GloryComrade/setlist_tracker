@@ -1,10 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Concert-poster palette: a dark stage under magenta, amber and violet lights.
+/// House Lights Down: a dark stage with the house lights off. Surfaces are
+/// flat and high contrast, with a film grain instead of light; Marquee
+/// [amber] is the one accent, and the venue marks ([liveMark],
+/// [studioMark]) are only ever edges, outlines and small marks.
 ///
 /// Fills that carry white text use the deeper "stage" shades so labels stay
 /// readable (4.5:1 or better). The bright shades are for text and marks on the
-/// dark background.
+/// dark background. There are no gradients anywhere in the app.
 class StageColors {
   static const background = Color(0xFF0B0A12);
   static const surface = Color(0xFF16141F);
@@ -20,23 +23,35 @@ class StageColors {
   static const cyan = Color(0xFF22D3EE);
   static const violet = Color(0xFF8B5CF6);
 
+  /// Live Show's venue mark: poster and stub edges, the Venue Badge outline
+  /// and its text (5.9:1 on [surface]), calendar dots, the Live chart series.
+  /// Never a fill bigger than a mark.
+  static const liveMark = magenta;
+
+  /// Studio Session's venue mark, used exactly like [liveMark] (10.1:1 on
+  /// [surface]).
+  static const studioMark = cyan;
+
   /// Deep lights: fills with white text on them.
   static const magentaDeep = Color(0xFFE0157A);
   static const orangeDeep = Color(0xFFC2410C);
   static const violetDeep = Color(0xFF6D28D9);
   static const tealDeep = Color(0xFF0E7490);
 
-  /// Gold foil for Gold Records (the foil gradient, discs and badges). Only
-  /// [goldInk] sits on the foil as text (15.4:1 on [goldLight], 11.4:1 on
-  /// [goldMid], 5.1:1 on [goldDeep]); the foil is never body text on the dark
-  /// stage, [amber] does that job.
+  /// A plain stage grey for the Fine Feel Face (white face 9.3:1).
+  static const feelFine = Color(0xFF4A4458);
+
+  /// Gold for Gold Records (the flat foil, discs and badges). Only [goldInk]
+  /// sits on gold as text (11.4:1 on [goldMid], 15.4:1 on [goldLight], 5.1:1
+  /// on [goldDeep]); gold is never body text on the dark stage, [amber] does
+  /// that job. [goldInk] is also the text on [amber] (10.1:1).
   static const goldLight = Color(0xFFFFE9A8);
   static const goldMid = Color(0xFFF5C451);
 
-  /// The shadowed fold of the foil, also the halftone dots on it.
+  /// The printed halftone dots on the foil, and the disc's grooves.
   static const goldDeep = Color(0xFFB7791F);
 
-  /// Near-black brown ink for text and grooves on the gold foil.
+  /// Near-black brown ink for text on the gold foil and on amber.
   static const goldInk = Color(0xFF1A1206);
 
   /// Spotify's brand green. The one brand color allowed in the app, and only
@@ -44,40 +59,8 @@ class StageColors {
   /// (8.1:1). Never on song picker rows or anywhere else.
   static const spotifyGreen = Color(0xFF1DB954);
 
-  /// Stage Glow house lights behind the main tabs: Magenta Deep at 22% from
-  /// the top-left and Violet Deep at 25% from the top-right, each fading to
-  /// fully transparent.
-  static final glowMagenta = magentaDeep.withValues(alpha: 0.22);
-  static final glowViolet = violetDeep.withValues(alpha: 0.25);
-
-  /// Live Shows: warm stage lights.
-  static const liveGradient = LinearGradient(
-    colors: [magentaDeep, orangeDeep],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  /// Studio Sessions: cool studio lights.
-  static const studioGradient = LinearGradient(
-    colors: [violetDeep, tealDeep],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  /// Screen headers and the main call to action.
-  static const headlineGradient = LinearGradient(
-    colors: [violetDeep, magentaDeep, orangeDeep],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  /// Gold Records foil: light, mid, the deep fold, then mid again.
-  static const goldFoil = LinearGradient(
-    colors: [goldLight, goldMid, goldDeep, goldMid],
-    stops: [0, 0.35, 0.75, 1],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  /// The film grain over the stage and the posters: Spotlight White at 5%.
+  static const grainOpacity = 0.05;
 }
 
 /// Font families bundled in assets/fonts.
@@ -98,13 +81,15 @@ class AppTheme {
   static ThemeData dark() {
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: StageColors.magentaDeep,
+          seedColor: StageColors.amber,
           brightness: Brightness.dark,
         ).copyWith(
-          primary: StageColors.magentaDeep,
-          onPrimary: Colors.white,
+          // Amber is the one accent: every action, selection, focus ring and
+          // progress indicator, with Gold Ink on it (10.1:1).
+          primary: StageColors.amber,
+          onPrimary: StageColors.goldInk,
           secondary: StageColors.amber,
-          onSecondary: Colors.black,
+          onSecondary: StageColors.goldInk,
           tertiary: StageColors.cyan,
           surface: StageColors.surface,
           onSurface: StageColors.text,
@@ -175,7 +160,7 @@ class AppTheme {
         ),
         focusedBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: StageColors.magenta, width: 2),
+          borderSide: const BorderSide(color: StageColors.amber, width: 2),
         ),
         errorBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -187,28 +172,31 @@ class AppTheme {
         ),
         labelStyle: const TextStyle(color: StageColors.textMuted),
         hintStyle: const TextStyle(color: StageColors.textMuted),
-        floatingLabelStyle: const TextStyle(color: StageColors.magenta),
+        floatingLabelStyle: const TextStyle(color: StageColors.amber),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: StageColors.surfaceHigh,
-        selectedColor: StageColors.magentaDeep,
+        selectedColor: StageColors.amber,
         side: const BorderSide(color: StageColors.outline),
-        // Readable label on both the dark (unselected) and pink chip.
+        // Readable label on both the dark (unselected) and amber chip.
         labelStyle: TextStyle(
           fontFamily: StageFonts.body,
           fontWeight: FontWeight.w600,
           color: WidgetStateColor.resolveWith(
             (states) => states.contains(WidgetState.selected)
-                ? Colors.white
+                ? StageColors.goldInk
                 : StageColors.text,
           ),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
+      // Secondary filled buttons are flat Stage Surface High with an outline,
+      // so amber stays the one Stage Button (and selection) on a screen.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: StageColors.magentaDeep,
-          foregroundColor: Colors.white,
+          backgroundColor: StageColors.surfaceHigh,
+          foregroundColor: StageColors.text,
+          side: const BorderSide(color: StageColors.outline),
           textStyle: const TextStyle(
             fontFamily: StageFonts.body,
             fontWeight: FontWeight.w700,
@@ -216,21 +204,34 @@ class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: StageColors.magenta),
+        style: TextButton.styleFrom(foregroundColor: StageColors.amber),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: StageColors.magenta,
+          foregroundColor: StageColors.amber,
           side: const BorderSide(color: StageColors.outline),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: StageColors.magentaDeep,
-        foregroundColor: Colors.white,
+        backgroundColor: StageColors.amber,
+        foregroundColor: StageColors.goldInk,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
       ),
+      // The selected tab sits on an amber pill (amber 30% on the surface)
+      // with its icon in Spotlight White (9.9:1 on the pill).
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: StageColors.surface,
-        indicatorColor: StageColors.magentaDeep.withValues(alpha: 0.35),
+        indicatorColor: StageColors.amber.withValues(alpha: 0.3),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (s) => IconThemeData(
+            color: s.contains(WidgetState.selected)
+                ? StageColors.text
+                : StageColors.textMuted,
+          ),
+        ),
         labelTextStyle: const WidgetStatePropertyAll(
           TextStyle(
             fontFamily: StageFonts.body,
@@ -241,26 +242,46 @@ class AppTheme {
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: StageColors.surface,
-        indicatorColor: StageColors.magentaDeep.withValues(alpha: 0.35),
+        indicatorColor: StageColors.amber.withValues(alpha: 0.3),
+        selectedIconTheme: const IconThemeData(color: StageColors.text),
       ),
       sliderTheme: const SliderThemeData(
-        activeTrackColor: StageColors.magenta,
+        activeTrackColor: StageColors.amber,
         thumbColor: StageColors.amber,
         inactiveTrackColor: StageColors.outline,
-        valueIndicatorColor: StageColors.magentaDeep,
+        valueIndicatorColor: StageColors.amber,
+        valueIndicatorTextStyle: TextStyle(
+          color: StageColors.goldInk,
+          fontWeight: FontWeight.w700,
+        ),
       ),
+      // On: an amber thumb on an amber-tinted track with an amber outline.
       switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? StageColors.amber
+              : StageColors.textMuted,
+        ),
         trackColor: WidgetStateColor.resolveWith(
           (s) => s.contains(WidgetState.selected)
-              ? StageColors.magentaDeep
+              ? StageColors.amber.withValues(alpha: 0.3)
               : StageColors.surfaceHigh,
         ),
+        trackOutlineColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? StageColors.amber
+              : StageColors.textMuted,
+        ),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: StageColors.amber,
+        linearTrackColor: StageColors.surfaceHigh,
       ),
       // The parts the browser would otherwise draw in its own colors.
       textSelectionTheme: TextSelectionThemeData(
-        cursorColor: StageColors.magenta,
-        selectionColor: StageColors.magenta.withValues(alpha: 0.35),
-        selectionHandleColor: StageColors.magenta,
+        cursorColor: StageColors.amber,
+        selectionColor: StageColors.amber.withValues(alpha: 0.35),
+        selectionHandleColor: StageColors.amber,
       ),
       scrollbarTheme: ScrollbarThemeData(
         thumbColor: WidgetStatePropertyAll(
@@ -273,12 +294,12 @@ class AppTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateColor.resolveWith(
             (s) => s.contains(WidgetState.selected)
-                ? StageColors.magentaDeep
+                ? StageColors.amber
                 : Colors.transparent,
           ),
           foregroundColor: WidgetStateColor.resolveWith(
             (s) => s.contains(WidgetState.selected)
-                ? Colors.white
+                ? StageColors.goldInk
                 : StageColors.text,
           ),
           side: const WidgetStatePropertyAll(

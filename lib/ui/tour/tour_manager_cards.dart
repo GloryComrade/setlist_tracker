@@ -94,7 +94,7 @@ class _SuggestionCard extends StatelessWidget {
               Icon(
                 _iconFor(suggestion.kind),
                 size: 22,
-                color: StageColors.magenta,
+                color: StageColors.amber,
               ),
               const SizedBox(width: 12),
               Expanded(

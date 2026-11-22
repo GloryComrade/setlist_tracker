@@ -231,7 +231,7 @@ class _TabShell extends StatelessWidget {
               labelType: NavigationRailLabelType.all,
               leading: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: Icon(Icons.mic, color: StageColors.magenta, size: 32),
+                child: Icon(Icons.mic, color: StageColors.amber, size: 32),
               ),
               destinations: [
                 for (final t in _tabs)
@@ -243,14 +243,14 @@ class _TabShell extends StatelessWidget {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: StageGlow(child: _withSettings(shell))),
+            Expanded(child: StageGrain(child: _withSettings(shell))),
           ],
         ),
       );
     }
     return Scaffold(
       floatingActionButton: fab,
-      body: StageGlow(child: _withSettings(shell)),
+      body: StageGrain(child: _withSettings(shell)),
       // Five tabs share a phone's width, so the labels keep their 100% size
       // at large text sizes (like iOS tab bars) instead of breaking mid-word.
       bottomNavigationBar: MediaQuery.withNoTextScaling(

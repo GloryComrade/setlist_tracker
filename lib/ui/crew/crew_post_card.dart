@@ -519,9 +519,9 @@ class _Stub extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = post.show;
-    return Container(
+    return VenueStub(
+      venue: s.venue,
       width: 64,
-      decoration: BoxDecoration(gradient: gradientFor(s.venue)),
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -543,7 +543,7 @@ class _Stub extends StatelessWidget {
                   ?.copyWith(color: Colors.white),
             ),
           ),
-          Icon(iconFor(s.venue), color: Colors.white, size: 18),
+          Icon(iconFor(s.venue), color: markFor(s.venue), size: 18),
         ],
       ),
     );
@@ -734,7 +734,7 @@ class _EncoreButton extends ConsumerWidget {
         child: TextButton.icon(
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            foregroundColor: on ? StageColors.magenta : StageColors.text,
+            foregroundColor: on ? StageColors.amber : StageColors.text,
           ),
           onPressed: toggle,
           icon: Icon(on ? Icons.celebration : Icons.celebration_outlined),

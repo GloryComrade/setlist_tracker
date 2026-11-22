@@ -527,7 +527,7 @@ class _WaveformPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     const bars = 60;
     final barWidth = size.width / bars;
-    final lit = Paint()..color = StageColors.magenta;
+    final lit = Paint()..color = StageColors.amber;
     final dim = Paint()..color = StageColors.outline;
     for (var i = 0; i < bars; i++) {
       // Fixed pseudo-random heights so the shape doesn't jump around.

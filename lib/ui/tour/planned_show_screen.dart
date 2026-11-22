@@ -49,7 +49,7 @@ class _PlannedShowScreenState extends ConsumerState<PlannedShowScreen> {
         content: const Text('Show logged. Add how it felt and a song?'),
         action: SnackBarAction(
           label: 'Edit',
-          textColor: StageColors.magenta,
+          textColor: StageColors.amber,
           onPressed: () => context.push('/show/${show.id}/edit'),
         ),
       ),
@@ -136,15 +136,14 @@ class _Hero extends StatelessWidget {
             show.workoutType == WorkoutType.recovery ||
             show.workoutType == WorkoutType.long);
     return PosterSurface(
-      gradient: show.isRace
-          ? StageColors.headlineGradient
-          : gradientFor(show.venue),
+      // Opening Night takes the one accent; every other run its venue mark.
+      mark: show.isRace ? StageColors.amber : markFor(show.venue),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              VenueBadge(show.venue, onPoster: true),
+              VenueBadge(show.venue),
               const SizedBox(width: 8),
               if (week.isRestStop)
                 const TourTag('Rest Stop', color: Colors.white),
@@ -316,7 +315,7 @@ class _TrackRow extends StatelessWidget {
             child: Text(
               track.speedMph.toStringAsFixed(1),
               style: style.copyWith(
-                color: fast ? StageColors.magenta : null,
+                color: fast ? StageColors.amber : null,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -370,7 +369,7 @@ class _Actions extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (quick) ...[
-          GradientButton(
+          StageButton(
             label: saving ? 'Logging…' : 'Done as planned',
             icon: Icons.check,
             onPressed: saving ? null : onDone,
@@ -445,11 +444,11 @@ class _LoggedNote extends StatelessWidget {
                   const Text(
                     'View Show',
                     style: TextStyle(
-                      color: StageColors.magenta,
+                      color: StageColors.amber,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: StageColors.magenta),
+                  const Icon(Icons.chevron_right, color: StageColors.amber),
                 ],
               ),
             ),
