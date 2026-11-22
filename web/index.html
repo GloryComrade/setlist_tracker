@@ -10,19 +10,22 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Setlist Tracker: a marathon training log that calls every run a Show</title>
-  <meta name="description" content="Setlist Tracker keeps your marathon training log and writes the plan. Treadmill runs logged Track by Track in mph and incline, one song per run, and a plan built from rules you can read. Free in your browser, no account needed.">
+  <title>Setlist Tracker: a marathon log that calls every run a Show</title>
+  <meta name="description" content="A marathon training log that calls every run a Show. Treadmill runs in mph and incline, one song per run, a plan from rules you can read. Free, no account.">
   <meta name="theme-color" content="#0B0A12">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Setlist Tracker">
   <meta property="og:url" content="https://setlisttracker.com/">
-  <meta property="og:title" content="Setlist Tracker: a marathon training log that calls every run a Show">
+  <meta property="og:title" content="Setlist Tracker: a marathon log that calls every run a Show">
   <meta property="og:description" content="It keeps the log and it writes the plan, from rules you can read. One song per run. Free in your browser, no account needed.">
   <meta property="og:image" content="https://setlisttracker.com/front/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Setlist Tracker. A marathon training log that calls every run a Show.">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Setlist Tracker: a marathon log that calls every run a Show">
+  <meta name="twitter:description" content="It keeps the log and it writes the plan, from rules you can read. One song per run. Free in your browser, no account needed.">
+  <meta name="twitter:image" content="https://setlisttracker.com/front/img/og.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -39,44 +42,80 @@
   -->
   <style id="st-shell">
     html { background: #0B0A12; }
-    html.st-app #front, html.st-app #st-cover { display: none; }
+    html.st-app #front, html.st-app #st-cover, html.st-fail #front { display: none; }
     html.st-wait #front { visibility: hidden; }
     #st-cover { display: none; position: fixed; inset: 0; z-index: 99; background: #0B0A12; color: #F5F3FA;
       align-items: center; justify-content: center; text-align: center; padding: 24px; }
-    html.st-go #st-cover { display: flex; }
+    #st-cover:focus { outline: none; }
+    html.st-go #st-cover, html.st-fail #st-cover, html.st-stall #st-cover { display: flex; }
     #st-cover b { display: block; font: 800 clamp(3rem, 12vw, 6rem)/.9 "ArchivoCondensed", "Archivo", sans-serif; text-transform: uppercase; }
     #st-cover span { display: block; margin-top: 14px; font: 400 1.125rem/1.5 "Archivo", system-ui, sans-serif; color: #A8A3B8; }
+    #st-retry { margin-top: 24px; min-height: 48px; padding: 0 24px; border: 0; border-radius: 3px; background: #FFB020; color: #1A1206;
+      font: 800 1.125rem/1 "Archivo", system-ui, sans-serif; cursor: pointer; }
+    #st-retry[hidden] { display: none; }
+    #st-retry:focus-visible { outline: 3px solid #F5F3FA; outline-offset: 4px; }
   </style>
   <script>
   (function () {
-    var d = document.documentElement, KEY = 'st.opened', booting = false;
+    var d = document.documentElement, KEY = 'st.opened', booting = false, live = false, fromFront = false;
     function flag() { try { localStorage.setItem(KEY, '1'); } catch (e) {} }
     function opened() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
     function isAppHash() { return location.hash.indexOf('#/') === 0; }
+    function byId(id) { return document.getElementById(id); }
+    // Drop the front=1 switch from a query string, keep everything else.
+    function dropFront(q) { q = q.replace(/([?&])front=1(&|$)/, function (m, a, b) { return b ? a : ''; }); return q === '?' ? '' : q; }
     var signIn = /[?&]login_(code|error)=/.test(location.search);
     var installed = false;
     try { installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) {}
     // "/?front=1" always shows the front page, unless the address is a deep link or a sign-in return.
     var force = /[?&]front=1(&|$)/.test(location.search) && !isAppHash() && !signIn;
 
+    // The flag is only set once the app has actually drawn, so a failed load never hides the page next time.
     function done() {
-      ['front', 'st-cover', 'st-css'].forEach(function (id) { var n = document.getElementById(id); if (n) n.remove(); });
+      live = true; flag();
+      ['front', 'st-cover', 'st-css'].forEach(function (id) { var n = byId(id); if (n) n.remove(); });
       d.className = '';
     }
     function failed() {
-      booting = false; d.className = 'st-front';
-      var e = document.getElementById('st-err'); if (e) { e.hidden = false; e.focus(); }
+      if (!booting || live) return;
+      booting = false;
+      if (fromFront) {
+        d.className = 'st-front';
+        var f = byId('front'); if (f) { f.inert = false; f.removeAttribute('aria-hidden'); }
+        var e = byId('st-err'); if (e) { e.hidden = false; e.focus(); }
+      } else {
+        d.className = 'st-fail';
+        var m = byId('st-slow'); if (m) m.textContent = 'The app didn\u2019t load. Check your connection, then try again.';
+        var r = byId('st-retry'); if (r) { r.hidden = false; r.focus(); }
+      }
     }
-    window.stBoot = function () {
-      if (booting) return; booting = true; flag();
+    // A script Flutter adds (main.dart.js) can fail too, not just the bootstrap.
+    window.addEventListener('error', function (e) {
+      var t = e.target;
+      if (t && t.tagName === 'SCRIPT' && /(main\.dart|flutter_bootstrap)\.js/.test(t.src || '')) failed();
+    }, true);
+    document.addEventListener('click', function (e) { if (e.target && e.target.id === 'st-retry') location.reload(); });
+
+    // push: called from the page's own button, so Back should come back to the page.
+    window.stBoot = function (push) {
+      if (booting) return; booting = true;
+      fromFront = d.className === 'st-front';
       // go_router reads the hash: keep an app route, drop a page anchor and the front=1 switch.
       try {
         var keep = isAppHash() ? location.hash : '';
-        var want = location.pathname + (force ? '' : location.search) + keep;
-        if (want !== location.pathname + location.search + location.hash) history.replaceState(null, '', want);
+        var want = location.pathname + dropFront(location.search) + keep;
+        if (push && fromFront) {
+          history.pushState(null, '', want);
+          // Back from the app's first screen lands on the page's entry: show the page again.
+          window.addEventListener('popstate', function () { if (!isAppHash()) location.replace(location.pathname + '?front=1'); });
+        } else if (want !== location.pathname + location.search + location.hash) history.replaceState(null, '', want);
       } catch (e) {}
-      // Flutter pins <body> the moment it starts, so cover a page that is showing.
-      d.className = d.className === 'st-front' ? 'st-front st-go' : 'st-app';
+      // Flutter pins <body> the moment it starts, so cover a page that is showing, and take it out of reach.
+      if (fromFront) {
+        d.className = 'st-front st-go';
+        var f = byId('front'); if (f) { f.inert = true; f.setAttribute('aria-hidden', 'true'); }
+        var c = byId('st-cover'); if (c) try { c.focus(); } catch (e) {}
+      } else d.className = 'st-app';
       window.addEventListener('flutter-first-frame', done, { once: true });
       function inject() {
         var s = document.createElement('script'); s.src = 'flutter_bootstrap.js'; s.async = true; s.onerror = failed;
@@ -84,8 +123,15 @@
       }
       if (document.body) inject(); else document.addEventListener('DOMContentLoaded', inject);
       setTimeout(function () {
-        var n = document.getElementById('st-slow'); if (n) n.textContent = 'Still loading. The first visit on a slow connection can take a while.';
+        if (live || !booting) return;
+        var n = byId('st-slow'); if (n) n.textContent = 'Still loading. The first visit on a slow connection can take a while.';
       }, 15000);
+      setTimeout(function () {
+        if (live || !booting) return;
+        d.classList.add('st-stall');
+        var n = byId('st-slow'); if (n) n.textContent = 'This is taking too long. Check your connection, then try again.';
+        var r = byId('st-retry'); if (r) r.hidden = false;
+      }, 45000);
     };
     window.addEventListener('hashchange', function () { if (isAppHash()) window.stBoot(); });
 
@@ -108,7 +154,7 @@
   <link rel="stylesheet" href="front/front.css" id="st-css">
 </head>
 <body>
-<div id="st-cover" role="status"><p><b>Doors opening</b><span id="st-slow">Loading the app. The first time takes a few seconds.</span></p></div>
+<div id="st-cover" role="status" tabindex="-1"><p><b>Doors opening</b><span id="st-slow">Loading the app. The first time takes a few seconds.</span><button type="button" id="st-retry" hidden>Try again</button></p></div>
 
 <div id="front">
 <a class="skip" href="#top">Skip to the page</a>
@@ -182,8 +228,8 @@
   <div class="col">
     <h2 id="h-notes">Liner notes</h2>
     <p class="dropline">I’m Ryan. I built Setlist Tracker with Claude, and this page is the sleeve it comes in: what’s on the record, how the plan works, and what got left off on purpose.</p>
-    <p>The short version. A marathon takes months of training, and a lot of those months look like the same week with slightly bigger numbers. Calling it a Tour doesn’t make the miles any shorter. It does give each one a date, a name and a song, which turns out to be enough to make you want to fill in the next one.</p>
-    <p>The tour words aren’t decoration. Each one stands for a thing you already know from running, and the app uses them on every screen. Here’s the whole glossary. Nine words and you’re fluent.</p>
+    <p>The short version. A marathon takes months of training, and a lot of those months look like the same week with slightly bigger numbers. Calling it a Tour doesn’t make the miles any shorter. It does give each one a date, a name and a song, which is the whole idea.</p>
+    <p>The tour words aren’t decoration. Each one stands for a thing you already know from running, and the app uses them on every screen. Here are the nine you need first.</p>
   </div>
 
   <aside class="gloss" aria-labelledby="h-gloss">
@@ -200,7 +246,7 @@
       <div><dt>Soundcheck</dt><dd>the taper</dd></div>
       <div><dt>Opening Night</dt><dd>race day, 26.2</dd></div>
     </dl>
-    <p class="hand gloss__note">That’s it. No quiz.</p>
+    <p class="hand gloss__note">Nine to start. No quiz.</p>
   </aside>
 </section>
 
@@ -208,7 +254,7 @@
   <div class="sheet">
     <div class="sheet__head">
       <h2 id="h-tracks">Track listing</h2>
-      <p>Ten things the app does, in the order you’ll meet them. The number on the right is a real one from the app.</p>
+      <p>Ten things the app does, in the order you’ll meet them. Everything on the right is real, from the app.</p>
     </div>
     <div class="sides">
       <div class="side">
@@ -217,7 +263,7 @@
           <li><a href="#show"><span class="no">A1</span><span class="tt"><b>Book a Show</b><i>Distance, time, effort, how it felt. Pace is worked out for you.</i></span><span class="len">9:20 /mi</span></a></li>
           <li><a href="#show"><span class="no">A2</span><span class="tt"><b>Studio Session</b><i>The treadmill, logged Track by Track in mph and incline.</i></span><span class="len">7.6 mph</span></a></li>
           <li><a href="#show"><span class="no">A3</span><span class="tt"><b>Live Show</b><i>Route, surface, feet climbed, and the weather.</i></span><span class="len">410 ft</span></a></li>
-          <li><a href="#show"><span class="no">A4</span><span class="tt"><b>Saved Mix</b><i>A treadmill setup you load in one tap.</i></span><span class="len">1 tap</span></a></li>
+          <li><a href="#show"><span class="no">A4</span><span class="tt"><b>Saved Mix</b><i>Your Tracks, saved, and loaded next time in one tap.</i></span><span class="len">3 Tracks</span></a></li>
           <li><a href="#song"><span class="no">A5</span><span class="tt"><b>Song of the Show</b><i>One song per run, and the 15 seconds of it that mattered.</i></span><span class="len">0:15</span></a></li>
         </ol>
       </div>
@@ -225,14 +271,14 @@
         <h3>Side B <span>the plan, the wall, the friends</span></h3>
         <ol>
           <li><a href="#tour"><span class="no">B1</span><span class="tt"><b>The Tour</b><i>A marathon plan of up to 20 weeks, built from rules you can read.</i></span><span class="len">10%</span></a></li>
-          <li><a href="#manager"><span class="no">B2</span><span class="tt"><b>Tour Manager</b><i>Suggests a change when you miss a Show. Waits for you to tap Apply.</i></span><span class="len">Apply</span></a></li>
+          <li><a href="#manager"><span class="no">B2</span><span class="tt"><b>Tour Manager</b><i>Suggests a change when you miss a Show. Changes nothing until you say yes.</i></span><span class="len">Not now</span></a></li>
           <li><a href="#song"><span class="no">B3</span><span class="tt"><b>The Record Wall</b><i>Every Song of the Show, counted.</i></span><span class="len">×5</span></a></li>
           <li><a href="#records"><span class="no">B4</span><span class="tt"><b>Gold Records</b><i>Your personal records, worked out from the log.</i></span><span class="len">11</span></a></li>
           <li><a href="#crew"><span class="no">B5</span><span class="tt"><b>The Crew</b><i>Friends you invite. Nobody else.</i></span><span class="len">7 days</span></a></li>
         </ol>
       </div>
     </div>
-    <p class="hand hand--ink sheet__note"><span class="ringed">Treadmill runner? Start at A2.<svg aria-hidden="true"><use href="#ring"/></svg></span></p>
+    <p class="hand hand--ink sheet__note"><span class="ringed">Treadmill runner? <span class="nb">Start at A2.</span><svg aria-hidden="true"><use href="#ring"/></svg></span></p>
   </div>
 </section>
 
@@ -254,8 +300,8 @@
 
   <div class="col">
     <h2 id="h-show">The treadmill gets a proper log</h2>
-    <p class="trk">tracks A1 to A4</p>
-    <p>Most logs file a treadmill run as one flat number. Here a treadmill run is a Studio Session, and you log it Track by Track: when each one started and ended, the speed in mph, the incline. The app multiplies it out, so you never type a distance or a pace.</p>
+    <p class="trk">A1 to A4</p>
+    <p>A treadmill run usually goes in a log as one flat number. Here it’s a Studio Session, and you log it Track by Track: when each one started and ended, the speed in mph, the incline. The app multiplies it out, so you never type a distance or a pace.</p>
     <p>When the belt and the arithmetic disagree, flip one switch and type what the treadmill screen said instead. You can name the gym and the treadmill too, for the days it matters that it was the wobbly one.</p>
     <p>Save Tuesday’s intervals once, not every Tuesday. Keep the Tracks as a Saved Mix and load them next time in one tap. Editing a Mix later never rewrites an old Show.</p>
     <p>Outside, it’s a Live Show: the route, whether it was road, trail or track, the feet you climbed, and the weather in °F and mph of wind. Either kind gets an effort from 1 to 10, the shoes you wore, and a verdict somewhere between <em>Rough night</em> and <em>Encore!</em></p>
@@ -266,8 +312,8 @@
 <section class="song wrap" id="song" aria-labelledby="h-song" tabindex="-1">
   <div class="song__copy">
     <h2 id="h-song">One song per Show</h2>
-    <p class="trk">tracks A5 and B3</p>
-    <p>Every Show can carry one song. Search Spotify or Apple Music, or type it in when the search comes up empty. Then pick your part: 15 seconds of the 30-second preview, the bit that got you up the hill. It plays back whenever you open that Show.</p>
+    <p class="trk">A5 and B3</p>
+    <p>Every Show can carry one song. Search Spotify or Apple Music, or type it in when the search comes up empty. Then pick your part: 15 seconds of the 30-second preview, the bit that got you up the hill. It’s one tap away whenever you open that Show.</p>
     <figure class="inset">
       <div class="print print--flat">
         <img src="front/img/song-of-show.webp" width="720" height="363" loading="lazy" alt="The Song of the Show card on a 15 mile Headliner: Lose Yourself by Eminem, with the note “the hill” and an Open in Spotify button.">
@@ -294,7 +340,7 @@
     <h2 id="h-tour"><span>The plan is arithmetic.</span> <span class="amber">You can read every rule.</span></h2>
     <div class="tour__top">
       <div class="col">
-        <p class="trk">tracks B1 and B2</p>
+        <p class="trk">B1 and B2</p>
         <p>The plan is called The Tour. Answer eight questions: the race date, your goal, the miles you run a week right now, your longest run this past month, any recent race, how many days you can run, which day is Headliner day, and treadmill or outside. The app books The Tour, up to 20 weeks, ending on Opening Night.</p>
         <p>There’s no AI in it. It’s a short list of rules, the same ones every time, and I’d rather print them than ask you to trust them.</p>
       </div>
@@ -304,14 +350,14 @@
           <img src="front/img/tour-dates.webp" width="720" height="584" loading="lazy" alt="Tour Dates in the app. Week 2, Rehearsals, 29 miles. Week 3, 30 miles. Week 4, marked Rest Stop, 23.5 miles. Week 5, On the Road, 32.5 miles.">
         </div>
         <figcaption>
-          <p class="hand hand--l" style="--y:56%"><span>Week 4: down from 30 to 23.5, on purpose.</span><svg class="arrow" aria-hidden="true"><use href="#arrow"/></svg></p>
+          <p class="hand hand--l" style="--y:56%"><span>Week 4: 30 down to 23.5. About three quarters, on purpose.</span><svg class="arrow" aria-hidden="true"><use href="#arrow"/></svg></p>
         </figcaption>
       </figure>
     </div>
 
     <dl class="bigrules">
-      <div><dt>10%</dt><dd><b>The most your weekly miles grow</b> from one building week to the next. Same ratio each week, never a jump.</dd></div>
-      <div><dt>Every 4th week</dt><dd><b>is a Rest Stop.</b> Miles drop to 75% of the week before, the Headliner to 70%, and there’s no hard run.</dd></div>
+      <div><dt>10%</dt><dd><b>The most your weekly miles grow</b> from one building week to the next. About the same step each time, never a jump.</dd></div>
+      <div><dt>Every 4th week</dt><dd><b>is a Rest Stop.</b> Miles drop to about three quarters of the week before, the Headliner to about 70%, and there’s no hard run. Runs are rounded to the half mile, so a week lands near those numbers, not exactly on them.</dd></div>
     </dl>
 
     <figure class="chart">
@@ -329,7 +375,7 @@
       </ol>
       <figcaption>
         <p class="hand">Both rules, drawn. The hollow bars are Rest Stops. The tall amber one is the peak week, with a 20 mile Headliner.</p>
-        <p>Weekly miles on the sample Tour in these screenshots: 16 weeks for someone running 28 miles a week now, with a 3:45 goal. The last bar is race week, shakeouts plus the 26.2. A worked example, not your plan. Yours comes out of your own eight answers.</p>
+        <p>Weekly miles on the sample Tour in these screenshots: a 16-week Tour booked from 28 miles a week, with a 3:45 goal. The sample week at the top of the page was set up on its own, so the two don’t line up. The last bar is race week, shakeouts plus the 26.2. A worked example, not your plan. Yours comes out of your own eight answers.</p>
       </figcaption>
     </figure>
 
@@ -337,7 +383,7 @@
       <h3>The rest of the rules</h3>
       <ul>
         <li>The Headliner, your long run, grows by at most <mark>2 miles</mark> in a building week. It tops out at <mark>20 miles</mark>, or 18 if your goal is to finish or you start under 20 miles a week, <mark>3 weeks</mark> before race week when the calendar allows.</li>
-        <li><mark>One hard run a week</mark> once Rehearsals are over, if you run at least three days: a tempo while you’re On the Road, 800 m repeats in the Headline Leg. None in a Rest Stop.</li>
+        <li><mark>One hard run a week</mark> once Rehearsals are over, if you run at least three days: a tempo while you’re On the Road, half-mile repeats in the Headline Leg. None in a Rest Stop.</li>
         <li><mark>2 or 3 weeks</mark> of Soundcheck. Three on Tours of 18 weeks or more, two on shorter ones.</li>
         <li>Paces come from a recent race, by Riegel’s formula: <span class="formula">T<sub>2</sub> = T<sub>1</sub> × (D<sub>2</sub> ÷ D<sub>1</sub>)<sup>1.06</sup></span>. No race? From your goal time, then from your usual easy pace. None of those, and you run the Tour by feel.</li>
         <li>Planned Studio days arrive with the Tracks already written out: <mark>1% incline</mark>, speeds to the nearest <mark>0.1 mph</mark>.</li>
@@ -347,16 +393,16 @@
 
     <div class="manager" id="manager" tabindex="-1">
       <div class="col">
-        <h3>Then life happens, and the Tour Manager leaves a note</h3>
+        <h3>Then you miss a Tuesday, and the Tour Manager leaves a note</h3>
         <p>Miss a Show and it offers to move it to an open day this week. Three easy runs in a row that felt like an 8 or harder, and it offers a lighter week. Running well ahead of plan at low effort, and it offers faster paces, by 15 seconds a mile at most.</p>
-        <p>Every note has two buttons, <em>Apply</em> and <em>Not now</em>. Nothing in your plan changes until you tap the first one. And when a day goes exactly as written, one button, <em>Done as planned</em>, logs it for you, Tracks and all.</p>
+        <p>Every note has two buttons: one that says what it will do, like <em>Move to Thu</em>, <em>Make it a Rest Stop</em> or <em>Update paces</em>, and <em>Not now</em>. Nothing in your plan changes until you tap the first. And when a day goes exactly as written, one button, <em>Done as planned</em>, logs it for you, Tracks and all.</p>
       </div>
-      <p class="aside">If your race is less than 16 weeks out, it still builds and tells you it’s a Short Tour. Less than six, it won’t. The line the app always shows with the plan: <q>General training guidance, not medical advice. If you are injured or have a health condition, check with a doctor or coach first.</q></p>
+      <p class="aside">Under 16 weeks to race day, it still builds and tells you it’s a Short Tour. Under 12, it warns that the race may be too soon. Under six, it won’t build at all. The line the app always shows with the plan: <q>General training guidance, not medical advice. If you are injured or have a health condition, check with a doctor or coach first.</q></p>
     </div>
   </div>
 </section>
 
-<section class="pair wrap" aria-label="Gold Records and The Crew">
+<div class="pair wrap">
   <article class="pair__a" id="records" aria-labelledby="h-records" tabindex="-1">
     <figure class="tip tip--gold" data-tip>
       <div class="print print--corners" style="--r:-3deg">
@@ -366,21 +412,21 @@
         <p class="hand hand--r" style="--y:12%"><svg class="arrow" aria-hidden="true"><use href="#arrow"/></svg><span>The 11th is the marathon itself.</span></p>
       </figcaption>
     </figure>
-    <h2 id="h-records">Eleven Gold Records, none of them saved</h2>
-    <p class="trk">track B4</p>
-    <p>Longest Show, biggest week, fastest 10K, most climbing, steepest Studio Session and six more. They’re worked out fresh from your log every time you look, so fixing a typo in an old Show can’t leave a wrong record hanging on the wall.</p>
+    <h2 id="h-records">Eleven Gold Records, worked out fresh every time</h2>
+    <p class="trk">B4</p>
+    <p>Longest Show, biggest week, fastest 10K, most climbing, steepest Studio Session and six more. None of them are stored: the app reads them off your log each time you look, so fixing a typo in an old Show can’t leave a wrong record hanging on the wall.</p>
     <p class="aside">One footnote, because it’s true: the race-distance records use a Show’s average pace, not your fastest split. The app logs one distance and one time per Show, so that’s all it honestly knows.</p>
   </article>
 
   <article class="pair__b" id="crew" aria-labelledby="h-crew" tabindex="-1">
     <h2 id="h-crew">The Crew: guest list only</h2>
-    <p class="trk">track B5</p>
+    <p class="trk">B5</p>
     <p>The Crew is for the two or three people who’d actually want to know you did 16 miles on Saturday. You invite them with a link or an 8-character code that works for 7 days, and you choose which Shows they get to see. No search, no public profile, no comments, no leaderboard.</p>
     <div class="sees">
       <div>
         <h3>Your Crew sees</h3>
-        <ul><li>The date</li><li>Miles</li><li>Pace and time</li><li>Song of the Show</li><li>Any Gold Records</li></ul>
-        <p>Your notes go along only if you tick <q>Include my notes</q>.</p>
+        <ul><li>The date</li><li>Miles</li><li>Pace and time</li><li>Studio or Live</li><li>The kind of run</li><li>Song of the Show</li><li>Any Gold Records</li></ul>
+        <p>The song goes with its note and the 15 seconds you picked. The notes on the Show itself go along only if you tick <q>Include my notes</q>.</p>
       </div>
       <div class="sees__no">
         <h3>Stays with you</h3>
@@ -388,7 +434,7 @@
         <p>How hard it felt and what was on your feet are nobody’s business.</p>
       </div>
     </div>
-    <p>The only reaction is an Encore. The feed shows how many, never who. Every shared Show has Block and Report. The Crew is the one part that needs a sign-in, called a Backstage Pass.</p>
+    <p>The only reaction is an Encore. The feed shows how many, never who. Every shared Show has Block and Report. The Crew needs a sign-in, called a Backstage Pass. Syncing between devices is the only other thing that does.</p>
     <figure class="tip tip--crew" data-tip>
       <div class="print" style="--r:1.8deg">
         <span class="tape tape--a" aria-hidden="true"></span>
@@ -399,14 +445,13 @@
       </figcaption>
     </figure>
   </article>
-</section>
+</div>
 
 <section class="credits wrap" id="credits" aria-labelledby="h-credits" tabindex="-1">
   <div class="credits__grid">
     <div class="col">
       <h2 id="h-credits">Credits</h2>
-      <p class="dropline">There’s no team page because there’s no team. One person made this, me, with Claude doing a great deal of the typing.</p>
-      <p>You’ll notice there are no quotes from happy runners on this page. The app is new and I don’t have any yet, and I’d rather leave the space empty than fill it with somebody called Sarah M.</p>
+      <p class="dropline">There’s no team page because there’s no team. One person made this, me, with Claude.</p>
       <p>If you run a Tour with it, or it does something strange to your week, <a href="support.html">tell me</a>. That’s the review section, for now.</p>
       <p class="sig">Ryan</p>
     </div>
@@ -415,7 +460,7 @@
       <h3>The small print, at a size you can read</h3>
       <dl class="creditlist">
         <div><dt>Account</dt><dd>None needed. A Backstage Pass (Google or Apple sign-in) is only for syncing between devices and for The Crew.</dd></div>
-        <div><dt>Where your runs live</dt><dd>Without a pass, in this browser and nowhere else. Nothing is sent to a server. The catch: clear your site data and they’re gone.</dd></div>
+        <div><dt>Where your runs live</dt><dd>Without a pass, your runs stay in this browser and nowhere else. The one thing that leaves is a song search, which goes to Spotify (through the app’s server) and to Apple. The catch: clear your site data and your runs are gone.</dd></div>
         <div><dt>With a pass</dt><dd>Stored on Cloudflare so your devices can sync. Delete account erases all of it, on every device, right away.</dd></div>
         <div><dt>Ads, analytics, trackers</dt><dd>None. Your data is never sold or shared for marketing.</dd></div>
         <div><dt>Price</dt><dd>Free to use.</dd></div>
@@ -424,7 +469,7 @@
     </div>
   </div>
 
-  <div class="leftoff" aria-labelledby="h-leftoff">
+  <div class="leftoff">
     <h3 id="h-leftoff">Left off the record</h3>
     <ul>
       <li><s>GPS tracking<svg aria-hidden="true"><use href="#strike"/></svg></s></li>
@@ -460,7 +505,7 @@
   <div class="wrap foot__grid">
     <div class="foot__id">
       <p class="wordmark wordmark--foot">Setlist Tracker</p>
-      <p>Marathon training, on tour. Miles, mph and °F, because that’s what the treadmill says.</p>
+      <p>Marathon training, on tour. Miles and mph, because that’s what the treadmill says, and °F for the weather.</p>
       <p class="foot__stamp">Admit one runner. No refunds on miles already run.</p>
     </div>
     <nav aria-label="Footer">
@@ -494,15 +539,21 @@
   var $ = function (s) { return front.querySelectorAll(s); };
   var each = function (list, fn) { Array.prototype.forEach.call(list, fn); };
 
-  // "Open the app": set the flag, cover the page, boot Flutter. Start the big download a moment early.
-  var hinted = false;
+  // "Open the app": cover the page and boot Flutter. A modified click opens the app in a new tab as usual.
+  // A mouse that rests on the button for a moment starts the big download early (never on touch or Save-Data).
+  var hinted = false, timer = 0, lean = false;
+  try { lean = !!(navigator.connection && navigator.connection.saveData); } catch (e) {}
   function hint() {
-    if (hinted) return; hinted = true;
-    var l = document.createElement('link'); l.rel = 'preload'; l.as = 'script'; l.href = 'main.dart.js'; document.head.appendChild(l);
+    if (hinted || lean) return; hinted = true;
+    var l = document.createElement('link'); l.rel = 'prefetch'; l.as = 'script'; l.href = 'main.dart.js'; document.head.appendChild(l);
   }
   each($('.js-open'), function (a) {
-    a.addEventListener('click', function (e) { e.preventDefault(); window.stBoot(); });
-    a.addEventListener('pointerenter', hint); a.addEventListener('focus', hint); a.addEventListener('touchstart', hint, { passive: true });
+    a.addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault(); window.stBoot(true);
+    });
+    a.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { clearTimeout(timer); timer = setTimeout(hint, 150); } });
+    a.addEventListener('pointerleave', function () { clearTimeout(timer); });
   });
 
   // In-page links. <base href> would turn "#tour" into a navigation to the site root, so scroll by hand.

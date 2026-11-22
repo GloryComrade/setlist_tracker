@@ -359,7 +359,7 @@ The page a first-time visitor sees at setlisttracker.com (`web/index.html`, `web
 - **Imagery is the real app.** Screenshots of the sample data, cropped tight, at slight angles, fixed three ways: tape, photo corners, or laid flat in the column. Every handwritten note points at, or sits under, something that is actually in the picture. Sample data is labelled as sample. No stock photos, icons or emoji.
 - **Marks share one hand.** Arrows, rings, underlines and strike-throughs are inline SVG paths, stroke 2.6, round caps, `currentColor`.
 - **Depth is paper, not light.** Prints and paper carry an offset, soft, black shadow. This is the one place shadows are allowed, because the page is a physical sleeve; the app's no-shadow rule stands inside the app.
-- **Voice.** First person, plain, American spelling, no em-dashes. Every claim has to be true of the shipped app, and the page says what the app does not do. No testimonials until there are real ones. Anything written in Ryan's voice needs his sign-off.
+- **Voice.** First person, plain, American spelling, no em-dashes. Every claim has to be true of the shipped app, and the page says what the app does not do. No testimonials until there are real ones. Anything written in Ryan's voice needs his sign-off. Numbers the plan prints are rounded to the half mile, so rules on the page say "about" where the screenshots would show the rounding.
 - **Motion.** One authored moment: margin notes are written in as a print scrolls into view. Notes are visible by default; the script only arms prints below the fold, and never under `prefers-reduced-motion`.
 
 ### Page-only tokens
@@ -382,7 +382,10 @@ Stage Black, Stage Surface, Stage Outline, Spotlight White, House Lights Grey, M
 - Straight to the app when the address has an app route (`#/...`, which covers Crew invite links), on the return leg of sign-in (`?login_code=` or `?login_error=`), when installed to a home screen, when `localStorage` has `st.opened`, or when the app's `setlist_tracker` database already exists in IndexedDB.
 - Otherwise the front page. If storage cannot be read, the page shows and one tap opens the app.
 - `/?front=1` always shows the front page, for returning visitors and for linking to it.
-- "Open the app" sets the flag, covers the page, loads `flutter_bootstrap.js`, and on Flutter's first frame removes the page and its stylesheet.
+- "Open the app" covers the page (and makes it `inert`), pushes a history entry, and loads `flutter_bootstrap.js`. On Flutter's first frame it sets the flag and removes the page and its stylesheet. The flag waits for that first frame so a failed load never hides the page on the next visit.
+- Back from the app's first screen lands on the page's own history entry, which reloads as `/?front=1`.
+- If `flutter_bootstrap.js` or `main.dart.js` fails to load, the page comes back with an error line (or, for a returning visitor, the cover says so and offers Try again). After 45 seconds with no first frame the cover offers Try again too.
+- A Ctrl, Cmd or Shift click on "Open the app" is left to the browser, so it opens the app in a new tab. Resting a mouse on the button for 150ms prefetches `main.dart.js`; touch, keyboard focus and Save-Data never do.
 
-Every selector in `web/front/front.css` is scoped to `#front` (or `html.st-front`) so nothing leaks into the app. Keep URLs relative: `<base href>` is set per build. In-page links are scrolled by script because of that `<base>`.
+Every selector in `web/front/front.css` is scoped to `#front` (or `html.st-front`) so nothing leaks into the app. Nothing clips the page sideways except the tilted Track listing sheet (`.sheet-zone`), so content that overflows at large text sizes shows up in testing instead of being cut off. Single-column grids use one `minmax(0,1fr)` track for the same reason. Keep URLs relative: `<base href>` is set per build. In-page links are scrolled by script because of that `<base>`.
 
