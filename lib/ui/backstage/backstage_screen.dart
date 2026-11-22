@@ -9,9 +9,11 @@ import '../../models/saved_mix.dart';
 import '../../theme/app_theme.dart';
 import '../records/records_entry.dart';
 import '../widgets/stage_widgets.dart';
+import 'apple_health_card.dart';
+import 'backstage_pass_card.dart';
 import 'gear_dialog.dart';
 
-/// Backstage: Gold Records, The Record Wall, your Gear and your Saved Mixes.
+/// Backstage: your Backstage Pass (account), Apple Health import, Gold Records, The Record Wall, your Gear and your Saved Mixes.
 class BackstageScreen extends ConsumerWidget {
   const BackstageScreen({super.key});
 
@@ -41,6 +43,10 @@ class BackstageScreen extends ConsumerWidget {
                 children: [
                   const PosterHeader(title: 'BACKSTAGE'),
                   const SizedBox(height: 16),
+                  const BackstagePassCard(),
+                  const SizedBox(height: 16),
+                  // iPhone only; takes no space (and its own gap) elsewhere.
+                  const AppleHealthCard(),
                   const RecordsEntry(),
                   const SizedBox(height: 16),
                   SectionCard(

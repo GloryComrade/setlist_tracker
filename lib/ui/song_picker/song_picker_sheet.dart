@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/music/apple_preview.dart';
 import '../../data/music/music_search.dart';
 import '../../models/song.dart';
 import '../../theme/app_theme.dart';
@@ -45,6 +46,9 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
   bool _loading = false;
   String? _error;
   int _requestId = 0;
+
+  /// True while a picked Spotify song looks for Apple's preview clip.
+  bool _findingPreview = false;
 
   /// Set once a song with a preview is tapped: then the sheet shows the
   /// "pick your part" step.
@@ -101,7 +105,16 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
     }
   }
 
-  void _pick(SongResult r) {
+  Future<void> _pick(SongResult picked) async {
+    if (_findingPreview) return;
+    var r = picked;
+    if (r.previewUrl == null && r.source == MusicSource.spotify) {
+      // Spotify has no clips: borrow Apple's 30-second preview.
+      setState(() => _findingPreview = true);
+      r = await ref.read(previewLookupProvider).previewFor(r);
+      if (!mounted) return;
+      setState(() => _findingPreview = false);
+    }
     if (r.previewUrl != null) {
       setState(() => _choosingPartOf = r);
       return;
@@ -111,6 +124,7 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
         title: r.title,
         artist: r.artist,
         albumArtUrl: r.artworkUrl,
+        spotifyUrl: r.spotifyUrl,
         appleMusicUrl: r.appleMusicUrl,
       ),
     );
@@ -181,7 +195,8 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
             ),
           ),
           const SizedBox(height: 8),
-          if (_loading) const LinearProgressIndicator(minHeight: 2),
+          if (_loading || _findingPreview)
+            const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _body()),
           const Divider(height: 1),
           TextButton.icon(
@@ -229,6 +244,15 @@ class _SongPickerState extends ConsumerState<_SongPicker> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: StageColors.textMuted),
+          ),
+          // Where the result came from, kept quiet: plain text, no logos.
+          trailing: Text(
+            r.source == MusicSource.spotify ? 'Spotify' : 'Apple Music',
+            style: const TextStyle(
+              color: StageColors.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         );
       },
@@ -388,6 +412,7 @@ class _PartChooserState extends State<_PartChooser> {
         title: r.title,
         artist: r.artist,
         albumArtUrl: r.artworkUrl,
+        spotifyUrl: r.spotifyUrl,
         appleMusicUrl: r.appleMusicUrl,
         previewUrl: r.previewUrl,
         clipStartSeconds: _start,

@@ -25,6 +25,7 @@ class Show implements Entity {
     this.studio,
     this.live,
     this.plannedShowId,
+    this.healthWorkoutId,
   });
 
   @override
@@ -55,6 +56,10 @@ class Show implements Entity {
   /// The Tour's Planned Show this run was logged for, if any.
   final String? plannedShowId;
 
+  /// The Apple Health workout this Show was imported from, if any. Keeps the
+  /// same run from being imported twice.
+  final String? healthWorkoutId;
+
   @override
   final DateTime createdAt;
   @override
@@ -84,6 +89,7 @@ class Show implements Entity {
     studio: studio,
     live: live,
     plannedShowId: plannedShowId,
+    healthWorkoutId: healthWorkoutId,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt ?? this.deletedAt,
@@ -113,6 +119,7 @@ class Show implements Entity {
     'studio': studio?.toJson(),
     'live': live?.toJson(),
     'plannedShowId': plannedShowId,
+    'healthWorkoutId': healthWorkoutId,
     'createdAt': utcString(createdAt),
     'updatedAt': utcString(updatedAt),
     'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
@@ -148,6 +155,7 @@ class Show implements Entity {
       studio: studio == null ? null : StudioDetails.fromJson(studio),
       live: live == null ? null : LiveDetails.fromJson(live),
       plannedShowId: asStringOrNull(json['plannedShowId']),
+      healthWorkoutId: asStringOrNull(json['healthWorkoutId']),
       createdAt: created,
       updatedAt: parseDate(json['updatedAt']) ?? created,
       deletedAt: parseDate(json['deletedAt']),

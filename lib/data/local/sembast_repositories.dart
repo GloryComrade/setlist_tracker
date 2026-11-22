@@ -7,13 +7,15 @@ import '../../models/saved_mix.dart';
 import '../../models/show.dart';
 import '../../models/tour.dart';
 import '../repositories/repositories.dart';
+import '../sync/sync_stores.dart';
 
 /// Shared Sembast code: each record is stored as its JSON map, keyed by id.
 class _SembastStore<T extends Entity> {
-  _SembastStore(this._db, String storeName, this._fromJson, this._sort)
-    : _store = stringMapStoreFactory.store(storeName);
+  _SembastStore(this._db, this._name, this._fromJson, this._sort)
+    : _store = recordStore(_name);
 
   final Database _db;
+  final String _name;
   final StoreRef<String, Map<String, Object?>> _store;
   final T Function(Map<String, Object?>) _fromJson;
   final int Function(T a, T b) _sort;
@@ -36,16 +38,25 @@ class _SembastStore<T extends Entity> {
 
   Future<void> save(T item) async {
     final json = Map<String, Object?>.from(item.toJson());
-    json['updatedAt'] = utcString(DateTime.now());
-    await _store.record(item.id).put(_db, json);
+    final now = utcString(DateTime.now());
+    json['updatedAt'] = now;
+    // The record and its outbox entry land together, so a change can't be
+    // saved without also being queued for sync.
+    await _db.transaction((txn) async {
+      await _store.record(item.id).put(txn, json);
+      await enqueue(txn, _name, item.id, now);
+    });
   }
 
   Future<void> delete(String id) async {
     final record = _store.record(id);
-    final json = await record.get(_db);
-    if (json == null) return;
-    final now = utcString(DateTime.now());
-    await record.put(_db, {...json, 'deletedAt': now, 'updatedAt': now});
+    await _db.transaction((txn) async {
+      final json = await record.get(txn);
+      if (json == null) return;
+      final now = utcString(DateTime.now());
+      await record.put(txn, {...json, 'deletedAt': now, 'updatedAt': now});
+      await enqueue(txn, _name, id, now);
+    });
   }
 }
 

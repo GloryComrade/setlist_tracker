@@ -28,7 +28,15 @@ jobs:
           cache: true
       - run: flutter pub get
       # The site lives at https://<user>.github.io/<repo>/, so the app's base path is /<repo>/.
-      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      # Backstage Pass settings come from repository variables (Settings >
+      # Secrets and variables > Actions > Variables). Left unset, the site is
+      # local-only. See docs/backstage-pass-setup.md.
+      - run: >-
+          flutter build web --release
+          --base-href "/${{ github.event.repository.name }}/"
+          --dart-define=SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          --dart-define=SUPABASE_KEY=${{ vars.SUPABASE_KEY }}
+          --dart-define=APPLE_SIGN_IN=${{ vars.APPLE_SIGN_IN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web

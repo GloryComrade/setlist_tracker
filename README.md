@@ -13,11 +13,15 @@ Needs Flutter 3.50 or newer (it uses the new `material_ui` package).
 ```
 flutter pub get
 flutter run -d chrome          # web
-flutter test                   # 20 tests: math, storage, and a full "book a Show" flow
+flutter test                   # 133 tests
 flutter build web              # production web build in build/web
 ```
 
 Data is saved in the browser (IndexedDB) on web and in a file on iOS. Clearing site data in the browser erases it.
+
+## On an iPhone
+
+Step-by-step, from `git pull` to the app on your phone (free Apple ID), then Sign in with Apple and TestFlight once you join the Apple Developer Program: [docs/iphone-setup.md](docs/iphone-setup.md). The app icon and web icons are drawn by `tool/app_icon.py` (`python3 tool/app_icon.py`, needs Pillow).
 
 ## Design rules
 
@@ -37,28 +41,39 @@ lib/
   logic/tour_builder.dart       The Tour's plan rules: phases, 10% rule, Rest Stops,
                                 Headliner peak, Riegel paces, treadmill Tracks
   logic/tour_logging.dart       "Done as planned": a Planned Show into a logged Show
+  logic/health_import.dart      Apple Health runs into Shows, skipping repeats
   data/
     repositories/               abstract storage contracts (no storage code)
     local/                      Sembast versions (IndexedDB on web, file on iOS)
-    providers.dart              THE place to swap storage for Supabase/Firebase
+    auth/                       sign-in contract (no Supabase code)
+    health/                     Apple Health reader (iPhone only; web gets a stub)
+    sync/                       outbox, sync engine, sync controller
+    remote/                     Supabase: settings, sign-in, cloud tables
+    providers.dart              wires storage, sign-in and sync together
   ui/
     setlist/                    home: Setlist grouped by week, filters, ticket cards
     show_form/                  Book a Show (new + edit)
     show_detail/                one Show: poster, numbers, Tracks or venue, song
     tour/                       The Tour: setup quiz, Tour Schedule, Planned Show page
-    backstage/                  Gear, Saved Mixes, dialogs
+    backstage/                  Backstage Pass, Apple Health import, Gear, Saved Mixes, dialogs
     widgets/                    shared pieces, including the Track editor
 test/
 ```
 
-## Swapping storage later
+## Accounts and syncing (Backstage Pass)
 
-Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved Mix / Tour ones), then change the providers at the top of `lib/data/providers.dart`. Records already carry UUID ids, `updatedAt`, soft-delete `deletedAt` and `schemaVersion` for syncing.
+Signing in is optional. With Supabase settings passed at build time (`--dart-define=SUPABASE_URL=… --dart-define=SUPABASE_KEY=…`), Backstage offers Google sign-in (and Apple, once switched on) and syncs Shows, Gear, Saved Mixes and Tours. The screens still read the on-device copy, so the app works offline; `lib/data/sync/` copies changes to and from the cloud underneath. Without the settings the app is local-only, as before.
+
+Setup steps: [docs/backstage-pass-setup.md](docs/backstage-pass-setup.md). Database tables and security rules: `supabase/migrations/`.
+
+## Apple Health (iPhone only)
+
+Backstage can bring in runs from Apple Health (Apple Watch or iPhone) as Shows. Read only, never writes to Health, and hidden on web. Details: [docs/apple-health.md](docs/apple-health.md).
 
 ## Notes
 
 - Studio Session distance and time come from the Tracks by default. Switch "Use Track totals" off to type what the treadmill screen said.
-- Song of the Show is picked from a search list with album art (Apple's free iTunes Search, no key needed), or typed in. The Show page has Open in Spotify and Apple Music buttons. A Spotify-powered search needs a server for its API secret, so it waits for Phase 5.
+- Song of the Show is picked from a search list with album art, or typed in. With the Supabase settings and the `spotify-search` Edge Function deployed it searches Spotify (the function holds Spotify's secret) and saves the song's Spotify link; a picked Spotify song borrows Apple's 30-second preview for the clip. Without them, or whenever Spotify can't be reached, it searches Apple's free iTunes catalog. Setup: [docs/spotify-setup.md](docs/spotify-setup.md). The Show page has Open in Spotify and Apple Music buttons.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
 - Fonts (Bebas Neue, Inter) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.
 

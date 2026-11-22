@@ -1,9 +1,9 @@
 /// Song search for the Song of the Show picker.
 ///
-/// The UI only knows [MusicSearch]. Today it is backed by Apple's free iTunes
-/// Search API, which needs no account or key and returns album art. A Spotify
-/// version (which needs a server to hold Spotify's API secret) can replace it
-/// in Phase 5 by changing [musicSearchProvider] only.
+/// The UI only knows [MusicSearch]. With backend settings it searches Spotify
+/// through the `spotify-search` Supabase Edge Function (which holds Spotify's
+/// API secret) and falls back to Apple's free iTunes Search API whenever that
+/// fails. Local-only builds search iTunes directly.
 library;
 
 import 'dart:convert';
@@ -12,7 +12,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../remote/backend_config.dart';
 import 'jsonp.dart';
+import 'spotify_music_search.dart';
+
+/// Which catalog a result came from.
+enum MusicSource { apple, spotify }
 
 /// One search result.
 class SongResult {
@@ -22,17 +27,37 @@ class SongResult {
     this.album,
     this.artworkUrl,
     this.appleMusicUrl,
+    this.spotifyUrl,
     this.previewUrl,
+    this.source = MusicSource.apple,
   });
 
+  final MusicSource source;
   final String title;
   final String artist;
   final String? album;
   final String? artworkUrl;
   final String? appleMusicUrl;
 
-  /// 30-second preview clip (m4a).
+  /// Set on Spotify results (https://open.spotify.com/track/...).
+  final String? spotifyUrl;
+
+  /// 30-second preview clip (m4a). Spotify gives none, so a picked Spotify
+  /// result borrows Apple's (see apple_preview.dart).
   final String? previewUrl;
+
+  /// This result with Apple's links filled in.
+  SongResult withApple({String? appleMusicUrl, String? previewUrl}) =>
+      SongResult(
+        title: title,
+        artist: artist,
+        album: album,
+        artworkUrl: artworkUrl,
+        appleMusicUrl: appleMusicUrl ?? this.appleMusicUrl,
+        spotifyUrl: spotifyUrl,
+        previewUrl: previewUrl ?? this.previewUrl,
+        source: source,
+      );
 }
 
 abstract class MusicSearch {
@@ -98,4 +123,39 @@ List<SongResult> parseITunesResults(String body) {
   return out;
 }
 
-final musicSearchProvider = Provider<MusicSearch>((ref) => ITunesMusicSearch());
+/// Tries [primary]; if it throws (function not deployed, offline, Spotify
+/// down), runs the same query on [fallback] so the picker keeps working.
+class FallbackMusicSearch implements MusicSearch {
+  FallbackMusicSearch(this.primary, this.fallback);
+  final MusicSearch primary;
+  final MusicSearch fallback;
+
+  @override
+  Future<List<SongResult>> search(String query) async {
+    try {
+      return await primary.search(query);
+    } catch (_) {
+      return fallback.search(query);
+    }
+  }
+}
+
+/// Apple's catalog: the fallback search, and where Spotify picks get their
+/// 30-second preview.
+final iTunesSearchProvider = Provider<ITunesMusicSearch>(
+  (ref) => ITunesMusicSearch(),
+);
+
+final musicSearchProvider = Provider<MusicSearch>((ref) {
+  final itunes = ref.watch(iTunesSearchProvider);
+  if (!backendConfigured) return itunes;
+  // Guests get Spotify too: the publishable key is enough to call it.
+  return FallbackMusicSearch(
+    SpotifyMusicSearch(
+      functionsUrl: '$supabaseUrl/functions/v1',
+      apiKey: supabaseKey,
+      accessToken: supabaseAccessToken,
+    ),
+    itunes,
+  );
+});
