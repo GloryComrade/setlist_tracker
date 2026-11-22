@@ -1,0 +1,401 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../../data/crew/crew_controller.dart';
+import '../../models/crew.dart';
+import '../../theme/app_theme.dart';
+import '../widgets/stage_widgets.dart';
+import 'crew_post_card.dart';
+import 'crew_sheets.dart';
+import 'crew_widgets.dart';
+
+/// The Crew tab: your running friends and the Shows they share.
+class CrewScreen extends ConsumerStatefulWidget {
+  const CrewScreen({super.key});
+
+  @override
+  ConsumerState<CrewScreen> createState() => _CrewScreenState();
+}
+
+class _CrewScreenState extends ConsumerState<CrewScreen> {
+  bool _checkedPending = false;
+
+  /// An invite link opened before sign-in waits on the device; pick it up
+  /// once there's a stage name.
+  Future<void> _openPendingInvite() async {
+    _checkedPending = true;
+    final code = await ref
+        .read(crewControllerProvider.notifier)
+        .pendingInvite();
+    if (code != null && mounted) context.push('/crew/join/$code');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(crewControllerProvider);
+    if (!_checkedPending && state.profile != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingInvite());
+    }
+
+    final Widget body;
+    if (!state.available) {
+      body = const _Centered(
+        child: EmptyStage(
+          icon: Icons.groups_outlined,
+          title: 'The Crew is coming',
+          message:
+              'Sharing Shows with friends turns on with the Backstage Pass. '
+              'Your Setlist is saved on this device.',
+        ),
+      );
+    } else if (!state.signedIn) {
+      body = _Centered(
+        child: EmptyStage(
+          icon: Icons.groups_outlined,
+          title: 'Join the Crew',
+          message:
+              'Sign in with your Backstage Pass to share Shows with running '
+              'friends and cheer theirs.',
+          actionLabel: 'Go Backstage',
+          actionIcon: Icons.badge_outlined,
+          onAction: () => context.go('/backstage'),
+        ),
+      );
+    } else if (!state.loaded) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (state.profile == null && state.error != null) {
+      body = _Centered(
+        child: EmptyStage(
+          icon: Icons.cloud_off_outlined,
+          title: 'Can’t reach the Crew',
+          message: state.error!,
+          actionLabel: 'Try again',
+          actionIcon: Icons.refresh,
+          onAction: ref.read(crewControllerProvider.notifier).refresh,
+        ),
+      );
+    } else if (state.profile == null) {
+      body = const _FirstRun();
+    } else {
+      body = _CrewHome(state: state);
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(child: body),
+    );
+  }
+}
+
+class _Centered extends StatelessWidget {
+  const _Centered({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(child: MaxWidth(child: child)),
+  );
+}
+
+/// Signed in, no stage name yet.
+class _FirstRun extends StatelessWidget {
+  const _FirstRun();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        MaxWidth(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const PosterHeader(
+                title: 'THE CREW',
+                children: [
+                  SizedBox(height: 6),
+                  Text(
+                    'Share Shows with running friends and cheer theirs.',
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const SectionCard(
+                title: 'Pick your stage name',
+                child: StageNameForm(buttonLabel: 'Join the Crew'),
+              ),
+              const SizedBox(height: 16),
+              const _HowItWorks(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HowItWorks extends StatelessWidget {
+  const _HowItWorks();
+
+  @override
+  Widget build(BuildContext context) {
+    const rows = [
+      (
+        Icons.link,
+        'Invite only',
+        'Friends join with your link or code. Nobody can search for you.',
+      ),
+      (
+        Icons.confirmation_number_outlined,
+        'You pick what’s shared',
+        'Turn on Share with your Crew on any Show. Effort, feel and Gear stay '
+            'private.',
+      ),
+      (
+        Icons.celebration_outlined,
+        'Encores',
+        'Cheer a friend’s Show with one tap.',
+      ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        children: [
+          for (final (icon, title, body) in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, color: StageColors.magenta, size: 22),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          body,
+                          style: const TextStyle(
+                            color: StageColors.textMuted,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CrewHome extends ConsumerWidget {
+  const _CrewHome({required this.state});
+  final CrewState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final crew = state.crew;
+    final posts = state.posts;
+    final c = ref.read(crewControllerProvider.notifier);
+    final n = crew.length;
+
+    return RefreshIndicator(
+      onRefresh: c.refresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        children: [
+          MaxWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PosterSurface(
+                  gradient: StageColors.headlineGradient,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'THE CREW',
+                              style: Theme.of(context).textTheme.displayMedium
+                                  ?.copyWith(color: Colors.white),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              n == 0
+                                  ? 'Only people you invite see what you share.'
+                                  : '$n ${n == 1 ? 'runner' : 'runners'} in '
+                                        'your Crew. Only they see what you '
+                                        'share.',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Crew settings',
+                        color: Colors.white,
+                        onPressed: () => showCrewSettingsSheet(context),
+                        icon: const Icon(Icons.tune),
+                      ),
+                    ],
+                  ),
+                ),
+                if (state.error != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_outlined,
+                        size: 18,
+                        color: StageColors.amber,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          state.error!,
+                          style: const TextStyle(color: StageColors.textMuted),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: c.refresh,
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _CrewCard(crew: crew),
+                const SizedBox(height: 24),
+                if (posts.isEmpty)
+                  EmptyStage(
+                    icon: Icons.confirmation_number_outlined,
+                    title: crew.isEmpty ? 'No Shows yet' : 'Quiet night',
+                    message: crew.isEmpty
+                        ? 'Shared Shows land here once your Crew is together. '
+                              'Share yours from any Show on your Setlist.'
+                        : 'When your Crew shares a Show, it lands here. Share '
+                              'yours from any Show on your Setlist.',
+                  )
+                else ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(4, 0, 4, 10),
+                    child: CrewLabel('Latest Shows'),
+                  ),
+                  for (final p in posts) ...[
+                    CrewPostCard(post: p),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Who's in the Crew, and the way to add someone.
+class _CrewCard extends StatelessWidget {
+  const _CrewCard({required this.crew});
+  final List<CrewMate> crew;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: 'Your Crew',
+      trailing: TextButton(
+        onPressed: () => showEnterCodeDialog(context),
+        child: const Text('Enter a code'),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (crew.isEmpty)
+            const Text(
+              'Invite a running friend. When they join, you’ll see the Shows '
+              'they share and they’ll see yours.',
+              style: TextStyle(color: StageColors.textMuted, height: 1.4),
+            )
+          else
+            SizedBox(
+              height: 92,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: crew.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (context, i) => _MateChip(mate: crew[i]),
+              ),
+            ),
+          const SizedBox(height: 16),
+          Center(
+            child: GradientButton(
+              label: 'Invite a friend',
+              icon: Icons.person_add_alt_1,
+              onPressed: () => showInviteSheet(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MateChip extends StatelessWidget {
+  const _MateChip({required this.mate});
+  final CrewMate mate;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = mate.openingNight == null
+        ? null
+        : daysUntil(mate.openingNight!);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => showMateSheet(context, mate),
+      child: SizedBox(
+        width: 76,
+        child: Column(
+          children: [
+            const SizedBox(height: 4),
+            CrewAvatar(name: mate.stageName, color: mate.color, size: 48),
+            const SizedBox(height: 6),
+            Text(
+              mate.stageName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            if (days != null && days >= 0)
+              Text(
+                days == 0 ? 'Race day' : '$days days',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: StageColors.amber,
+                  fontFeatures: StageFonts.tabular,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

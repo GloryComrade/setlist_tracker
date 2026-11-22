@@ -4,10 +4,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'data/crew/crew_controller.dart';
 import 'data/local/open_database.dart';
 import 'data/providers.dart';
 import 'data/remote/backend_config.dart';
 import 'data/remote/supabase_auth_service.dart';
+import 'data/remote/supabase_crew_service.dart';
 import 'data/remote/supabase_remote_store.dart';
 
 Future<void> main() async {
@@ -24,6 +26,7 @@ Future<void> main() async {
     overrides.addAll([
       authServiceProvider.overrideWithValue(SupabaseAuthService(client)),
       remoteStoreProvider.overrideWithValue(SupabaseRemoteStore(client)),
+      crewServiceProvider.overrideWithValue(SupabaseCrewService(client)),
     ]);
   }
   runApp(ProviderScope(overrides: overrides, child: const SetlistApp()));
