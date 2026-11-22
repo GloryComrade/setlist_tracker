@@ -11,9 +11,14 @@ import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
 import 'tour_widgets.dart';
 
-/// "Book The Tour": the 8-question setup quiz, then a preview to confirm.
+/// "Book The Tour": the 9-question setup quiz, then a preview to confirm.
+///
+/// With [featuring], the race (distance and date) comes from a Crew
+/// friend's Tour, so the two Tours are co-headlined.
 class BookTourScreen extends ConsumerStatefulWidget {
-  const BookTourScreen({super.key});
+  const BookTourScreen({super.key, this.featuring});
+
+  final TourFeaturing? featuring;
 
   @override
   ConsumerState<BookTourScreen> createState() => _BookTourScreenState();
@@ -38,10 +43,12 @@ const _weekdayNames = [
 ];
 
 class _BookTourScreenState extends ConsumerState<BookTourScreen> {
-  static const _questions = 8;
+  static const _questions = 9;
   int _step = 0;
   bool _saving = false;
 
+  /// Opening Night's distance.
+  RaceDistance? _distance;
   DateTime? _raceDate;
   bool _suggested = false;
   TourGoal? _goal;
@@ -59,6 +66,11 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   @override
   void initState() {
     super.initState();
+    final f = widget.featuring;
+    if (f != null) {
+      _distance = f.raceDistance;
+      _raceDate = f.raceDate;
+    }
     for (final c in [_goalTime, _weekly, _longest, _raceTime, _easyPace]) {
       c.addListener(() => setState(() {}));
     }
@@ -75,12 +87,16 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   double? _num(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.'));
 
-  /// "3:45" means 3 h 45 min for a marathon goal.
-  int? _marathonTime(String text) {
+  bool get _shortRace =>
+      _distance == RaceDistance.fiveK || _distance == RaceDistance.tenK;
+
+  /// "3:45" means 3 h 45 min for a half or marathon goal; "24:30" means
+  /// 24 min 30 s for a 5K or 10K.
+  int? _goalTimeOf(String text) {
     final t = text.trim();
     if (t.isEmpty) return null;
     final parts = t.split(':');
-    if (parts.length == 2) {
+    if (parts.length == 2 && !_shortRace) {
       final h = int.tryParse(parts[0]);
       final m = int.tryParse(parts[1]);
       if (h == null || m == null || m >= 60) return null;
@@ -89,11 +105,31 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
     return parseDuration(t);
   }
 
+  /// Sensible finish times for each distance, in seconds.
+  (int, int) get _goalRange => switch (_distance) {
+    RaceDistance.fiveK => (12 * 60, 90 * 60),
+    RaceDistance.tenK => (25 * 60, 150 * 60),
+    RaceDistance.half => (60 * 60, 270 * 60),
+    _ => (2 * 3600, 8 * 3600),
+  };
+
+  String get _goalRangeText => switch (_distance) {
+    RaceDistance.fiveK => 'Use mm:ss, between 12:00 and 1:30:00',
+    RaceDistance.tenK => 'Use mm:ss, between 25:00 and 2:30:00',
+    RaceDistance.half => 'Use h:mm, between 1:00 and 4:30',
+    _ => 'Use h:mm, between 2:00 and 8:00',
+  };
+
   int? get _goalSeconds {
-    final s = _marathonTime(_goalTime.text);
-    // Between 2 and 8 hours.
-    return s != null && s >= 7200 && s <= 8 * 3600 ? s : null;
+    final s = _goalTimeOf(_goalTime.text);
+    final (lo, hi) = _goalRange;
+    return s != null && s >= lo && s <= hi ? s : null;
   }
+
+  /// Boston qualifiers are for marathons only.
+  List<TourGoal> get _goals => _distance == RaceDistance.marathon
+      ? TourGoal.values
+      : [TourGoal.finish, TourGoal.targetTime];
 
   int? get _raceSeconds {
     final s = parseDuration(_raceTime.text);
@@ -108,21 +144,25 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   }
 
   bool get _stepValid => switch (_step) {
-    0 => _raceDate != null,
-    1 => _goal == TourGoal.finish || (_goal != null && _goalSeconds != null),
-    2 => (_num(_weekly) ?? -1) >= 0 && (_num(_weekly) ?? 0) <= 150,
-    3 => (_num(_longest) ?? -1) >= 0 && (_num(_longest) ?? 0) <= 30,
-    4 =>
+    0 => _distance != null,
+    1 => _raceDate != null,
+    2 =>
+      _goal == TourGoal.finish ||
+          (_goal != null && _goals.contains(_goal) && _goalSeconds != null),
+    3 => (_num(_weekly) ?? -1) >= 0 && (_num(_weekly) ?? 0) <= 150,
+    4 => (_num(_longest) ?? -1) >= 0 && (_num(_longest) ?? 0) <= 30,
+    5 =>
       (_noRace &&
               (_easyPace.text.trim().isEmpty || _easyPaceSeconds != null)) ||
           (_raceDistance != null && _raceSeconds != null),
-    5 || 6 => true,
-    7 => _venue != null,
+    6 || 7 => true,
+    8 => _venue != null,
     _ => true,
   };
 
   TourSetup get _setup => TourSetup(
     raceDate: _raceDate!,
+    raceDistance: _distance!,
     goal: _goal!,
     goalTimeSeconds: _goal == TourGoal.finish ? null : _goalSeconds,
     currentWeeklyMiles: _num(_weekly) ?? 0,
@@ -154,7 +194,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
     final now = today();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _raceDate ?? suggestedRaceDate(now),
+      initialDate: _raceDate ?? suggestedRaceDate(now, _distance!),
       firstDate: now,
       lastDate: DateTime(now.year + 2, now.month, now.day),
       helpText: 'Opening Night',
@@ -167,7 +207,33 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
     }
   }
 
-  Future<void> _book(Tour tour) async {
+  /// Still the friend's race? Changing the date or distance books a solo
+  /// Tour instead.
+  bool get _stillFeaturing {
+    final f = widget.featuring;
+    return f != null &&
+        _raceDate != null &&
+        _distance != null &&
+        sameRace(f.raceDate, f.raceDistance, _raceDate!, _distance!);
+  }
+
+  Future<void> _book(Tour built) async {
+    final f = widget.featuring;
+    final tour = _stillFeaturing
+        ? Tour(
+            id: built.id,
+            name: f!.tourName?.trim().isNotEmpty == true
+                ? f.tourName!
+                : built.name,
+            setup: built.setup,
+            paces: built.paces,
+            weeks: built.weeks,
+            warnings: built.warnings,
+            featuring: (userId: f.userId, stageName: f.stageName),
+            createdAt: built.createdAt,
+            updatedAt: built.updatedAt,
+          )
+        : built;
     setState(() => _saving = true);
     try {
       await ref.read(tourRepositoryProvider).save(tour);
@@ -223,34 +289,43 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   }
 
   Widget _question() {
+    final raceWord = switch (_distance) {
+      RaceDistance.marathon || null => 'marathon',
+      final d => d.label,
+    };
     final (title, hint, body) = switch (_step) {
       0 => (
+        'Pick your show',
+        'The race you\'re training for on Opening Night.',
+        _distanceStep(),
+      ),
+      1 => (
         'When is Opening Night?',
-        'Your marathon date. Not signed up yet? We can pick one for you.',
+        'Your $raceWord date. Not signed up yet? We can pick one for you.',
         _dateStep(),
       ),
-      1 => ('What is the goal?', null, _goalStep()),
-      2 => (
+      2 => ('What is the goal?', null, _goalStep()),
+      3 => (
         'How many miles a week right now?',
         'Your average over the last month.',
         _numberStep(_weekly, 'Miles per week', 'mi / week'),
       ),
-      3 => (
+      4 => (
         'Longest run in the past month?',
         'Your Headliners start from here.',
         _numberStep(_longest, 'Longest run', 'mi'),
       ),
-      4 => (
+      5 => (
         'Any recent race?',
         'A race from the last 3 months sets your paces most accurately.',
         _raceStep(),
       ),
-      5 => (
+      6 => (
         'How many days a week can you run?',
         'Light weeks may use fewer days.',
         _daysStep(),
       ),
-      6 => (
+      7 => (
         'Which day is Headliner day?',
         'The long run, usually on a weekend.',
         _headlinerStep(),
@@ -288,6 +363,16 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                 ),
               ],
               const SizedBox(height: 28),
+              if (widget.featuring != null && _step <= 1) ...[
+                _FeaturingNote(
+                  featuring: widget.featuring!,
+                  matches:
+                      _stillFeaturing ||
+                      (_step == 0 &&
+                          _distance == widget.featuring!.raceDistance),
+                ),
+                const SizedBox(height: 16),
+              ],
               body,
               if (_step == 0) ...[
                 const SizedBox(height: 36),
@@ -317,6 +402,35 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
 
   // ---- Steps ----
 
+  Widget _distanceStep() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final d in RaceDistance.values) ...[
+        _ChoiceTile(
+          icon: switch (d) {
+            RaceDistance.fiveK => Icons.bolt_outlined,
+            RaceDistance.tenK => Icons.directions_run,
+            RaceDistance.half => Icons.landscape_outlined,
+            RaceDistance.marathon => Icons.emoji_events_outlined,
+          },
+          title: d.label,
+          subtitle: () {
+            final r = rulesFor(d);
+            return '${d.milesText} · ${r.idealMinWeeks} to ${r.maxWeeks} '
+                'week Tour';
+          }(),
+          selected: _distance == d,
+          onTap: () => setState(() {
+            if (_distance != d && _suggested) _raceDate = null;
+            _distance = d;
+            if (!_goals.contains(_goal)) _goal = null;
+          }),
+        ),
+        const SizedBox(height: 10),
+      ],
+    ],
+  );
+
   Widget _dateStep() {
     final d = _raceDate;
     final weeks = d == null ? null : weeksUntil(today(), d);
@@ -337,12 +451,14 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
           icon: Icons.auto_awesome,
           title: 'Help me pick',
           subtitle: _suggested
-              ? 'Picked ${formatLongDate(_raceDate!)}: 18 weeks out, the '
+              ? 'Picked ${formatLongDate(_raceDate!)}: '
+                    '${rulesFor(_distance!).suggestWeeks} weeks out, the '
                     'sweet spot for a full Tour. Look for a race near it.'
-              : 'Suggests a Sunday about 18 weeks out',
+              : 'Suggests a Sunday about '
+                    '${rulesFor(_distance!).suggestWeeks} weeks out',
           selected: _suggested,
           onTap: () => setState(() {
-            _raceDate = suggestedRaceDate(today());
+            _raceDate = suggestedRaceDate(today(), _distance!);
             _suggested = true;
           }),
         ),
@@ -355,7 +471,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final g in TourGoal.values) ...[
+        for (final g in _goals) ...[
           _ChoiceTile(
             icon: switch (g) {
               TourGoal.finish => Icons.flag_outlined,
@@ -382,12 +498,19 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
               labelText: _goal == TourGoal.bq
                   ? 'Your BQ standard'
                   : 'Goal finish time',
-              hintText: '3:45',
+              hintText: switch (_distance) {
+                RaceDistance.fiveK => '24:30',
+                RaceDistance.tenK => '52:00',
+                RaceDistance.half => '1:55',
+                _ => '3:45',
+              },
               helperText: _goal == TourGoal.bq
                   ? 'The Boston qualifying time for your age group, as h:mm'
+                  : _shortRace
+                  ? 'Minutes and seconds, as mm:ss'
                   : 'Hours and minutes, as h:mm',
               errorText: _goalTime.text.isNotEmpty && _goalSeconds == null
-                  ? 'Use h:mm, between 2:00 and 8:00'
+                  ? _goalRangeText
                   : null,
             ),
             onSubmitted: (_) => _next(),
@@ -562,6 +685,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
+                        '${tour.setup.raceDistance.label} · '
                         '${tour.weeks.length} weeks · '
                         '${formatShortDate(tour.startDate)} to '
                         '${formatLongDate(tour.raceDate)}',
@@ -578,7 +702,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                           _WhiteStat(
                             'Peak week',
                             formatMiles(
-                              // Race week's 26.2 isn't a training week.
+                              // Race week isn't a training week.
                               tour.weeks
                                   .take(tour.weeks.length - 1)
                                   .map((w) => w.plannedMiles)
@@ -601,9 +725,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                           if (tour.paces != null)
                             _WhiteStat(
                               'Predicted',
-                              formatDuration(
-                                tour.paces!.predictedMarathonSeconds,
-                              ),
+                              formatDuration(tour.paces!.predictedRaceSeconds),
                             ),
                         ],
                       ),
@@ -890,4 +1012,50 @@ class _BigChoice extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// "Booking a Tour featuring Sam" above the race questions.
+class _FeaturingNote extends StatelessWidget {
+  const _FeaturingNote({required this.featuring, required this.matches});
+
+  final TourFeaturing featuring;
+
+  /// False once the runner picks a different race.
+  final bool matches;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = featuring;
+    final race = '${f.raceDistance.label} on ${formatLongDate(f.raceDate)}';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: StageColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: matches ? StageColors.amber : StageColors.outline,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            matches ? Icons.groups_2_outlined : Icons.info_outline,
+            color: matches ? StageColors.amber : StageColors.textMuted,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              matches
+                  ? 'Booking a Tour featuring ${f.stageName}: $race. You '
+                        'answer the fitness questions for your own plan.'
+                  : '${f.stageName} is running the $race. Pick that race '
+                        'to co-headline, or keep going for a solo Tour.',
+              style: const TextStyle(fontSize: 15, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

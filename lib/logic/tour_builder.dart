@@ -579,8 +579,7 @@ class TourBuilder {
           'Starting from under ${formatMiles(lightBase)} a week (or no run '
               'over ${formatMiles(lightLong)}) makes $raceWord a big jump. '
               'A finish-only goal fits best.',
-          serious:
-              weeks < rules.idealMinWeeks || setup.goal != TourGoal.finish,
+          serious: weeks < rules.idealMinWeeks || setup.goal != TourGoal.finish,
         ),
       );
     }
@@ -974,7 +973,7 @@ PlannedShow replanShow(
     WorkoutType.tempo => _tempo(miles),
     WorkoutType.intervals => _intervals(miles),
     WorkoutType.recovery => _easy(miles, recovery: true),
-    WorkoutType.race => _race(),
+    WorkoutType.race => _race(_distanceNear(p.distanceMiles)),
     WorkoutType.easy => _easy(miles),
   };
   final program = _program(w, paces, p.venue);
@@ -994,6 +993,12 @@ PlannedShow replanShow(
   );
 }
 
+/// The race distance closest to [miles] (a planned Opening Night keeps its
+/// race's miles).
+RaceDistance _distanceNear(double miles) => RaceDistance.values.reduce(
+  (a, b) => (a.miles - miles).abs() <= (b.miles - miles).abs() ? a : b,
+);
+
 /// Every pace [secondsFaster] seconds per mile quicker.
 TourPaces fasterPaces(TourPaces p, double secondsFaster) => TourPaces(
   predictedMarathonSeconds:
@@ -1004,6 +1009,8 @@ TourPaces fasterPaces(TourPaces p, double secondsFaster) => TourPaces(
   tempo: p.tempo - secondsFaster,
   interval: p.interval - secondsFaster,
   source: p.source,
+  race: p.race - secondsFaster,
+  raceMiles: p.raceMiles,
 );
 
 /// [p] with every stretch [secondsFaster] sec/mi quicker. Distances stay the

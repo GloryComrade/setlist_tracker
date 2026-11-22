@@ -39,8 +39,10 @@ enum RaceDistance {
   final String milesText;
 
   /// Tours made before distances existed are marathons.
-  static RaceDistance fromName(String? name) => RaceDistance.values
-      .firstWhere((v) => v.name == name, orElse: () => RaceDistance.marathon);
+  static RaceDistance fromName(String? name) => RaceDistance.values.firstWhere(
+    (v) => v.name == name,
+    orElse: () => RaceDistance.marathon,
+  );
 }
 
 /// Base / Build / Peak / Taper.

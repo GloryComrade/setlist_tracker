@@ -436,7 +436,7 @@ TourSuggestion? fasterPacesSuggestion(
           at: at,
           note:
               'Paces ${shift.round()} sec/mi faster; predicted Opening Night '
-              '${formatDuration(updated.predictedMarathonSeconds)}',
+              '${formatDuration(updated.predictedRaceSeconds)}',
         ),
       ],
     ),

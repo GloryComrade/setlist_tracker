@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import 'data/crew/crew_controller.dart';
 import 'data/sync/sync_controller.dart';
+import 'models/tour.dart';
 import 'theme/app_theme.dart';
 import 'ui/backstage/backstage_screen.dart';
 import 'ui/backstage/saved_mix_screen.dart';
@@ -67,7 +69,11 @@ final appRouter = GoRouter(
       builder: (_, state) =>
           JoinCrewScreen(code: state.pathParameters['code']!),
     ),
-    GoRoute(path: '/tour/book', builder: (_, _) => const BookTourScreen()),
+    GoRoute(
+      path: '/tour/book',
+      builder: (_, state) =>
+          BookTourScreen(featuring: state.extra as TourFeaturing?),
+    ),
     GoRoute(
       path: '/tour/show/:id',
       builder: (_, state) =>
