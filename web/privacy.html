@@ -3,86 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="How Setlist Tracker handles your data.">
-<meta name="theme-color" content="#0B0A12">
 <title>Privacy · Setlist Tracker</title>
+<meta name="description" content="How Setlist Tracker handles your data: what it keeps, where it lives, who handles it, and how to delete it.">
+<meta name="theme-color" content="#0B0A12">
 <link rel="icon" type="image/png" href="favicon.png">
-<style>
-  @font-face { font-family: "ArchivoCondensed"; src: url("assets/assets/fonts/Archivo-ExtraCondensedBlack.ttf") format("truetype"); font-weight: 800; font-display: swap; }
-  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-400.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-700.ttf") format("truetype"); font-weight: 700; font-display: swap; }
-  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-800.ttf") format("truetype"); font-weight: 800; font-display: swap; }
-  :root { color-scheme: dark; --stage: #0B0A12; --surface: #16141F; --outline: #3A3548; --text: #F5F3FA; --muted: #A8A3B8; --magenta: #FF4D9A; --amber: #FFB020; }
-  * { box-sizing: border-box; }
-  html { background: var(--stage); }
-  body { margin: 0; color: var(--text); font: 400 16px/1.6 "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: radial-gradient(ellipse 70% 420px at 0% 0%, rgba(224,21,122,.22), transparent 70%),
-                radial-gradient(ellipse 60% 420px at 100% 0%, rgba(109,40,217,.25), transparent 70%), var(--stage);
-    background-repeat: no-repeat; min-height: 100vh; }
-  ::selection { background: #E0157A; color: #fff; }
-  main { max-width: 680px; margin: 0 auto; padding: 24px 16px 64px; }
-  .poster { border-radius: 20px; padding: 28px 24px; color: #fff;
-    background: linear-gradient(135deg, #6D28D9, #E0157A 55%, #C2410C); }
-  .poster h1 { font: 800 clamp(44px, 11vw, 64px)/1 "ArchivoCondensed", Impact, sans-serif; letter-spacing: 0; text-transform: uppercase; margin: 0 0 10px; }
-  .poster p { margin: 0; max-width: 46ch; }
-  h2 { font: 800 28px/1.05 "ArchivoCondensed", Impact, sans-serif; letter-spacing: 0; text-transform: uppercase; margin: 40px 0 10px; }
-  p, li { color: var(--text); }
-  .muted { color: var(--muted); }
-  ul { padding-left: 20px; }
-  li { margin: 6px 0; }
-  a { color: var(--magenta); text-underline-offset: 3px; }
-  a:focus-visible { outline: 2px solid var(--magenta); outline-offset: 3px; border-radius: 4px; }
-  .card { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 16px 18px; margin: 14px 0; }
-  .card strong { display: block; font-weight: 700; }
-  .label { font: 800 12px/1 "Archivo", sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
-  footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
-  .back { display: inline-block; margin: 0 0 18px; font-weight: 700; text-decoration: none; }
-</style>
+<link rel="preload" href="front/fonts/Archivo-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="front/fonts/Archivo-ExtraCondensedBlack.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="front/pages.css">
 </head>
 <body>
-<main>
-<a class="back" href="./">← Back to Setlist Tracker</a>
-<header class="poster">
-  <h1>PRIVACY</h1>
-  <p>Your training is yours. Here is everything Setlist Tracker keeps, where it lives, and how to delete it.</p>
+<a class="skip" href="#top">Skip to the policy</a>
+
+<svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
+  <symbol id="arrow" viewBox="0 0 72 34"><path d="M3 25 C 16 6, 40 3, 64 15" /><path d="M52 6.5 L65.5 15.5 L50.5 22" /></symbol>
+  <symbol id="scribble" viewBox="0 0 220 14" preserveAspectRatio="none"><path d="M3 8 C 40 2, 70 12, 108 6 S 180 3, 217 8" /></symbol>
+  <symbol id="tick" viewBox="0 0 22 18"><path d="M2 10 C 4.5 11.5, 6.5 13.5, 8 16 C 11 9.5, 15 5, 20 2" /></symbol>
+</svg>
+
+<header class="mast wrap">
+  <a class="wordmark" href="./?front=1">Setlist Tracker</a>
+  <nav aria-label="Site">
+    <a href="./?front=1">Front page</a>
+    <a href="privacy.html" aria-current="page">Privacy</a>
+    <a href="support.html">Support</a>
+  </nav>
+  <a class="btn btn--small" href="./#/setlist">Open the app</a>
 </header>
-<p class="label" style="margin-top:20px">Effective November 22, 2026</p>
 
-<h2>Without an account</h2>
-<p>Everything you log (Shows, Tours, Gear, Saved Mixes, songs) stays on your device. Nothing is sent to us.</p>
+<main id="top" tabindex="-1">
 
-<h2>With a Backstage Pass</h2>
-<p>When you sign in with Google or Apple, we keep:</p>
-<ul>
-  <li><strong>Your account:</strong> your name and email from Google or Apple, and an id for that sign-in. If you use Hide My Email with Apple, we only see Apple’s relay address.</li>
-  <li><strong>Your training:</strong> the Shows, Tours, Gear and Saved Mixes you log, so they sync between your devices.</li>
-  <li><strong>The Crew, only if you use it:</strong> your stage name and avatar color, the people in your Crew, Encores, invite codes, blocks, and reports you send.</li>
-</ul>
-<p>The people in your Crew see your training: every Show you log (date, distance, time, pace, effort, feel, notes, Tracks, route, weather, Gear and Song of the Show), your Gold Records and your current Tour. Mark a Show “Keep off the Crew” and it stays yours. If you were in a Crew before November 22, 2026, your Crew keeps seeing only the Shows you shared until you say OK to this in the app. After that, Shows you logged before that moment stay hidden unless you had shared them. Leave or block someone and they stop seeing it. Nobody outside your Crew can find you or see your training.</p>
+<section class="opening wrap" aria-labelledby="h-top">
+  <div>
+    <h1 id="h-top"><span class="under">Privacy<svg class="mark" aria-hidden="true"><use href="#scribble"/></svg></span></h1>
+    <p class="lede">Your training is yours. This is everything Setlist Tracker keeps, where it lives, who else touches it, and how to delete it. Short enough to read before your next easy run.</p>
+    <p class="stamp">Effective November 22, 2026</p>
+    <p><a class="back" href="./?front=1"><svg class="mark" aria-hidden="true"><use href="#arrow"/></svg><span>Back to the front page</span></a></p>
+  </div>
 
-<h2>Apple Health</h2>
-<p>On iPhone you can import runs from Apple Health. The app only reads running workouts, only when you tap Import, and never writes to Health. Imported runs become Shows like any other. Health data is never used for advertising or sold.</p>
+  <aside class="paper" aria-labelledby="h-short">
+    <span class="tape" aria-hidden="true"></span>
+    <h2 id="h-short">The short version</h2>
+    <ul>
+      <li><svg class="mark" aria-hidden="true"><use href="#tick"/></svg><b>No account?</b> Your log stays on your device.</li>
+      <li><svg class="mark" aria-hidden="true"><use href="#tick"/></svg><b>Backstage Pass?</b> It’s stored on Cloudflare so your devices can sync.</li>
+      <li><svg class="mark" aria-hidden="true"><use href="#tick"/></svg>Your Crew sees the Shows you log, unless you mark one Keep off the Crew.</li>
+      <li><svg class="mark" aria-hidden="true"><use href="#tick"/></svg>No ads, no analytics, nothing sold.</li>
+      <li><svg class="mark" aria-hidden="true"><use href="#tick"/></svg>Delete account erases it all, right away.</li>
+    </ul>
+    <p class="hand hand--ink">The long version is below, and it’s the one that counts.</p>
+  </aside>
+</section>
 
-<h2>Song search</h2>
-<p>When you search for a Song of the Show, the words you type go to Spotify (through our server) and to Apple’s music catalog to find matches. No account details go with them.</p>
+<div class="body wrap">
 
-<h2>Who handles the data</h2>
-<ul>
-  <li><strong>Cloudflare</strong> hosts the website and stores the data above.</li>
-  <li><strong>Google</strong> and <strong>Apple</strong> handle sign-in.</li>
-  <li><strong>Spotify</strong> and <strong>Apple</strong> answer song searches.</li>
-</ul>
-<p>There are no ads, no analytics or tracking tools, and your data is never sold or shared for marketing.</p>
+<section class="part" aria-labelledby="h-local">
+  <div class="part__text">
+    <h2 id="h-local">Without an account</h2>
+    <p>Everything you log (Shows, Tours, Gear, Saved Mixes, songs) stays on your device. None of it is sent to me. The one thing that leaves your device is a song search, if you make one; see <a href="#h-songs">Song search</a> below.</p>
+  </div>
+  <p class="hand note"><svg class="mark" aria-hidden="true"><use href="#arrow"/></svg><span>The catch: on the website your log lives in the browser, so clearing its site data erases it.</span></p>
+</section>
 
-<h2>Deleting your data</h2>
-<p>In the app, go to <strong>Backstage → Backstage Pass → ⋮ → Delete account</strong>. This deletes your account and everything listed above, on every device, right away, and signs you out of Sign in with Apple for this app. Signing out instead keeps your data in your account and clears it from that device.</p>
+<section class="part" aria-labelledby="h-pass">
+  <div class="part__text">
+    <h2 id="h-pass">With a Backstage Pass</h2>
+    <p>A Backstage Pass is the app’s word for signing in. When you sign in with Google or Apple, I keep:</p>
+    <ul>
+      <li><strong>Your account</strong> Your name and email from Google or Apple, and an id for that sign-in. If you use Hide My Email with Apple, I only see Apple’s relay address.</li>
+      <li><strong>Your training</strong> The Shows, Tours, Gear and Saved Mixes you log, so they sync between your devices.</li>
+      <li><strong>The Crew, only if you use it</strong> Your stage name and avatar color, the people in your Crew, Encores, invite codes, blocks, and reports you send.</li>
+    </ul>
+    <p>The people in your Crew see your training: every Show you log (date, distance, time, pace, effort, feel, notes, Tracks, route, weather, Gear and Song of the Show), your Gold Records and your current Tour. Mark a Show “Keep off the Crew” and it stays yours. If you were in a Crew before November 22, 2026, your Crew keeps seeing only the Shows you shared until you say OK to this in the app. After that, Shows you logged before that moment stay hidden unless you had shared them. Leave or block someone and they stop seeing it. Nobody outside your Crew can find you or see your training.</p>
+  </div>
+  <p class="hand note" style="--y:5.2rem"><svg class="mark" aria-hidden="true"><use href="#arrow"/></svg><span>No search, no public profile. A Crew is invite only.</span></p>
+</section>
 
-<h2>Children</h2>
-<p>Setlist Tracker is not meant for children under 13.</p>
+<section class="part" aria-labelledby="h-health">
+  <div class="part__text">
+    <h2 id="h-health">Apple Health</h2>
+    <p>On iPhone you can import runs from Apple Health. The app only reads running workouts, only when you tap Import, and never writes to Health. Imported runs become Shows like any other. Health data is never used for advertising or sold.</p>
+  </div>
+</section>
 
-<h2>Changes and questions</h2>
-<p>If this policy changes, the new version will be posted here with a new date. Questions? See <a href="support.html">Support</a>.</p>
-<footer>Setlist Tracker · <a href="./?front=1">What it is</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a></footer>
+<section class="part" aria-labelledby="h-songs">
+  <div class="part__text">
+    <h2 id="h-songs" tabindex="-1">Song search</h2>
+    <p>When you search for a Song of the Show, the words you type go to Spotify (through my server) and to Apple’s music catalog to find matches. No account details go with them.</p>
+  </div>
+</section>
+
+<section class="part" aria-labelledby="h-who">
+  <div class="part__text">
+    <h2 id="h-who">Who handles the data</h2>
+    <dl class="who">
+      <div><dt>Cloudflare</dt><dd>hosts the website and stores the data above.</dd></div>
+      <div><dt>Google and Apple</dt><dd>handle sign-in.</dd></div>
+      <div><dt>Spotify and Apple</dt><dd>answer song searches.</dd></div>
+    </dl>
+    <p>There are no ads, no analytics or tracking tools, and your data is never sold or shared for marketing.</p>
+  </div>
+</section>
+
+<section class="part" aria-labelledby="h-delete">
+  <div class="part__text">
+    <h2 id="h-delete">Deleting your data</h2>
+    <p>In the app, go to <span class="path"><span>Backstage</span>, then <span>Backstage Pass</span>, then the <span>three-dot menu</span>, then <span>Delete account</span></span>. This deletes your account and everything listed above, on every device, right away, and signs you out of Sign in with Apple for this app.</p>
+    <p>Signing out instead keeps your data in your account and clears it from that device.</p>
+  </div>
+  <p class="hand note"><svg class="mark" aria-hidden="true"><use href="#arrow"/></svg><span>Sign out is “see you next Tour.” Delete account is the last show.</span></p>
+</section>
+
+<section class="part" aria-labelledby="h-kids">
+  <div class="part__text">
+    <h2 id="h-kids">Children</h2>
+    <p>Setlist Tracker is not meant for children under 13.</p>
+  </div>
+</section>
+
+<section class="part" aria-labelledby="h-changes">
+  <div class="part__text">
+    <h2 id="h-changes">Changes and questions</h2>
+    <p>If this policy changes, the new version will be posted here with a new date. Questions? See <a href="support.html">Support</a>.</p>
+  </div>
+</section>
+
+</div>
 </main>
+
+<footer class="foot">
+  <div class="wrap foot__grid">
+    <div class="foot__id">
+      <p class="wordmark wordmark--foot">Setlist Tracker</p>
+      <p>Marathon training, on tour. Miles, mph and °F, because that’s what the treadmill says.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="./?front=1">Front page <span>what the app is, from the top</span></a>
+      <a href="privacy.html" aria-current="page">Privacy <span>where your data goes, in plain words</span></a>
+      <a href="support.html">Support <span>something broke, or you have a question</span></a>
+    </nav>
+  </div>
+  <p class="wrap foot__fine">© 2026 Ryan. Made by one person with Claude. Set in Archivo, with handwriting in Mynerve.</p>
+</footer>
 </body>
 </html>
