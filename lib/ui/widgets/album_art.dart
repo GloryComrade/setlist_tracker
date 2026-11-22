@@ -1,28 +1,31 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../theme/app_theme.dart';
+import '../../theme/stage_art.dart';
 
-/// Square album cover, with a stage-light placeholder when there is no art
-/// or it fails to load.
+/// Square album cover. With no art, or while it loads or if it fails, a
+/// sample sleeve stands in: the same one for the same [seed] (usually the
+/// song's title and artist).
 class AlbumArt extends StatelessWidget {
   const AlbumArt({
     super.key,
     required this.url,
     this.size = 56,
     this.radius = 8,
+    this.seed = '',
   });
 
   final String? url;
   final double size;
   final double radius;
+  final String seed;
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = Container(
+    final placeholder = Image(
+      image: StageArt.sleeveFor(seed),
       width: size,
       height: size,
-      decoration: const BoxDecoration(gradient: StageColors.headlineGradient),
-      child: Icon(Icons.album, color: Colors.white, size: size * 0.55),
+      fit: BoxFit.cover,
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),

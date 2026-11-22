@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../logic/spoken.dart';
 import '../../models/enums.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/stage_art.dart';
 
 final _dayFormat = DateFormat('EEE, MMM d');
 final _fullFormat = DateFormat('EEE, MMM d, y · h:mm a');
@@ -68,9 +69,12 @@ class VenueBadge extends StatelessWidget {
   }
 }
 
-/// A gradient block printed like a screen-printed gig poster: the stage-light
-/// gradient with a halftone dot screen that fades in toward the bottom-right
-/// corner. The dots are dark ink, so white type on top only gains contrast.
+/// A poster-sized block printed like a screen-printed gig poster: a stage
+/// backdrop from the sample art (matched to its stage-light gradient), with a
+/// halftone dot screen that fades in toward the bottom-right corner. The dots
+/// are dark ink, so white type on top only gains contrast. The gradient is
+/// still painted underneath, so the block is lit while the image loads, and
+/// a gradient with no backdrop (the Gold Records foil) shows as it is.
 class PosterSurface extends StatelessWidget {
   const PosterSurface({
     super.key,
@@ -91,16 +95,40 @@ class PosterSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final backdrop = StageArt.backdropFor(gradient);
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(radius),
+        image: backdrop == null
+            ? null
+            : DecorationImage(
+                image: backdrop,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
       ),
-      child: CustomPaint(
-        painter: HalftonePainter(ink: ink),
-        child: Padding(padding: padding, child: child),
+      child: DecoratedBox(
+        // On a backdrop, a dark wash on the left keeps white titles at
+        // 4.5:1 or better over the brightest beam.
+        decoration: BoxDecoration(
+          gradient: backdrop == null
+              ? null
+              : const LinearGradient(
+                  colors: [
+                    Color(0x8C000000),
+                    Color(0x33000000),
+                    Color(0x00000000),
+                  ],
+                  stops: [0, 0.55, 1],
+                ),
+        ),
+        child: CustomPaint(
+          painter: HalftonePainter(ink: ink),
+          child: Padding(padding: padding, child: child),
+        ),
       ),
     );
   }

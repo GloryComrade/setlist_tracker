@@ -9,6 +9,7 @@ import '../../data/providers.dart';
 import '../../logic/record_wall.dart';
 import '../../logic/show_math.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/stage_art.dart';
 import '../widgets/album_art.dart';
 import '../widgets/download/save_text_file.dart';
 import '../widgets/stage_widgets.dart';
@@ -354,63 +355,73 @@ class _PrintedSleeve extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The same song always gets the same lights.
-    const lights = [
-      StageColors.liveGradient,
-      StageColors.studioGradient,
-      StageColors.headlineGradient,
-    ];
-    final gradient = lights[(title.hashCode ^ artist.hashCode).abs() % 3];
     return DecoratedBox(
-      decoration: BoxDecoration(gradient: gradient),
-      child: LayoutBuilder(
-        builder: (context, c) {
-          // Archivo Condensed capitals average about 0.5 em wide. Shrink the type until the
-          // longest word fits on one line, so no word breaks in the middle.
-          final longest = title
-              .split(RegExp(r'\s+'))
-              .fold(1, (n, w) => w.length > n ? w.length : n);
-          final fit = (c.maxWidth - 20) / (longest * 0.5);
-          // Never below 11, the smallest size anyone reads on a phone; a
-          // word too long for that ellipsizes instead.
-          final fontSize =
-              (fit.clamp(11.0, 22.0) * (c.maxWidth / 115).clamp(0.6, 1.0))
-                  .clamp(11.0, 22.0);
-          return Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: Text(
-                    title.toUpperCase(),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: StageFonts.display,
-                      fontSize: fontSize,
-                      height: 0.95,
-                      letterSpacing: 0.4,
-                      color: Colors.white,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          // The same song always gets the same sleeve.
+          image: StageArt.sleeveFor('$title|$artist'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: DecoratedBox(
+        // Dark at the foot, where the printed title sits.
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x00000000), Color(0x99000000)],
+            stops: [0.35, 1],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, c) {
+            // Archivo Condensed capitals average about 0.5 em wide. Shrink the type until the
+            // longest word fits on one line, so no word breaks in the middle.
+            final longest = title
+                .split(RegExp(r'\s+'))
+                .fold(1, (n, w) => w.length > n ? w.length : n);
+            final fit = (c.maxWidth - 20) / (longest * 0.5);
+            // Never below 11, the smallest size anyone reads on a phone; a
+            // word too long for that ellipsizes instead.
+            final fontSize =
+                (fit.clamp(11.0, 22.0) * (c.maxWidth / 115).clamp(0.6, 1.0))
+                    .clamp(11.0, 22.0);
+            return Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Flexible(
+                    child: Text(
+                      title.toUpperCase(),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: StageFonts.display,
+                        fontSize: fontSize,
+                        height: 0.95,
+                        letterSpacing: 0.4,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  artist,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  Text(
+                    artist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

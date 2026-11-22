@@ -214,7 +214,11 @@ class _SongCard extends StatelessWidget {
           Stack(
             alignment: Alignment.center,
             children: [
-              AlbumArt(url: song.albumArtUrl, size: 96),
+              AlbumArt(
+                url: song.albumArtUrl,
+                size: 96,
+                seed: '${song.title}|${song.artist}',
+              ),
               if (song.hasClip) ClipPlayButton(song: song),
             ],
           ),
