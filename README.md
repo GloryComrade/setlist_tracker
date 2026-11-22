@@ -82,7 +82,7 @@ Backstage can bring in runs from Apple Health (Apple Watch or iPhone) as Shows. 
 - Studio Session distance and time come from the Tracks by default. Switch "Use Track totals" off to type what the treadmill screen said.
 - Song of the Show is picked from a search list with album art, or typed in. With the backend's Spotify secrets set it searches Spotify (the Worker holds Spotify's secret) and saves the song's Spotify link; a picked Spotify song borrows Apple's 30-second preview for the clip. Without them, or whenever Spotify can't be reached, it searches Apple's free iTunes catalog. Setup: [docs/cloudflare-setup.md](docs/cloudflare-setup.md), Part 3. The Show page has Open in Spotify and Apple Music buttons.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
-- Fonts (Anybody, Atkinson Hyperlegible Next) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.
+- Fonts (Archivo, in a condensed cut and at normal width) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.
 
 ## The Tour's rules
 

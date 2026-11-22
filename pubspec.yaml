@@ -78,21 +78,25 @@ flutter:
 
   fonts:
     # Bundled so type works offline and on iOS (licenses in assets/fonts).
-    # Anybody: a static instance of the variable font at width 60, weight 800
-    # (Latin + Latin Extended), cut with fontTools from the OFL release.
-    - family: Anybody
+    # ArchivoCondensed: a static instance of Archivo's variable font at width
+    # 62, weight 850 (Latin + Latin Extended), cut with fontTools from the OFL
+    # release. Declared as 800 so a w800 request never gets a faked bold.
+    - family: ArchivoCondensed
       fonts:
-        - asset: assets/fonts/Anybody-CondensedExtraBold.ttf
+        - asset: assets/fonts/Archivo-ExtraCondensedBlack.ttf
           weight: 800
-    - family: AtkinsonHyperlegibleNext
+    - family: Archivo
       fonts:
-        - asset: assets/fonts/AtkinsonHyperlegibleNext-400.ttf
+        - asset: assets/fonts/Archivo-400.ttf
           weight: 400
-        - asset: assets/fonts/AtkinsonHyperlegibleNext-600.ttf
+        - asset: assets/fonts/Archivo-400-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Archivo-600.ttf
           weight: 600
-        - asset: assets/fonts/AtkinsonHyperlegibleNext-700.ttf
+        - asset: assets/fonts/Archivo-700.ttf
           weight: 700
-        - asset: assets/fonts/AtkinsonHyperlegibleNext-800.ttf
+        - asset: assets/fonts/Archivo-800.ttf
           weight: 800
 
   # To add assets to your application, add an assets section, like this:

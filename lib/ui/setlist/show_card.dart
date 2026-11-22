@@ -73,10 +73,7 @@ class ShowCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(
-                            show.feel.emoji,
-                            style: const TextStyle(fontSize: 20),
-                          ),
+                          FeelFace(show.feel),
                         ],
                       ),
                       const SizedBox(height: 4),

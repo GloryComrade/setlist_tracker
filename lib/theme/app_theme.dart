@@ -50,14 +50,13 @@ class StageColors {
 
 /// Font families bundled in assets/fonts.
 ///
-/// [display] is Anybody cut at condensed width and extra-bold weight: the
-/// gig-flyer face for poster titles and big numbers. It has lowercase, so
-/// names (songs, Gear, routes) stay in their own case; titles are uppercased
-/// where they are written. [body] is Atkinson Hyperlegible Next, built to be
-/// read at a glance.
+/// [display] is Archivo cut at extra-condensed width and black weight: the
+/// tour-poster face for titles and big numbers. It has lowercase, so names
+/// (songs, Gear, routes) stay in their own case; titles are uppercased where
+/// they are written. [body] is the same family at normal width.
 class StageFonts {
-  static const display = 'Anybody';
-  static const body = 'AtkinsonHyperlegibleNext';
+  static const display = 'ArchivoCondensed';
+  static const body = 'Archivo';
 
   /// Digits that line up in columns (times, paces, miles).
   static const tabular = [FontFeature.tabularFigures()];
@@ -89,7 +88,7 @@ class AppTheme {
           fontFamily: StageFonts.display,
           fontSize: size,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.2,
+          letterSpacing: 0,
           height: 1.05,
           color: StageColors.text,
         );

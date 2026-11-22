@@ -346,11 +346,79 @@ class EmptyStage extends StatelessWidget {
   }
 }
 
+/// How a Show felt, as a white face on a stage light: cool light for a rough
+/// night, warming up to the full headline gradient for an Encore. Drawn from
+/// Material icons so it looks the same on web and iPhone (emoji don't).
+class FeelFace extends StatelessWidget {
+  const FeelFace(this.feel, {super.key, this.size = 22, this.dim = false});
+  final Feel feel;
+  final double size;
+
+  /// Unpicked choices in the feel picker sit back at half strength.
+  final bool dim;
+
+  static const _gradients = {
+    Feel.rough: LinearGradient(
+      colors: [StageColors.violetDeep, StageColors.tealDeep],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    Feel.offKey: LinearGradient(
+      colors: [StageColors.violetDeep, StageColors.magentaDeep],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    Feel.fine: LinearGradient(
+      colors: [StageColors.magentaDeep, StageColors.violetDeep],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    Feel.good: StageColors.liveGradient,
+    Feel.encore: StageColors.headlineGradient,
+  };
+
+  static const _icons = {
+    Feel.rough: Icons.sentiment_very_dissatisfied_rounded,
+    Feel.offKey: Icons.sentiment_dissatisfied_rounded,
+    Feel.fine: Icons.sentiment_neutral_rounded,
+    Feel.good: Icons.sentiment_satisfied_rounded,
+    Feel.encore: Icons.sentiment_very_satisfied_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: dim ? 0.45 : 1,
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: _gradients[feel],
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        _icons[feel],
+        size: size * 0.74,
+        color: Colors.white,
+        semanticLabel: feel.label,
+      ),
+    ),
+  );
+}
+
 /// A labelled number, e.g. "PACE / 8:42 /mi".
 class StatTile extends StatelessWidget {
-  const StatTile({super.key, required this.label, required this.value});
+  const StatTile({
+    super.key,
+    required this.label,
+    required this.value,
+    this.leading,
+  });
   final String label;
   final String value;
+
+  /// Drawn before the value, e.g. the [FeelFace] on the Show page.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -368,10 +436,18 @@ class StatTile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontFeatures: StageFonts.tabular),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leading != null) ...[leading!, const SizedBox(width: 8)],
+            Flexible(
+              child: Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontFeatures: StageFonts.tabular),
+              ),
+            ),
+          ],
         ),
       ],
     );

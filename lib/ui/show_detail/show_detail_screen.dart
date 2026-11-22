@@ -185,7 +185,8 @@ class _Stats extends StatelessWidget {
           StatTile(label: 'Effort', value: '${show.effort}/10'),
           StatTile(
             label: 'Feel',
-            value: '${show.feel.emoji} ${show.feel.label}',
+            value: show.feel.label,
+            leading: ExcludeSemantics(child: FeelFace(show.feel, size: 26)),
           ),
           if (gearName != null) StatTile(label: 'Gear', value: gearName!),
         ],
