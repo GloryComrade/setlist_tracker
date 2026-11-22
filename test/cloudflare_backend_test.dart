@@ -694,6 +694,35 @@ void main() {
       expect(h.sent.single.body, {'stageName': 'Ryan', 'color': 2});
     });
 
+    test('profile: allActivityPending, and OK-ing every Show', () async {
+      final (s, h) = await crew(
+        (r) async =>
+            _json({...profileJson, 'allActivityPending': r.method == 'GET'}),
+      );
+      expect((await s.myProfile())?.allActivityPending, isTrue);
+      h.handler = (_) async => _json(profileJson);
+      expect((await s.myProfile())?.allActivityPending, isFalse);
+      h.sent.clear();
+      h.handler = (_) async =>
+          _json({...profileJson, 'allActivityPending': false});
+      final p = await s.acceptAllActivity(
+        const CrewProfile(
+          userId: 'u1',
+          stageName: 'Ryan',
+          color: 2,
+          allActivityPending: true,
+        ),
+      );
+      expect(h.sent.single.method, 'PUT');
+      expect(h.sent.single.path, '/api/crew/profile');
+      expect(h.sent.single.body, {
+        'stageName': 'Ryan',
+        'color': 2,
+        'allActivity': true,
+      });
+      expect(p.allActivityPending, isFalse);
+    });
+
     test('invite code, preview and join', () async {
       final (s, h) = await crew((r) async {
         switch (r.path) {

@@ -112,8 +112,15 @@ void main() {
   testWidgets('Next waits for a distance', (tester) async {
     await pump(tester);
     expect(find.text('Question 1 of 9'), findsOneWidget);
-    expect(find.text('PICK YOUR SHOW'), findsOneWidget);
+    expect(find.text('WHAT ARE YOU RACING?'), findsOneWidget);
     expect(nextEnabled(tester), isFalse);
+    // Each tile leads with its distance, not a stock icon.
+    for (final n in ['3.1', '6.2', '13.1', '26.2']) {
+      expect(find.text(n), findsOneWidget);
+    }
+    expect(find.text('MI'), findsNWidgets(4));
+    expect(find.byIcon(Icons.landscape_outlined), findsNothing);
+    expect(find.byIcon(Icons.directions_run), findsNothing);
 
     await tap(tester, '10K');
     expect(nextEnabled(tester), isTrue);
@@ -129,6 +136,8 @@ void main() {
     await pump(tester);
     await tap(tester, 'Half Marathon');
     await next(tester);
+    // Lowercase mid-sentence.
+    expect(find.textContaining('Your half marathon date'), findsOneWidget);
     await tap(tester, 'Help me pick');
     await next(tester);
     expect(find.text('Target time'), findsOneWidget);
@@ -215,15 +224,17 @@ void main() {
       tourName: "Sam's Spring 5K",
     );
 
-    testWidgets('the prefilled race books a Tour featuring them', (
+    testWidgets('the prefilled race skips to the goal and co-headlines', (
       tester,
     ) async {
       await pump(tester, featuring: featuring);
-      expect(nextEnabled(tester), isTrue);
-      expect(find.textContaining('Booking a Tour featuring Sam'), findsOne);
-      await next(tester);
-      expect(find.textContaining('Booking a Tour featuring Sam'), findsOne);
-      await next(tester);
+      // The race is Sam's: one summary row, and the count starts at the goal.
+      expect(find.text('Question 1 of 7'), findsOneWidget);
+      expect(find.text('WHAT IS THE GOAL?'), findsOneWidget);
+      expect(find.textContaining('with Sam'), findsOneWidget);
+      expect(find.text('Change race'), findsOneWidget);
+      expect(find.text('Help me pick'), findsNothing);
+      expect(find.byTooltip('Close'), findsOneWidget);
       await finishQuiz(tester);
       await tap(tester, 'BOOK THE TOUR');
 
@@ -238,9 +249,55 @@ void main() {
       expect(find.text('TOUR PAGE'), findsOneWidget);
     });
 
-    testWidgets('choosing another date books a solo Tour', (tester) async {
+    testWidgets('Change race keeps Sam’s race, with no Help me pick', (
+      tester,
+    ) async {
       await pump(tester, featuring: featuring);
+      await tap(tester, 'Change race');
+      expect(find.text('Question 1 of 9'), findsOneWidget);
+      expect(find.textContaining('Booking a Tour featuring Sam'), findsOne);
       await next(tester);
+      expect(find.text('Question 2 of 9'), findsOneWidget);
+      // One tap here would quietly turn the Tour solo, so it isn't offered.
+      expect(find.text('Help me pick'), findsNothing);
+      await next(tester);
+      await finishQuiz(tester);
+      await tap(tester, 'BOOK THE TOUR');
+      expect(tours.saved.single.featuring?.userId, 'friend-1');
+    });
+
+    testWidgets('the note is a live region and says when the Tour goes solo', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, featuring: featuring);
+      await tap(tester, 'Change race');
+      expect(
+        tester.getSemantics(
+          find.textContaining('Booking a Tour featuring Sam'),
+        ),
+        isSemantics(isLiveRegion: true),
+      );
+      tester.takeAnnouncements();
+      await tap(tester, '10K');
+      expect(find.textContaining('Sam is running the 5K'), findsOne);
+      expect(
+        tester.takeAnnouncements(),
+        contains(
+          isAccessibilityAnnouncement('No longer co-headlining with Sam'),
+        ),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('another distance and a picked date books a solo Tour', (
+      tester,
+    ) async {
+      await pump(tester, featuring: featuring);
+      await tap(tester, 'Change race');
+      await tap(tester, '10K');
+      await next(tester);
+      // No longer Sam's race, so picking a date for you is back.
       await tap(tester, 'Help me pick');
       expect(find.textContaining('Sam is running the 5K'), findsOne);
       await next(tester);
@@ -257,6 +314,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, featuring: featuring);
+      await tap(tester, 'Change race');
       await tap(tester, '10K');
       expect(find.textContaining('Sam is running the 5K'), findsOne);
       await next(tester);

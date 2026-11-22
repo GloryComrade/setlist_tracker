@@ -19,6 +19,7 @@ class CrewProfile {
     required this.userId,
     required this.stageName,
     this.color = 0,
+    this.allActivityPending = false,
   });
 
   final String userId;
@@ -27,10 +28,19 @@ class CrewProfile {
   /// 0 to [kCrewColors] - 1.
   final int color;
 
-  CrewProfile copyWith({String? stageName, int? color}) => CrewProfile(
+  /// True for runners who joined The Crew before it saw every Show: until
+  /// they OK the change, their Crew sees only the Shows they had shared.
+  final bool allActivityPending;
+
+  CrewProfile copyWith({
+    String? stageName,
+    int? color,
+    bool? allActivityPending,
+  }) => CrewProfile(
     userId: userId,
     stageName: stageName ?? this.stageName,
     color: color ?? this.color,
+    allActivityPending: allActivityPending ?? this.allActivityPending,
   );
 }
 

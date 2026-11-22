@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../logic/tour_builder.dart';
 import '../../models/tour.dart';
 import '../../theme/app_theme.dart';
@@ -47,6 +49,10 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   int _step = 0;
   bool _saving = false;
 
+  /// Booking from a friend's page skips the race questions until the runner
+  /// taps "Change race".
+  bool _changingRace = false;
+
   /// Opening Night's distance.
   RaceDistance? _distance;
   DateTime? _raceDate;
@@ -70,6 +76,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
     if (f != null) {
       _distance = f.raceDistance;
       _raceDate = f.raceDate;
+      _step = 2;
     }
     for (final c in [_goalTime, _weekly, _longest, _raceTime, _easyPace]) {
       c.addListener(() => setState(() {}));
@@ -86,6 +93,19 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
 
   double? _num(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.'));
+
+  /// The friend's race is already filled in, so the quiz starts at the goal.
+  bool get _skipRace => widget.featuring != null && !_changingRace;
+  int get _firstStep => _skipRace ? 2 : 0;
+  int get _questionCount => _questions - _firstStep;
+
+  void _changeRace() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _changingRace = true;
+      _step = 0;
+    });
+  }
 
   bool get _shortRace =>
       _distance == RaceDistance.fiveK || _distance == RaceDistance.tenK;
@@ -183,7 +203,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   }
 
   void _back() {
-    if (_step == 0) {
+    if (_step == _firstStep) {
       leaveScreen(context, fallback: '/tour');
     } else {
       setState(() => _step--);
@@ -261,22 +281,24 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   Widget build(BuildContext context) {
     final preview = _step >= _questions;
     return PopScope(
-      canPop: _step == 0,
+      canPop: _step == _firstStep,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            tooltip: _step == 0 ? 'Close' : 'Back',
-            icon: Icon(_step == 0 ? Icons.close : Icons.arrow_back),
+            tooltip: _step == _firstStep ? 'Close' : 'Back',
+            icon: Icon(_step == _firstStep ? Icons.close : Icons.arrow_back),
             onPressed: _back,
           ),
           title: Text(preview ? 'YOUR TOUR' : 'BOOK THE TOUR'),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(4),
             child: LinearProgressIndicator(
-              value: preview ? 1 : (_step + 1) / (_questions + 1),
+              value: preview
+                  ? 1
+                  : (_step - _firstStep + 1) / (_questionCount + 1),
               minHeight: 4,
               color: StageColors.magenta,
               backgroundColor: StageColors.surfaceHigh,
@@ -296,12 +318,13 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   Widget _question() {
     final raceWord = switch (_distance) {
       RaceDistance.marathon || null => 'marathon',
+      RaceDistance.half => RaceDistance.half.label.toLowerCase(),
       final d => d.label,
     };
     final (title, hint, body) = switch (_step) {
       0 => (
-        'Pick your show',
-        'The race you\'re training for on Opening Night.',
+        'What are you racing?',
+        'Pick the distance. We build the Tour around it.',
         _distanceStep(),
       ),
       1 => (
@@ -346,7 +369,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
             children: [
               Text(
-                'Question ${_step + 1} of $_questions',
+                'Question ${_step - _firstStep + 1} of $_questionCount',
                 style: const TextStyle(
                   color: StageColors.textMuted,
                   fontWeight: FontWeight.w600,
@@ -368,7 +391,14 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                 ),
               ],
               const SizedBox(height: 28),
-              if (widget.featuring != null && _step <= 1) ...[
+              if (widget.featuring != null && _skipRace && _step == 2) ...[
+                _FeaturingSummary(
+                  featuring: widget.featuring!,
+                  onChange: _changeRace,
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (widget.featuring != null && !_skipRace && _step <= 1) ...[
                 _FeaturingNote(
                   featuring: widget.featuring!,
                   matches:
@@ -379,7 +409,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                 const SizedBox(height: 16),
               ],
               body,
-              if (_step == 0) ...[
+              if (_step == _firstStep) ...[
                 const SizedBox(height: 36),
                 const TourDisclaimer(),
               ],
@@ -412,17 +442,12 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
     children: [
       for (final d in RaceDistance.values) ...[
         _ChoiceTile(
-          icon: switch (d) {
-            RaceDistance.fiveK => Icons.bolt_outlined,
-            RaceDistance.tenK => Icons.directions_run,
-            RaceDistance.half => Icons.landscape_outlined,
-            RaceDistance.marathon => Icons.emoji_events_outlined,
-          },
+          // The distance is the tile's identity, set as a poster number.
+          lead: _DistanceNumber(d, selected: _distance == d),
           title: d.label,
           subtitle: () {
             final r = rulesFor(d);
-            return '${d.milesText} · ${r.idealMinWeeks} to ${r.maxWeeks} '
-                'week Tour';
+            return '${r.idealMinWeeks} to ${r.maxWeeks} week Tour';
           }(),
           selected: _distance == d,
           onTap: () => setState(() {
@@ -455,22 +480,25 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
           selected: d != null && !_suggested,
           onTap: _pickDate,
         ),
-        const SizedBox(height: 10),
-        _ChoiceTile(
-          icon: Icons.auto_awesome,
-          title: 'Help me pick',
-          subtitle: _suggested
-              ? 'Picked ${formatLongDate(_raceDate!)}: '
-                    '${rulesFor(_distance!).suggestWeeks} weeks out, the '
-                    'sweet spot for a full Tour. Look for a race near it.'
-              : 'Suggests a Sunday about '
-                    '${rulesFor(_distance!).suggestWeeks} weeks out',
-          selected: _suggested,
-          onTap: () => setState(() {
-            _raceDate = suggestedRaceDate(today(), _distance!);
-            _suggested = true;
-          }),
-        ),
+        // Picking a date for you would quietly move off the friend's race.
+        if (!_stillFeaturing) ...[
+          const SizedBox(height: 10),
+          _ChoiceTile(
+            icon: Icons.auto_awesome,
+            title: 'Help me pick',
+            subtitle: _suggested
+                ? 'Picked ${formatLongDate(_raceDate!)}: '
+                      '${rulesFor(_distance!).suggestWeeks} weeks out, the '
+                      'sweet spot for a full Tour. Look for a race near it.'
+                : 'Suggests a Sunday about '
+                      '${rulesFor(_distance!).suggestWeeks} weeks out',
+            selected: _suggested,
+            onTap: () => setState(() {
+              _raceDate = suggestedRaceDate(today(), _distance!);
+              _suggested = true;
+            }),
+          ),
+        ],
       ],
     );
   }
@@ -893,14 +921,18 @@ class _WhiteStat extends StatelessWidget {
 /// A selectable row with an icon, a title and one line of help.
 class _ChoiceTile extends StatelessWidget {
   const _ChoiceTile({
-    required this.icon,
+    this.icon,
+    this.lead,
     required this.title,
     required this.subtitle,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Shown in place of [icon], e.g. the distance on a race tile.
+  final Widget? lead;
   final String title;
   final String subtitle;
   final bool selected;
@@ -929,10 +961,13 @@ class _ChoiceTile extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(
-                  icon,
-                  color: selected ? StageColors.magenta : StageColors.textMuted,
-                ),
+                lead ??
+                    Icon(
+                      icon,
+                      color: selected
+                          ? StageColors.magenta
+                          : StageColors.textMuted,
+                    ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -1023,8 +1058,89 @@ class _BigChoice extends StatelessWidget {
   );
 }
 
-/// "Booking a Tour featuring Sam" above the race questions.
-class _FeaturingNote extends StatelessWidget {
+/// "13.1 MI" at the head of a race tile, in the poster face.
+class _DistanceNumber extends StatelessWidget {
+  const _DistanceNumber(this.distance, {required this.selected});
+  final RaceDistance distance;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final miles = distance.miles.toStringAsFixed(1);
+    return Semantics(
+      label: spokenMiles(double.parse(miles)),
+      child: ExcludeSemantics(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 52),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                miles,
+                style: TextStyle(
+                  fontFamily: StageFonts.display,
+                  fontSize: 26,
+                  height: 1.05,
+                  fontFeatures: StageFonts.tabular,
+                  color: selected ? StageColors.magenta : StageColors.text,
+                ),
+              ),
+              const Text(
+                'MI',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: StageColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Booking from a friend's page: the race is theirs, in one row, with a way
+/// to pick another.
+class _FeaturingSummary extends StatelessWidget {
+  const _FeaturingSummary({required this.featuring, required this.onChange});
+  final TourFeaturing featuring;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = featuring;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+      decoration: BoxDecoration(
+        color: StageColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: StageColors.outline),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.groups, color: StageColors.magenta),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '${f.raceDistance.label} · ${formatShowDay(f.raceDate)} · '
+              'with ${f.stageName}',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(onPressed: onChange, child: const Text('Change race')),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Booking a Tour featuring Sam" above the race questions. A live region,
+/// and it says so out loud when the Tour stops co-headlining.
+class _FeaturingNote extends StatefulWidget {
   const _FeaturingNote({required this.featuring, required this.matches});
 
   final TourFeaturing featuring;
@@ -1033,37 +1149,57 @@ class _FeaturingNote extends StatelessWidget {
   final bool matches;
 
   @override
+  State<_FeaturingNote> createState() => _FeaturingNoteState();
+}
+
+class _FeaturingNoteState extends State<_FeaturingNote> {
+  @override
+  void didUpdateWidget(_FeaturingNote old) {
+    super.didUpdateWidget(old);
+    if (old.matches && !widget.matches) {
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'No longer co-headlining with ${widget.featuring.stageName}',
+        Directionality.of(context),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final f = featuring;
+    final f = widget.featuring;
+    final matches = widget.matches;
     final race = '${f.raceDistance.label} on ${formatLongDate(f.raceDate)}';
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: StageColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: matches ? StageColors.amber : StageColors.outline,
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: StageColors.surfaceHigh,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: StageColors.outline),
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            matches ? Icons.groups_2_outlined : Icons.info_outline,
-            color: matches ? StageColors.amber : StageColors.textMuted,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              matches
-                  ? 'Booking a Tour featuring ${f.stageName}: $race. You '
-                        'answer the fitness questions for your own plan.'
-                  : '${f.stageName} is running the $race. Pick that race '
-                        'to co-headline, or keep going for a solo Tour.',
-              style: const TextStyle(fontSize: 15, height: 1.35),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              matches ? Icons.groups : Icons.info_outline,
+              color: matches ? StageColors.magenta : StageColors.textMuted,
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                matches
+                    ? 'Booking a Tour featuring ${f.stageName}: $race. You '
+                          'answer the fitness questions for your own plan.'
+                    : '${f.stageName} is running the $race. Pick that race '
+                          'to co-headline, or keep going for a solo Tour.',
+                style: const TextStyle(fontSize: 15, height: 1.35),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

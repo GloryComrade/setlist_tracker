@@ -243,8 +243,7 @@ class _CrewHome extends ConsumerWidget {
                               n == 0
                                   ? 'Only people you invite see your Shows.'
                                   : '$n ${n == 1 ? 'runner' : 'runners'} in '
-                                        'your Crew. They see every Show you '
-                                        'log.',
+                                        'your Crew. ${state.allActivityPending ? 'They see the Shows you shared.' : 'They see every Show you log.'}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
@@ -262,6 +261,11 @@ class _CrewHome extends ConsumerWidget {
                     ],
                   ),
                 ),
+                if (state.allActivityPending &&
+                    !state.allActivityNoticeHidden) ...[
+                  const SizedBox(height: 12),
+                  const AllActivityNotice(),
+                ],
                 if (state.error != null) ...[
                   const SizedBox(height: 12),
                   Row(
@@ -310,6 +314,68 @@ class _CrewHome extends ConsumerWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One time, for runners who were in The Crew before it saw every Show.
+class AllActivityNotice extends ConsumerStatefulWidget {
+  const AllActivityNotice({super.key});
+
+  @override
+  ConsumerState<AllActivityNotice> createState() => _AllActivityNoticeState();
+}
+
+class _AllActivityNoticeState extends ConsumerState<AllActivityNotice> {
+  bool _sending = false;
+
+  Future<void> _accept() async {
+    setState(() => _sending = true);
+    try {
+      await ref.read(crewControllerProvider.notifier).acceptAllActivity();
+      if (mounted) {
+        crewSnack(context, 'Your Crew sees every Show you log from now on.');
+      }
+    } catch (_) {
+      if (mounted) crewSnack(context, 'Couldn’t reach the Crew. Try again.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ref.read(crewControllerProvider.notifier);
+    return SectionCard(
+      title: 'Your Crew sees more now',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'From now on, your Crew sees every Show you log: effort, feel, '
+            'notes, route and Gear. Shows you logged before today stay '
+            'hidden unless you shared them. Mark any Show “Keep off the '
+            'Crew” to keep it to yourself.',
+            style: TextStyle(height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton(
+                onPressed: _sending ? null : c.hideAllActivityNotice,
+                child: const Text('Not now'),
+              ),
+              FilledButton(
+                onPressed: _sending ? null : _accept,
+                child: const Text('Sounds good'),
+              ),
+            ],
           ),
         ],
       ),

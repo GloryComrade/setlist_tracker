@@ -17,6 +17,11 @@ const crewColors = [
   StageColors.orangeDeep,
 ];
 
+/// The same, for a runner who hasn't OK'd the Crew seeing every Show yet.
+const kCrewSeesShared =
+    'Your Crew sees the Shows you shared. OK the change on The Crew tab to '
+    'let them see every Show you log.';
+
 Color crewColor(int i) => crewColors[i.clamp(0, crewColors.length - 1)];
 
 /// A runner's initial on their color.
@@ -45,13 +50,16 @@ class CrewAvatar extends StatelessWidget {
         color: crewColor(color),
         shape: BoxShape.circle,
       ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontFamily: StageFonts.display,
-          fontSize: size * 0.55,
-          height: 1.05,
-          color: Colors.white,
+      // The name is always said next to the avatar; the initial is art.
+      child: ExcludeSemantics(
+        child: Text(
+          initial,
+          style: TextStyle(
+            fontFamily: StageFonts.display,
+            fontSize: size * 0.55,
+            height: 1.05,
+            color: Colors.white,
+          ),
         ),
       ),
     );

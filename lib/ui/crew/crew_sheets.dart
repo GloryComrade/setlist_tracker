@@ -380,21 +380,23 @@ class _SettingsSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.visibility_outlined,
                     size: 18,
                     color: StageColors.textMuted,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      kCrewSeesEverything,
-                      style: TextStyle(
+                      p.allActivityPending
+                          ? kCrewSeesShared
+                          : kCrewSeesEverything,
+                      style: const TextStyle(
                         color: StageColors.textMuted,
                         height: 1.4,
                       ),
@@ -504,6 +506,7 @@ class _MateSheet extends ConsumerWidget {
             const SizedBox(height: 8),
             TextButton(
               style: TextButton.styleFrom(
+                foregroundColor: StageColors.textMuted,
                 minimumSize: const Size.fromHeight(44),
               ),
               onPressed: () async {

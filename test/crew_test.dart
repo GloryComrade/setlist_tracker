@@ -22,6 +22,10 @@ import 'package:setlist_tracker/ui/crew/crew_widgets.dart';
 import 'package:setlist_tracker/ui/crew/join_crew_screen.dart';
 import 'package:setlist_tracker/ui/tour/tour_screen.dart';
 import 'package:setlist_tracker/ui/crew/crew_mate_screen.dart';
+import 'package:setlist_tracker/ui/crew/crew_post_card.dart';
+import 'package:setlist_tracker/ui/tour/featuring_strip.dart';
+import 'package:setlist_tracker/logic/gold_records.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:setlist_tracker/ui/widgets/stage_widgets.dart';
 
 import 'fakes/fake_backend.dart';
@@ -288,6 +292,74 @@ void main() {
     });
   });
 
+  test('a friend’s Gold Records: no repeats, one row per Show, 3 at most', () {
+    final shows = [
+      for (var i = 0; i < 6; i++)
+        mateShow('s$i', miles: 3.5 + i, date: DateTime(2026, 11, 1 + i * 3, 7)),
+    ];
+    final rows = mateRecordRows(computeGoldRecords(shows));
+    expect(rows.length, lessThanOrEqualTo(3));
+    // Every row is a different Show or period.
+    expect(rows.map((r) => r.date).toSet().length, rows.length);
+    expect(rows.first.titles.first, 'Longest Show');
+    // A week or month that only repeats the Longest Show is left off.
+    final one = mateRecordRows(computeGoldRecords([mateShow('only')]));
+    expect(one, hasLength(1));
+    expect(one.single.titles, isNot(contains('Biggest week')));
+    expect(one.single.titles, isNot(contains('Biggest month')));
+    expect(one.single.titles, contains('Longest Show'));
+  });
+
+  test('the featuring strip says something new about the friend', () {
+    final mate = CrewMate(
+      userId: 'maya',
+      stageName: 'Maya',
+      color: 2,
+      since: DateTime(2026, 10, 1),
+    );
+    final detail = CrewMateDetail(
+      mate: mate,
+      shows: [
+        CrewPost(
+          id: 'maya:m1',
+          ownerId: 'maya',
+          stageName: 'Maya',
+          color: 2,
+          show: mateShow('m1', date: DateTime(2026, 11, 20, 7), miles: 5.5),
+          sharedAt: DateTime(2026, 11, 20),
+        ),
+      ],
+    );
+    final news = featuringNews(detail, DateTime(2026, 11, 22));
+    expect(news.text, startsWith('Fri · 5.5 mi Easy'));
+    expect(news.spoken, startsWith('Latest Show: Friday, 5.5 miles'));
+    expect(
+      featuringNews(CrewMateDetail(mate: mate), DateTime(2026, 11, 22)).text,
+      'No Shows yet',
+    );
+  });
+
+  test('the effort line says one stop after “Encore!”', () {
+    expect(spokenEffortLine(8, Feel.encore), 'Effort 8 of 10, felt Encore!');
+    expect(spokenEffortLine(6, Feel.fine), 'Effort 6 of 10, felt Fine.');
+  });
+
+  test('saving a stage name keeps a pending OK; accepting ends it', () async {
+    final s = MemoryCrewService(me: 'me')
+      ..profiles['me'] = const CrewProfile(
+        userId: 'me',
+        stageName: 'Ryan',
+        allActivityPending: true,
+      );
+    final renamed = await s.saveProfile(
+      const CrewProfile(userId: 'me', stageName: 'Ry'),
+    );
+    expect(renamed.allActivityPending, isTrue);
+    final ok = await s.acceptAllActivity(renamed);
+    expect(ok.allActivityPending, isFalse);
+    expect(ok.stageName, 'Ry');
+  });
+
   test('words for time', () {
     final now = DateTime(2026, 11, 21, 18);
     expect(sharedAgo(now, now: now), 'Just now');
@@ -328,8 +400,9 @@ void main() {
       WidgetTester tester,
       Widget home, {
       String initial = '/',
+      Size size = const Size(400, 1600),
     }) async {
-      tester.view.physicalSize = const Size(400, 1600);
+      tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final router = GoRouter(
@@ -512,7 +585,9 @@ void main() {
       await settle(tester);
       expect(find.text('MAYA'), findsOneWidget);
       expect(find.text('THE TOUR'), findsOneWidget);
-      expect(find.text('GOLD RECORDS'), findsOneWidget);
+      // One Show would make every record the same Show: no card yet.
+      expect(find.text('GOLD RECORDS'), findsNothing);
+      expect(find.text('CREW MATE'), findsOneWidget);
       expect(find.textContaining(' mi'), findsWidgets);
       expect(find.text('Co-headlining ${mine.name}'), findsOneWidget);
     });
@@ -555,8 +630,11 @@ void main() {
         () => SembastTourRepository(db).save(tourFor(race)),
       );
       await pump(tester, const TourScreen());
-      expect(find.text('FEATURING MAYA'), findsOneWidget);
-      expect(find.text('FEATURING JO'), findsNothing);
+      // The name is the title, under a FEATURING micro label.
+      expect(find.text('FEATURING'), findsOneWidget);
+      expect(find.text('Maya'), findsOneWidget);
+      expect(find.text('Jo'), findsNothing);
+      expect(find.text('Co-headlining Opening Night'), findsNothing);
       expect(find.textContaining('4.0 mi so far'), findsOneWidget);
     });
 
@@ -589,6 +667,119 @@ void main() {
       expect(find.text('You'), findsNothing);
       final after = (await tester.runAsync(() => repo.getById('s1')))!;
       expect(after.crewPrivate, isTrue);
+    });
+
+    testWidgets('a friend page holds Gold Records once, at most 3 rows', (
+      tester,
+    ) async {
+      crew.profiles['me'] = const CrewProfile(userId: 'me', stageName: 'Ryan');
+      crew.addMate(maya);
+      for (var i = 0; i < 6; i++) {
+        crew.addShow(
+          'maya',
+          mateShow(
+            'm$i',
+            miles: 3.5 + i,
+            date: DateTime(2026, 11, 1 + i * 3, 7),
+          ),
+        );
+      }
+      await pump(tester, const SizedBox(), initial: '/crew/mate/maya');
+      expect(find.text('GOLD RECORDS'), findsOneWidget);
+      // The longest Show holds several records: one row names them all.
+      expect(find.textContaining('Longest Show, '), findsOneWidget);
+      final rows = find.descendant(
+        of: find.ancestor(
+          of: find.text('GOLD RECORDS'),
+          matching: find.byType(SectionCard),
+        ),
+        matching: find.byIcon(Icons.album),
+      );
+      expect(rows.evaluate().length, lessThanOrEqualTo(3));
+    });
+
+    testWidgets('pending: one card to OK every Show, and honest copy', (
+      tester,
+    ) async {
+      crew.profiles['me'] = const CrewProfile(
+        userId: 'me',
+        stageName: 'Ryan',
+        allActivityPending: true,
+      );
+      crew.addMate(maya);
+      await pump(tester, const CrewScreen());
+      expect(find.text('YOUR CREW SEES MORE NOW'), findsOneWidget);
+      expect(find.textContaining('They see the Shows you shared.'), findsOne);
+      expect(find.textContaining('They see every Show you log.'), findsNothing);
+
+      await tester.tap(find.text('Sounds good'));
+      await settle(tester);
+      expect(crew.profiles['me']?.allActivityPending, isFalse);
+      expect(crew.profiles['me']?.stageName, 'Ryan');
+      expect(find.text('YOUR CREW SEES MORE NOW'), findsNothing);
+      expect(find.textContaining('They see every Show you log.'), findsOne);
+    });
+
+    testWidgets('pending: Not now hides the card and changes nothing', (
+      tester,
+    ) async {
+      crew.profiles['me'] = const CrewProfile(
+        userId: 'me',
+        stageName: 'Ryan',
+        allActivityPending: true,
+      );
+      crew.addMate(maya);
+      await pump(tester, const CrewScreen());
+      await tester.tap(find.text('Not now'));
+      await settle(tester);
+      expect(find.text('YOUR CREW SEES MORE NOW'), findsNothing);
+      expect(crew.profiles['me']?.allActivityPending, isTrue);
+      expect(find.textContaining('They see the Shows you shared.'), findsOne);
+    });
+
+    testWidgets('a long note opens in place with More', (tester) async {
+      crew.profiles['me'] = const CrewProfile(userId: 'me', stageName: 'Ryan');
+      crew.addMate(maya);
+      final long = List.filled(30, 'Rolling hills along the river.').join(' ');
+      crew.addShow('maya', mateShow('m1', notes: long));
+      await pump(tester, const CrewScreen());
+      Text notes() => tester.widget<Text>(find.text(long));
+      expect(notes().maxLines, 4);
+      await tester.tap(find.text('More'));
+      await tester.pump();
+      expect(notes().maxLines, isNull);
+      expect(find.text('Less'), findsOneWidget);
+    });
+
+    testWidgets('at 150% text the name keeps its whole width', (tester) async {
+      crew.profiles['me'] = const CrewProfile(userId: 'me', stageName: 'Ryan');
+      crew.addMate(maya);
+      crew.addShow('maya', mateShow('m1'));
+      tester.view.physicalSize = const Size(390, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pump(tester, const CrewScreen(), size: const Size(390, 1600));
+      expect(tester.takeException(), isNull);
+      final name = find.descendant(
+        of: find.byType(CrewPostCard),
+        matching: find.text('Maya'),
+      );
+      expect(name, findsOneWidget);
+      final p = tester.renderObject<RenderParagraph>(name);
+      expect(p.didExceedMaxLines, isFalse);
+      // Laid out at its full width: nothing was cut off.
+      final full = TextPainter(
+        text: p.text,
+        textDirection: TextDirection.ltr,
+        textScaler: p.textScaler,
+      )..layout();
+      expect(p.size.width, greaterThanOrEqualTo(full.width - 0.5));
+      full.dispose();
+      // The workout line wraps instead of ending in an ellipsis.
+      final line = tester.widget<Text>(find.text('EASY · STUDIO SESSION'));
+      expect(line.overflow, isNot(TextOverflow.ellipsis));
     });
 
     testWidgets('guests are asked to get a Backstage Pass', (tester) async {

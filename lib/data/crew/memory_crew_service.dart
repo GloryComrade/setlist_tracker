@@ -106,8 +106,16 @@ class MemoryCrewService implements CrewService {
       userId: me,
       stageName: saved.stageName,
       color: saved.color,
+      // Saving a name doesn't OK the change; only acceptAllActivity does.
+      allActivityPending: profiles[me]?.allActivityPending ?? false,
     );
     return profiles[me]!;
+  }
+
+  @override
+  Future<CrewProfile> acceptAllActivity(CrewProfile profile) async {
+    final saved = await saveProfile(profile);
+    return profiles[me] = saved.copyWith(allActivityPending: false);
   }
 
   void _needProfile() {

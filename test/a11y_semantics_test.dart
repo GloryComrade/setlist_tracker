@@ -1,3 +1,6 @@
+import 'dart:ui' show Tristate;
+
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -279,6 +282,111 @@ void main() {
       );
       expect(find.bySemanticsLabel('Gear: Pegasus 41.'), findsOneWidget);
       expect(find.text('15 mi'), findsOneWidget);
+      handle.dispose();
+      await tester.pumpWidget(const SizedBox());
+      await _settle(tester);
+      await tester.runAsync(db.close);
+    },
+  );
+
+  testWidgets(
+    'a Crew post: the name is its own button, notes are not, Encore toggles',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      final db = await newDatabaseFactoryMemory().openDatabase(
+        'a11y2${DateTime.now().microsecondsSinceEpoch}.db',
+      );
+      const me = PassHolder(id: 'me', name: 'Ryan Runner', email: 'r@x.com');
+      const notes =
+          'Rolling hills along the river. Felt strong after the turnaround.';
+      CrewPost post({required bool cheered, int encores = 0}) => CrewPost(
+        id: 'p2',
+        ownerId: 'jordan',
+        stageName: 'Jordan',
+        color: 2,
+        sharedAt: DateTime(2026, 11, 21, 10),
+        encores: encores,
+        encoredByMe: cheered,
+        show: Show(
+          id: 'j1',
+          date: DateTime(2026, 11, 21, 7),
+          venue: Venue.live,
+          workoutType: WorkoutType.easy,
+          distanceMiles: 6,
+          durationSeconds: 3300,
+          effort: 8,
+          feel: Feel.encore,
+          notes: notes,
+          createdAt: DateTime.utc(2026, 11, 21),
+          updatedAt: DateTime.utc(2026, 11, 21),
+        ),
+      );
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      Future<void> show(CrewPost p) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              databaseProvider.overrideWithValue(db),
+              authServiceProvider.overrideWithValue(FakeAuth(me)),
+              remoteStoreProvider.overrideWithValue(FakeRemote()),
+              crewServiceProvider.overrideWithValue(
+                MemoryCrewService(me: 'me'),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.dark(),
+              home: Scaffold(
+                body: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    CrewPostCard(post: p, now: DateTime(2026, 11, 22, 12)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await _settle(tester);
+      }
+
+      await show(post(cheered: false));
+      final name = tester.getSemantics(find.bySemanticsLabel('Jordan'));
+      expect(name.label, 'Jordan');
+      expect(name.flagsCollection.isButton, isTrue);
+      expect(name.hint, 'Opens Jordan’s page');
+      expect(name.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      // The 44pt target.
+      expect(name.rect.height, greaterThanOrEqualTo(44));
+
+      // No button anywhere carries the notes.
+      final buttons = find.semantics
+          .byPredicate((n) => n.flagsCollection.isButton)
+          .evaluate()
+          .toList();
+      expect(buttons, isNotEmpty);
+      for (final b in buttons) {
+        expect(b.label, isNot(contains('Rolling hills')));
+      }
+      expect(find.bySemanticsLabel(notes), findsOneWidget);
+
+      // One stop after "Encore!".
+      expect(
+        find.bySemanticsLabel('Effort 8 of 10, felt Encore!'),
+        findsOneWidget,
+      );
+
+      // The Encore says whether you cheered.
+      var encore = tester.getSemantics(find.bySemanticsLabel('Encore'));
+      expect(encore.flagsCollection.isButton, isTrue);
+      expect(encore.flagsCollection.isToggled, Tristate.isFalse);
+      expect(encore.value, 'none yet');
+      await show(post(cheered: true, encores: 3));
+      encore = tester.getSemantics(find.bySemanticsLabel('Encore'));
+      expect(encore.flagsCollection.isToggled, Tristate.isTrue);
+      expect(encore.value, '3 Encores');
+
       handle.dispose();
       await tester.pumpWidget(const SizedBox());
       await _settle(tester);

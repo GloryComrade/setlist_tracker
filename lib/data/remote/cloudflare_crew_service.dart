@@ -49,6 +49,7 @@ class CloudflareCrewService implements CrewService {
     userId: '${r['userId']}',
     stageName: '${r['stageName']}',
     color: asInt(r['color']),
+    allActivityPending: r['allActivityPending'] == true,
   );
 
   @override
@@ -62,6 +63,19 @@ class CloudflareCrewService implements CrewService {
     final r = await _api.put(
       '/api/crew/profile',
       body: {'stageName': p.stageName.trim(), 'color': p.color},
+    );
+    return _profile(_map(r));
+  });
+
+  @override
+  Future<CrewProfile> acceptAllActivity(CrewProfile p) => _guard(() async {
+    final r = await _api.put(
+      '/api/crew/profile',
+      body: {
+        'stageName': p.stageName.trim(),
+        'color': p.color,
+        'allActivity': true,
+      },
     );
     return _profile(_map(r));
   });

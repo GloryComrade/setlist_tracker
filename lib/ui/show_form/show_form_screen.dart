@@ -870,6 +870,18 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
           contentPadding: EdgeInsets.zero,
           value: _crewPrivate,
           onChanged: (v) => setState(() => _crewPrivate = v),
+          // The off state must read on the card (3:1): a grey outline and
+          // thumb. The on state keeps the theme's Magenta Deep.
+          trackOutlineColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? null
+                : StageColors.textMuted,
+          ),
+          thumbColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? null
+                : StageColors.textMuted,
+          ),
           secondary: Icon(
             _crewPrivate
                 ? Icons.visibility_off_outlined
@@ -880,9 +892,12 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             'Keep off the Crew',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
-          subtitle: const Text(
-            'Your Crew sees every Show you log. Turn this on to keep this '
-            'one to yourself.',
+          subtitle: Text(
+            crew.allActivityPending
+                ? 'Your Crew sees only the Shows you shared. Turn this on to '
+                      'keep this one to yourself either way.'
+                : 'Your Crew sees every Show you log. Turn this on to keep '
+                      'this one to yourself.',
           ),
         ),
       ),

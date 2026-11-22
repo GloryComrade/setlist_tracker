@@ -21,6 +21,10 @@ abstract class CrewService {
 
   Future<CrewProfile> saveProfile(CrewProfile profile);
 
+  /// OKs the Crew seeing every Show from now on (ends
+  /// [CrewProfile.allActivityPending]). Sends the stage name and color too.
+  Future<CrewProfile> acceptAllActivity(CrewProfile profile);
+
   /// Your invite code (six letters and digits), made if needed. Lasts a week.
   Future<String> inviteCode();
 

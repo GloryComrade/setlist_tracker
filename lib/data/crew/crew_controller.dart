@@ -30,6 +30,7 @@ class CrewState {
     this.mates = const [],
     this.posts = const [],
     this.error,
+    this.allActivityNoticeHidden = false,
   });
 
   /// False when this build has no backend: the Crew tab says so.
@@ -46,6 +47,12 @@ class CrewState {
   final List<CrewPost> posts;
   final String? error;
 
+  /// "Not now" on the "Your Crew sees more now" card, for this session.
+  final bool allActivityNoticeHidden;
+
+  /// The runner hasn't OK'd the Crew seeing every Show yet.
+  bool get allActivityPending => profile?.allActivityPending ?? false;
+
   List<CrewMate> get crew => mates.where((m) => !m.blocked).toList();
   List<CrewMate> get blocked => mates.where((m) => m.blocked).toList();
 
@@ -57,6 +64,7 @@ class CrewState {
     List<CrewPost>? posts,
     String? error,
     bool clearError = false,
+    bool? allActivityNoticeHidden,
   }) => CrewState(
     available: available,
     signedIn: signedIn,
@@ -66,6 +74,8 @@ class CrewState {
     mates: mates ?? this.mates,
     posts: posts ?? this.posts,
     error: clearError ? null : (error ?? this.error),
+    allActivityNoticeHidden:
+        allActivityNoticeHidden ?? this.allActivityNoticeHidden,
   );
 }
 
@@ -172,6 +182,22 @@ class CrewController extends Notifier<CrewState> {
     state = state.copyWith(profile: saved);
     if (state.mates.isEmpty && state.posts.isEmpty) await refresh();
   }
+
+  /// "Sounds good": the Crew sees every Show from now on.
+  Future<void> acceptAllActivity() async {
+    final p = state.profile;
+    if (p == null) return;
+    final saved = await _s.acceptAllActivity(p);
+    state = state.copyWith(profile: saved);
+    // The server has the last word on what the Crew sees.
+    final fresh = await _s.myProfile();
+    if (fresh != null) state = state.copyWith(profile: fresh);
+  }
+
+  /// "Not now": hides the card until the app is opened again. The Crew
+  /// keeps seeing only the Shows you shared.
+  void hideAllActivityNotice() =>
+      state = state.copyWith(allActivityNoticeHidden: true);
 
   Future<String> inviteCode() => _s.inviteCode();
 

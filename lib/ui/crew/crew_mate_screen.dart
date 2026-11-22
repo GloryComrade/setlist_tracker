@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/crew/crew_controller.dart';
+import '../../data/crew/crew_service.dart';
 import '../../logic/gold_records.dart';
 import '../../models/crew.dart';
 import '../../models/show.dart';
@@ -33,24 +35,33 @@ class CrewMateScreen extends ConsumerWidget {
       );
     } else {
       body = async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: CircularProgressIndicator(
+            semanticsLabel: 'Loading the Crew mate’s page',
+          ),
+        ),
         error: (e, _) => _Message(
           child: EmptyStage(
             icon: Icons.cloud_off_outlined,
             title: 'Can’t reach the Crew',
-            message: '$e',
+            message: e is CrewException
+                ? e.message
+                : 'Check your connection and try again.',
             actionLabel: 'Try again',
             actionIcon: Icons.refresh,
             onAction: () => ref.invalidate(crewMateProvider(userId)),
           ),
         ),
         data: (detail) => detail == null
-            ? const _Message(
+            ? _Message(
                 child: EmptyStage(
                   icon: Icons.groups_outlined,
                   title: 'Not in your Crew',
                   message:
                       'Only runners in your Crew can see each other’s Shows.',
+                  actionLabel: 'Back to The Crew',
+                  actionIcon: Icons.groups,
+                  onAction: () => context.go('/crew'),
                 ),
               )
             : _MatePage(detail: detail, crew: crew),
@@ -59,7 +70,7 @@ class CrewMateScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: backButtonFor(context, fallback: '/crew'),
-        title: const Text('THE CREW'),
+        title: const Text('CREW MATE'),
       ),
       body: body,
     );
@@ -98,7 +109,14 @@ class _MatePage extends ConsumerWidget {
     final isMe = mate.userId == crew.profile?.userId;
     final posts = detail.shows;
     final shows = [for (final p in posts) p.show];
-    final records = computeGoldRecords(shows);
+    // A handful of Shows makes every record the same Show, so the card and
+    // the badges wait until there is a Setlist to draw from.
+    final enough =
+        shows.where((s) => !s.isDeleted).length >= kMateRecordsMinShows;
+    final records = enough
+        ? computeGoldRecords(shows)
+        : const <RecordKind, GoldRecord>{};
+    final rows = mateRecordRows(records);
     final byShow = <String, List<String>>{};
     for (final r in records.values) {
       final id = r.show?.id;
@@ -119,11 +137,11 @@ class _MatePage extends ConsumerWidget {
               : MateTourCard(mate: mate, progress: progress),
         ),
       ],
-      if (records.isNotEmpty) ...[
+      if (rows.isNotEmpty) ...[
         const SizedBox(height: 12),
         SectionCard(
           title: 'Gold Records',
-          child: _RecordList(records: records),
+          child: _RecordList(rows: rows),
         ),
       ],
       const SizedBox(height: 24),
@@ -138,7 +156,10 @@ class _MatePage extends ConsumerWidget {
       else
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
-          child: CrewLabel(isMe ? 'Your Setlist' : 'The Setlist'),
+          child: Semantics(
+            header: true,
+            child: CrewLabel(isMe ? 'Your Setlist' : 'The Setlist'),
+          ),
         ),
     ];
 
@@ -203,9 +224,14 @@ class _Poster extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          WholeWordsText(
-            mate.stageName.toUpperCase(),
-            style: theme.textTheme.displayMedium?.copyWith(color: Colors.white),
+          Semantics(
+            header: true,
+            child: WholeWordsText(
+              mate.stageName.toUpperCase(),
+              style: theme.textTheme.displayMedium?.copyWith(
+                color: Colors.white,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -273,20 +299,56 @@ class _OwnTour extends StatelessWidget {
   }
 }
 
-/// Records they hold, as small gold-edged rows: title, then the number.
+/// Fewer Shows than this and a Crew mate's page shows no Gold Records.
+const kMateRecordsMinShows = 5;
+
+/// One row on a Crew mate's Gold Records card: one Show (or one week or
+/// month) and every record it holds.
+typedef MateRecordRow = ({DateTime date, List<String> titles, String value});
+
+/// The Gold Records worth a row on a Crew mate's page: week and month
+/// totals that only repeat the Longest Show are dropped, records set by the
+/// same Show share a row, and at most [max] rows are kept.
+List<MateRecordRow> mateRecordRows(
+  Map<RecordKind, GoldRecord> records, {
+  int max = 3,
+}) {
+  final longest = records[RecordKind.longestShow]?.value;
+  final rows = <MateRecordRow>[];
+  final byShow = <String, int>{};
+  for (final k in RecordKind.values) {
+    final r = records[k];
+    if (r == null) continue;
+    final period = k == RecordKind.biggestWeek || k == RecordKind.biggestMonth;
+    if (period && r.value == longest) continue;
+    final id = r.show?.id;
+    final at = id == null ? null : byShow[id];
+    if (at != null) {
+      rows[at].titles.add(k.title);
+      continue;
+    }
+    if (id != null) byShow[id] = rows.length;
+    rows.add((date: r.date, titles: [k.title], value: r.value));
+  }
+  return rows.take(max).toList();
+}
+
+/// Records they hold, as small gold-edged rows: the day and what it holds,
+/// then the headline number.
 class _RecordList extends StatelessWidget {
-  const _RecordList({required this.records});
-  final Map<RecordKind, GoldRecord> records;
+  const _RecordList({required this.rows});
+  final List<MateRecordRow> rows;
 
   @override
   Widget build(BuildContext context) {
-    final list = [for (final k in RecordKind.values) ?records[k]];
     return Column(
       children: [
-        for (final r in list)
+        for (final r in rows)
           Semantics(
             container: true,
-            label: 'Gold Record: ${r.kind.title}, ${r.value}',
+            label:
+                'Gold Record: ${r.titles.join(', ')}, ${r.value}, '
+                '${formatShowDay(r.date)}',
             child: ExcludeSemantics(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -299,7 +361,7 @@ class _RecordList extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            r.kind.title,
+                            r.titles.join(', '),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           Text(
@@ -312,6 +374,7 @@ class _RecordList extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       r.value,
                       style: Theme.of(context).textTheme.headlineSmall
