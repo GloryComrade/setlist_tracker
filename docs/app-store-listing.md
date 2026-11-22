@@ -10,7 +10,7 @@ version page below, screenshots, review notes, and a TestFlight build.
 Shout-outs and Seen by changed two answers since then: add **Usage Data →
 Product Interaction** on App Privacy, and switch **Messaging and chat** to
 Yes on Age Rating.
-Push notifications (build 5, version 1.1) change no App Privacy answer and
+Push notifications (build 5, version 1.0) change no App Privacy answer and
 no Age Rating answer; the review notes below mention them.
 
 ## App Information

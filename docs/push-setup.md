@@ -1,6 +1,6 @@
 # Push notifications: setting up Apple's side
 
-From build 5 (version 1.1), the iPhone app can send two notifications:
+From build 5 (version 1.0), the iPhone app can send two notifications:
 
 - **A Crew mate logs a Show**: "Maya just played a Show", "Tempo · 6.2 mi".
 - **A Shout-out on your Show**: "Sam gave you a Shout-out", then the
