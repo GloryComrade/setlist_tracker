@@ -196,7 +196,7 @@ class OnStageScreen extends ConsumerWidget {
   }
 }
 
-/// The Live gradient poster with the clock and the two numbers that matter
+/// The Live poster (flat Stage Surface, Live mark on the edge) with the clock and the two numbers that matter
 /// mid-run: miles and pace right now (and the same pace in mph).
 class _Poster extends StatelessWidget {
   const _Poster({
@@ -223,13 +223,13 @@ class _Poster extends StatelessWidget {
     final display = Theme.of(context).textTheme.displayLarge;
     final mph = currentPace == null ? null : mphFromPace(currentPace!);
     return PosterSurface(
-      gradient: gradientFor(Venue.live),
+      mark: markFor(Venue.live),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const VenueBadge(Venue.live, onPoster: true),
+              const VenueBadge(Venue.live),
               const SizedBox(width: 10),
               Flexible(
                 child: Text(
@@ -453,7 +453,7 @@ class _Controls extends StatelessWidget {
       ),
       RecorderPhase.ready => SizedBox(
         width: double.infinity,
-        child: GradientButton(
+        child: StageButton(
           label: 'Go Live',
           icon: Icons.mic,
           onPressed: onStart,
@@ -495,7 +495,7 @@ class _Controls extends StatelessWidget {
       RecorderPhase.paused => Row(
         children: [
           Expanded(
-            child: GradientButton(
+            child: StageButton(
               label: 'Resume',
               icon: Icons.play_arrow,
               onPressed: onResume,
@@ -510,7 +510,7 @@ class _Controls extends StatelessWidget {
           TextButton(onPressed: onThrowAway, child: const Text('Throw away')),
           const SizedBox(width: 12),
           Expanded(
-            child: GradientButton(
+            child: StageButton(
               label: 'Book this Show',
               icon: Icons.confirmation_number_outlined,
               onPressed: onBook,
