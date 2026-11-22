@@ -93,6 +93,8 @@
 	<string>Setlist Tracker saves the Shows you book to Apple Health as running workouts, with the route when you recorded it with Go Live. Turn it off in Settings.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Setlist Tracker uses your location while you're On Stage (Go Live) to record the route, distance and pace of your run, including with the screen locked. It's never used at any other time.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Setlist Tracker uses your location only while you're On Stage (Go Live), to record your run's route, distance and pace, including with the screen locked. It only asks for While Using access.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
