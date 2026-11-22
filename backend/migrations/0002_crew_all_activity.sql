@@ -34,9 +34,11 @@ WHERE post_id IN (SELECT id FROM crew_posts);
 -- before today keep showing.
 
 -- Runners who were in The Crew before today were promised "your Crew sees
--- only what you share". For them, Shows logged before this moment stay
--- hidden unless they had shared them. Everything they log from now on is
--- visible. Runners who pick a stage name later have NULL: all Shows.
+-- only what you share". They start "pending" (a far-future date): their
+-- Crew sees only the Shows they shared, until they say OK in the app, which
+-- sets the date to that moment. From then on, Shows logged before it stay
+-- hidden unless shared, and everything after is visible. Runners who pick a
+-- stage name later have NULL: all their Shows. See ALL_ACTIVITY_PENDING in
+-- src/crew.ts.
 ALTER TABLE crew_profiles ADD COLUMN all_activity_since TEXT;
-UPDATE crew_profiles
-SET all_activity_since = strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
+UPDATE crew_profiles SET all_activity_since = '9999-12-31T00:00:00.000Z';

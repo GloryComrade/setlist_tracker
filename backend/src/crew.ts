@@ -78,16 +78,31 @@ export interface Profile {
   userId: string;
   stageName: string;
   color: number;
+  /** In The Crew from before it showed everything, and not yet OK'd. */
+  allActivityPending: boolean;
 }
 
 interface ProfileRow {
   user_id: string;
   stage_name: string;
   color: number;
+  all_activity_since: string | null;
 }
 
+/**
+ * Runners who joined The Crew before it showed everything start with this
+ * date (migration 0002): only the Shows they shared are visible until they
+ * say OK in the app, which sets it to that moment.
+ */
+export const ALL_ACTIVITY_PENDING = "9999-12-31T00:00:00.000Z";
+
 function toProfile(r: ProfileRow): Profile {
-  return { userId: r.user_id, stageName: r.stage_name, color: r.color };
+  return {
+    userId: r.user_id,
+    stageName: r.stage_name,
+    color: r.color,
+    allActivityPending: r.all_activity_since === ALL_ACTIVITY_PENDING,
+  };
 }
 
 export async function getProfile(
@@ -95,7 +110,9 @@ export async function getProfile(
   userId: string,
 ): Promise<Profile | null> {
   const row = await db
-    .prepare("SELECT user_id, stage_name, color FROM crew_profiles WHERE user_id = ?")
+    .prepare(
+      "SELECT user_id, stage_name, color, all_activity_since FROM crew_profiles WHERE user_id = ?",
+    )
     .bind(userId)
     .first<ProfileRow>();
   return row ? toProfile(row) : null;
@@ -142,13 +159,23 @@ export async function saveProfile(
   const row = await db
     .prepare(
       `INSERT INTO crew_profiles (user_id, stage_name, color, updated_at)
-       VALUES (?, ?, ?, ?)
+       VALUES (?1, ?2, ?3, ?4)
        ON CONFLICT (user_id) DO UPDATE SET
          stage_name = excluded.stage_name, color = excluded.color,
-         updated_at = excluded.updated_at
-       RETURNING user_id, stage_name, color`,
+         updated_at = excluded.updated_at,
+         all_activity_since = CASE
+           WHEN ?5 = 1 AND all_activity_since = ?6 THEN excluded.updated_at
+           ELSE all_activity_since END
+       RETURNING user_id, stage_name, color, all_activity_since`,
     )
-    .bind(userId, stageName, color, iso(now))
+    .bind(
+      userId,
+      stageName,
+      color,
+      iso(now),
+      body.allActivity === true ? 1 : 0,
+      ALL_ACTIVITY_PENDING,
+    )
     .first<ProfileRow>();
   return toProfile(row!);
 }

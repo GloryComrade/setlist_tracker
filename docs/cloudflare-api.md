@@ -188,8 +188,10 @@ All Crew routes need sign-in.
 
 | Route | Body | Answer |
 | --- | --- | --- |
-| `GET /api/crew/profile` | | profile or `null` |
-| `PUT /api/crew/profile` | `{stageName, color}` (other fields, such as the old `alwaysShare`, are ignored) | profile |
+| `GET /api/crew/profile` | | `{userId, stageName, color, allActivityPending}` or `null` |
+| `PUT /api/crew/profile` | `{stageName, color, allActivity?: true}` (other fields, such as the old `alwaysShare`, are ignored) | profile |
+
+`allActivityPending` is true for runners who were in The Crew before it showed every Show (migration 0002). Until they send `allActivity: true`, their Crew sees only the Shows they shared the old way. After that, Shows created before that moment stay hidden unless shared, and everything newer is visible.
 | `POST /api/crew/invite` | | `{"code"}` (`need_stage_name` without a profile) |
 | `GET /api/crew/invite/{code}` | | `{stageName, color, alreadyCrew, ownInvite}`, or 404 `invite_invalid` (counts a miss) |
 | `POST /api/crew/join` | `{code}` | `{"userId"}`, or `invite_invalid` / `own_invite` / `need_stage_name` / `too_many_tries` |

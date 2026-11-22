@@ -119,7 +119,7 @@ describe("profile", () => {
     const r = await newRunner();
     expect((await callJson("GET", "/api/crew/profile", { token: r.token })).body).toBeNull();
     const p = await profile(r, "  Maya   Runs ", { color: 7 });
-    expect(p).toEqual({ userId: r.user.id, stageName: "Maya Runs", color: 7 });
+    expect(p).toEqual({ userId: r.user.id, stageName: "Maya Runs", color: 7, allActivityPending: false });
     expect((await callJson("GET", "/api/crew/profile", { token: r.token })).body).toEqual(p);
   });
 
@@ -131,7 +131,7 @@ describe("profile", () => {
       openingNight: "April 20",
       tourName: 42,
     });
-    expect(p).toEqual({ userId: r.user.id, stageName: "Maya", color: 1 });
+    expect(p).toEqual({ userId: r.user.id, stageName: "Maya", color: 1, allActivityPending: false });
   });
 
   it("validates stage name and color", async () => {
@@ -452,6 +452,32 @@ describe("the feed", () => {
     expect(seen).toContain(shared);
     expect(seen).toContain(fresh);
     expect(seen).not.toContain(hidden);
+  });
+
+  it("runners from before the change share only old posts until they say OK", async () => {
+    const { maya, ryan } = await crewPair();
+    await env.DB.prepare(
+      "UPDATE crew_profiles SET all_activity_since = '9999-12-31T00:00:00.000Z' WHERE user_id = ?",
+    )
+      .bind(ryan.user.id)
+      .run();
+    const p = await callJson("GET", "/api/crew/profile", { token: ryan.token });
+    expect(p.body.allActivityPending).toBe(true);
+
+    const fresh = await logShow(ryan, "new", { createdAt: new Date().toISOString() });
+    expect((await feed(maya)).map((x) => x.showId)).not.toContain(fresh);
+
+    // Old app builds save without allActivity: still pending.
+    expect((await profile(ryan, "Ryan")).allActivityPending).toBe(true);
+
+    const ok = await profile(ryan, "Ryan", { allActivity: true });
+    expect(ok.allActivityPending).toBe(false);
+    const later = await logShow(ryan, "later", {
+      createdAt: new Date(Date.now() + 1000).toISOString(),
+    });
+    const seen = (await feed(maya)).map((x) => x.showId);
+    expect(seen).toContain(later);
+    expect(seen).not.toContain(fresh);
   });
 
   it("gearName is null when the Gear is deleted or unknown", async () => {
