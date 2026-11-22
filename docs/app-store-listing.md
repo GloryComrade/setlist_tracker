@@ -10,6 +10,8 @@ version page below, screenshots, review notes, and a TestFlight build.
 Shout-outs and Seen by changed two answers since then: add **Usage Data →
 Product Interaction** on App Privacy, and switch **Messaging and chat** to
 Yes on Age Rating.
+Push notifications (build 5, version 1.0) change no App Privacy answer and
+no Age Rating answer; the review notes below mention them.
 
 ## App Information
 
@@ -160,6 +162,12 @@ For every type below:
 Not collected: coarse location, location outside a Go Live run, contacts, browsing or search history (song
 searches aren't stored), other usage data (no analytics), diagnostics, purchases.
 
+Push notifications add no data type. The app keeps the APNs device token iOS
+gives it, linked to the account, only to send Crew notifications; Apple's
+list of data types has no entry for it (it isn't a User ID or Device ID in
+Apple's sense, and it isn't used for tracking). `PrivacyInfo.xcprivacy`
+stays as it is.
+
 ## App Review notes
 
 Paste this into **App Review Information → Notes**, and tick **Sign-in
@@ -186,7 +194,8 @@ account.
 > who reviews it within 24 hours and removes the content and the account.
 >
 > Shout-outs are short comments (up to 280 characters) on a Show, seen
-> only by the Show's owner and their Crew. Tap Shout-out under a Show to
+> only by the Show's owner and their Crew. The server filters slurs and
+> profanity out of Shout-outs and stage names before anyone sees them. Tap Shout-out under a Show to
 > open them, and long-press one for Report or Delete. Each report alerts
 > the developer, who reviews it within 24 hours, and the reported
 > Shout-out leaves the reporter's view right away. The writer or the
@@ -207,6 +216,12 @@ account.
 > running with the screen locked so the route and distance are complete
 > (the app asks for "While Using" only; iOS shows the blue location
 > indicator). There is no location use outside a run you started.
+>
+> Notifications (opt-in): the app asks for permission the first time you
+> open The Crew tab, never at launch. It notifies you when a Crew mate logs
+> a new Show and when someone gives a Shout-out on your Show; Settings →
+> The Crew has a switch for each. There are no marketing or promotional
+> notifications.
 
 `TRYCREW2` is a permanent invite to the demo runner "Review Crew", seeded
 by backend migration 0006 (three Shows and a Shout-out; nobody can sign in
