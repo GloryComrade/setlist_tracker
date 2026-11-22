@@ -50,7 +50,8 @@ String encodePolyline(List<(double, double)> points) {
   var lastLat = 0;
   var lastLng = 0;
   void write(int v) {
-    var n = v < 0 ? ~(v << 1) : v << 1;
+    // Arithmetic, not ~ and <<: on the web those are unsigned 32-bit.
+    var n = v < 0 ? -v * 2 - 1 : v * 2;
     while (n >= 0x20) {
       out.writeCharCode((0x20 | (n & 0x1f)) + 63);
       n >>= 5;
@@ -84,7 +85,7 @@ List<(double, double)> decodePolyline(String encoded) {
       shift += 5;
       if (b < 0x20) break;
     }
-    return (result & 1) != 0 ? ~(result >> 1) : result >> 1;
+    return (result & 1) != 0 ? -(result >> 1) - 1 : result >> 1;
   }
 
   while (i < encoded.length) {
