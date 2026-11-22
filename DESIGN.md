@@ -238,7 +238,7 @@ Confident and loud for the one main action, quiet for the rest.
 - **Labels and hints:** House Lights Grey. Units go in the label or suffix: mi, mph, %, °F, ft.
 
 ### Navigation
-- **Bottom bar (narrow) / side rail (800px+):** Stage Surface background; indicator is Magenta Deep at 35% opacity; labels Inter 600 12px. Each tab has an outlined icon and a filled selected icon (for example `queue_music_outlined` → `queue_music` for the Setlist, `inventory_2_outlined` → `inventory_2` for Backstage). New tabs follow the same outlined/filled pair.
+- **Bottom bar (narrow) / side rail (800px+):** Stage Surface background; indicator is Magenta Deep at 35% opacity; labels Inter 600 12px. Each tab has an outlined icon and a filled selected icon (for example `queue_music_outlined` → `queue_music` for the Setlist, `leaderboard_outlined` → `leaderboard` for The Charts, `inventory_2_outlined` → `inventory_2` for Backstage). Charts draw bars and lines in the bright shades (cyan Studio, magenta Live, amber Headliners), since they are marks on the dark stage, and planned values as dashed outlines. New tabs follow the same outlined/filled pair.
 
 ### Icons
 Material Icons only, no extra icon packs. Venue icons: `graphic_eq` for Studio Session, `landscape` for Live Show (via `iconFor(venue)`). Weather uses outlined icons where they exist (`wb_sunny_outlined`, `cloud_outlined`, `umbrella_outlined`) via `iconForConditions`. Music marks use `music_note` / `album` / `queue_music`. Icons inside gradient fills are white; on the dark stage they use Spotlight White or a bright accent. Badge icons 14px, inline marks 16–18px, nav default 24px.
