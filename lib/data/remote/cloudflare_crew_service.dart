@@ -243,4 +243,69 @@ class CloudflareCrewService implements CrewService {
       body: {'userId': userId, 'reason': reason},
     ),
   );
+
+  // ---- Seen by, Encores and Shout-outs ----
+
+  @override
+  Future<CrewProfile> setShareViews(CrewProfile p, bool on) =>
+      _guard(() async {
+        final r = await _api.put(
+          '/api/crew/profile',
+          body: {
+            'stageName': p.stageName.trim(),
+            'color': p.color,
+            'shareViews': on,
+          },
+        );
+        return _profile(_map(r));
+      });
+
+  @override
+  Future<void> markSeen(String postId) =>
+      _guard(() => _api.put('/api/crew/posts/${_seg(postId)}/seen'));
+
+  @override
+  Future<CrewAudience> audience(String postId) => _guard(() async {
+    final r = await _api.get('/api/crew/posts/${_seg(postId)}/audience');
+    return CrewAudience.fromJson(_map(r));
+  });
+
+  @override
+  Future<List<CrewShoutout>> shoutouts(String postId) => _guard(() async {
+    final r = _map(await _api.get('/api/crew/posts/${_seg(postId)}/shoutouts'));
+    return asMapList(r['shoutouts']).map(CrewShoutout.fromJson).toList();
+  });
+
+  @override
+  Future<CrewShoutout> addShoutout(String postId, String body) async {
+    try {
+      return await _guard(() async {
+        final r = await _api.post(
+          '/api/crew/posts/${_seg(postId)}/shoutouts',
+          body: {'body': body},
+        );
+        return CrewShoutout.fromJson(_map(r));
+      });
+    } on CrewException catch (e) {
+      // The invite wording doesn't fit here.
+      if (e.message == messages['too_many_tries']) {
+        throw const CrewException(
+          'That’s a lot of Shout-outs. Try again in a bit.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteShoutout(String id) =>
+      _guard(() => _api.delete('/api/crew/shoutouts/${_seg(id)}'));
+
+  @override
+  Future<void> reportShoutout(String id, String reason) => _guard(
+    () => _api.post(
+      '/api/crew/shoutouts/${_seg(id)}/report',
+      body: {'reason': reason},
+    ),
+  );
 }
