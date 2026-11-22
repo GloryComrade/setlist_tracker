@@ -265,6 +265,9 @@ One component, `EmptyStage`: a centered 56px House Lights Grey icon, a Bebas hea
 ### Backstage Pass (account card)
 The first card in Backstage, a Section Card titled "Backstage Pass". Signed out: one plain sentence on what the Pass does, then full-width 48px sign-in buttons: Sign in with Apple in Apple's own white-with-black style (above), Continue with Google as a Magenta Deep filled button. Signed in: an "ALL ACCESS" badge in the headline gradient (venue-badge shape) as the card's trailing action, a 44px Magenta Deep avatar with the initial in Bebas, name in Inter 700 and email in House Lights Grey, an overflow menu (Sign out, Delete account), then one sync line: an 18px outlined cloud icon in grey (`cloud_done_outlined`) or amber when offline (`cloud_off_outlined`), grey text ("Synced 5 min ago", "Offline. 2 changes wait on this device."), and a Sync now text button. Sign out and Delete account always confirm in a dialog; the destructive action uses the error color. On the Setlist, a guest with 3 or more Shows sees one dismissible card ("Get your Backstage Pass…") with a magenta `badge_outlined` icon; it never returns once closed. Signed in, pulling down on the Setlist syncs.
 
+### Song Picker
+A bottom sheet ("SONG OF THE SHOW") with a search field and a plain list: 52px album art, the title in Inter 700, artist and album in House Lights Grey. Each row ends with where the result came from, "Spotify" or "Apple Music", as plain Inter 600 11px House Lights Grey text in sentence case: no logos, no brand colors, never louder than the song. While a picked Spotify song looks up its Apple preview, the sheet's 2px progress bar runs and further taps wait.
+
 ### App Bars
 Detail screens name the kind of screen ("THE SHOW", "TOUR DATE · WEEK 3", "BOOK A SHOW", "EDIT SAVED MIX"); the poster below carries the content. Screens whose poster already names them (Gold Records, The Record Wall) leave the app bar title empty.
 

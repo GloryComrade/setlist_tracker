@@ -63,7 +63,7 @@ Setup steps: [docs/backstage-pass-setup.md](docs/backstage-pass-setup.md). Datab
 ## Notes
 
 - Studio Session distance and time come from the Tracks by default. Switch "Use Track totals" off to type what the treadmill screen said.
-- Song of the Show is picked from a search list with album art (Apple's free iTunes Search, no key needed), or typed in. The Show page has Open in Spotify and Apple Music buttons. A Spotify-powered search needs a server for its API secret, so it waits for Phase 5.
+- Song of the Show is picked from a search list with album art, or typed in. With the Supabase settings and the `spotify-search` Edge Function deployed it searches Spotify (the function holds Spotify's secret) and saves the song's Spotify link; a picked Spotify song borrows Apple's 30-second preview for the clip. Without them, or whenever Spotify can't be reached, it searches Apple's free iTunes catalog. Setup: [docs/spotify-setup.md](docs/spotify-setup.md). The Show page has Open in Spotify and Apple Music buttons.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
 - Fonts (Bebas Neue, Inter) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.
 
