@@ -1,27 +1,33 @@
-// The Crew: running friends who share Shows with each other.
+// The Crew: running friends who see each other's Shows.
+//
+// Being in someone's Crew means you see all their activity: every Show they
+// sync with Backstage Pass (the `records` table), except deleted ones and
+// ones they marked "Keep off the Crew" (`crewPrivate: true`), plus their
+// active Tour. Nothing is shared by hand anymore.
 //
 // Same rules as the old Supabase version
 // (supabase/migrations/20261123000000_the_crew.sql):
-// - You see your own posts and profile, plus your Crew's. Anyone you
+// - You see your own Shows and profile, plus your Crew's. Anyone you
 //   blocked, or who blocked you, is never in your Crew.
 // - Invite codes: 8 characters from ABCDEFGHJKMNPQRSTUVWXYZ23456789, crypto
 //   random, valid 7 days, reused while more than a day is left.
 // - Ten wrong codes in an hour gets too_many_tries (codes from a blocked
 //   runner count as wrong).
-// - Encores only on posts you can see, never your own. The feed shows how
+// - Encores only on Shows you can see, never your own. The feed shows how
 //   many and whether one is yours, never who.
-// - The server sets sharedAt and copies the post into a report.
+// - A post is named "<ownerId>:<showId>". The server copies the Show into a
+//   report.
 
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
-import { addMs, byteLength, DAY, HOUR, iso, isObject, normalizeIso, randomBytes } from "./util";
+import { addMs, DAY, HOUR, iso, isObject, randomBytes } from "./util";
 
 export const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export const INVITE_LENGTH = 8;
 export const INVITE_MS = 7 * DAY;
 export const MAX_MISSES_PER_HOUR = 10;
 export const FEED_LIMIT = 60;
-export const MAX_SHOW_BYTES = 8 * 1024;
+export const MATE_SHOWS_LIMIT = 500;
 
 // ---- Shared SQL ----
 
@@ -72,32 +78,16 @@ export interface Profile {
   userId: string;
   stageName: string;
   color: number;
-  alwaysShare: boolean;
-  showOpeningNight: boolean;
-  openingNight: string | null;
-  tourName: string | null;
 }
 
 interface ProfileRow {
   user_id: string;
   stage_name: string;
   color: number;
-  always_share: number;
-  show_opening_night: number;
-  opening_night: string | null;
-  tour_name: string | null;
 }
 
 function toProfile(r: ProfileRow): Profile {
-  return {
-    userId: r.user_id,
-    stageName: r.stage_name,
-    color: r.color,
-    alwaysShare: r.always_share === 1,
-    showOpeningNight: r.show_opening_night === 1,
-    openingNight: r.opening_night,
-    tourName: r.tour_name,
-  };
+  return { userId: r.user_id, stageName: r.stage_name, color: r.color };
 }
 
 export async function getProfile(
@@ -105,7 +95,7 @@ export async function getProfile(
   userId: string,
 ): Promise<Profile | null> {
   const row = await db
-    .prepare("SELECT * FROM crew_profiles WHERE user_id = ?")
+    .prepare("SELECT user_id, stage_name, color FROM crew_profiles WHERE user_id = ?")
     .bind(userId)
     .first<ProfileRow>();
   return row ? toProfile(row) : null;
@@ -126,12 +116,11 @@ function badProfile(message: string): ApiError {
   return new ApiError("bad_request", message);
 }
 
-function optionalBool(v: unknown, name: string): boolean {
-  if (v == null) return false;
-  if (typeof v !== "boolean") throw badProfile(`${name} should be true or false.`);
-  return v;
-}
-
+/**
+ * Saves the stage name and color. Fields from the first Crew release
+ * (alwaysShare, showOpeningNight, openingNight, tourName) are ignored, so
+ * older app builds keep working.
+ */
 export async function saveProfile(
   db: D1Database,
   userId: string,
@@ -150,54 +139,16 @@ export async function saveProfile(
   if (typeof color !== "number" || !Number.isInteger(color) || color < 0 || color > 7) {
     throw badProfile("Pick one of the avatar colors.");
   }
-  const alwaysShare = optionalBool(body.alwaysShare, "alwaysShare");
-  const showOpeningNight = optionalBool(body.showOpeningNight, "showOpeningNight");
-  let openingNight: string | null = null;
-  let tourName: string | null = null;
-  if (showOpeningNight) {
-    if (body.openingNight != null) {
-      if (
-        typeof body.openingNight !== "string" ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(body.openingNight) ||
-        !Number.isFinite(Date.parse(`${body.openingNight}T00:00:00Z`))
-      ) {
-        throw badProfile("Opening Night should be a date (YYYY-MM-DD).");
-      }
-      openingNight = body.openingNight;
-    }
-    if (body.tourName != null) {
-      if (typeof body.tourName !== "string") {
-        throw badProfile("Your Tour's name should be text.");
-      }
-      tourName = body.tourName.trim() || null;
-      if (tourName && tourName.length > 60) {
-        throw badProfile("Your Tour's name can be up to 60 characters.");
-      }
-    }
-  }
   const row = await db
     .prepare(
-      `INSERT INTO crew_profiles (user_id, stage_name, color, always_share,
-         show_opening_night, opening_night, tour_name, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO crew_profiles (user_id, stage_name, color, updated_at)
+       VALUES (?, ?, ?, ?)
        ON CONFLICT (user_id) DO UPDATE SET
          stage_name = excluded.stage_name, color = excluded.color,
-         always_share = excluded.always_share,
-         show_opening_night = excluded.show_opening_night,
-         opening_night = excluded.opening_night,
-         tour_name = excluded.tour_name, updated_at = excluded.updated_at
-       RETURNING *`,
+         updated_at = excluded.updated_at
+       RETURNING user_id, stage_name, color`,
     )
-    .bind(
-      userId,
-      stageName,
-      color,
-      alwaysShare ? 1 : 0,
-      showOpeningNight ? 1 : 0,
-      openingNight,
-      tourName,
-      iso(now),
-    )
+    .bind(userId, stageName, color, iso(now))
     .first<ProfileRow>();
   return toProfile(row!);
 }
@@ -346,17 +297,85 @@ export async function joinCrew(
   return them;
 }
 
+// ---- Tours ----
+
+export const RACE_DISTANCES = ["fiveK", "tenK", "half", "marathon"] as const;
+
+/** "YYYY-MM-DD" in UTC. */
+export function utcDate(now: Date): string {
+  return iso(now).slice(0, 10);
+}
+
+/**
+ * SQL for the active Tour of the runner in [col]: their non-deleted Tour
+ * with the latest setup.raceDate on or after ?2 (today, UTC). Selects
+ * [what] from it (the Tour row is `t`).
+ */
+const ACTIVE_TOUR = (col: string, what: string) => `(
+  SELECT ${what} FROM records t
+  WHERE t.user_id = ${col} AND t.kind = 'tours' AND t.deleted_at IS NULL
+    AND json_extract(t.data, '$.setup.raceDate') >= ?2
+  ORDER BY json_extract(t.data, '$.setup.raceDate') DESC, t.id DESC
+  LIMIT 1)`;
+
+const TOUR_SUMMARY_JSON = `json_object(
+    'id', t.id,
+    'name', json_extract(t.data, '$.name'),
+    'raceDate', json_extract(t.data, '$.setup.raceDate'),
+    'raceDistance', json_extract(t.data, '$.setup.raceDistance'),
+    'featuring', json(json_extract(t.data, '$.featuring')))`;
+
+export interface Featuring {
+  userId: string;
+  stageName: string;
+}
+
+export interface TourSummary {
+  id: string;
+  name: string;
+  raceDate: string;
+  raceDistance: (typeof RACE_DISTANCES)[number];
+  featuring: Featuring | null;
+}
+
+function toFeaturing(v: unknown): Featuring | null {
+  if (!isObject(v)) return null;
+  if (typeof v.userId !== "string" || typeof v.stageName !== "string") return null;
+  return { userId: v.userId, stageName: v.stageName };
+}
+
+function toTourSummary(raw: string | null): TourSummary | null {
+  if (!raw) return null;
+  const t = JSON.parse(raw) as Record<string, unknown>;
+  const distance = (RACE_DISTANCES as readonly unknown[]).includes(t.raceDistance)
+    ? (t.raceDistance as TourSummary["raceDistance"])
+    : "marathon";
+  return {
+    id: String(t.id),
+    name: typeof t.name === "string" ? t.name : "Tour",
+    raceDate: String(t.raceDate),
+    raceDistance: distance,
+    featuring: toFeaturing(t.featuring),
+  };
+}
+
 // ---- Mates and blocks ----
 
-export async function listMates(db: D1Database, me: string) {
+export async function listMates(
+  db: D1Database,
+  me: string,
+  now: Date = new Date(),
+) {
   const { results } = await db
     .prepare(
-      `SELECT user_id, stage_name, color, opening_night, tour_name, since, blocked
+      `SELECT user_id, stage_name, color, since, blocked,
+              CASE WHEN blocked = 0
+                THEN ${ACTIVE_TOUR("m.user_id", TOUR_SUMMARY_JSON)} END AS tour
        FROM (
          SELECT o.other AS user_id,
                 coalesce(p.stage_name, 'Runner') AS stage_name,
                 coalesce(p.color, 0) AS color,
-                p.opening_night, p.tour_name, o.created_at AS since,
+                o.created_at AS since,
                 0 AS blocked
          FROM (SELECT CASE WHEN user_a = ?1 THEN user_b ELSE user_a END AS other,
                       user_a, user_b, created_at
@@ -367,32 +386,72 @@ export async function listMates(db: D1Database, me: string) {
                 OR (b.blocker = o.user_b AND b.blocked = o.user_a))
          UNION ALL
          SELECT b.blocked, coalesce(p.stage_name, 'Runner'), coalesce(p.color, 0),
-                NULL, NULL, b.created_at, 1
+                b.created_at, 1
          FROM crew_blocks b
          LEFT JOIN crew_profiles p ON p.user_id = b.blocked
          WHERE b.blocker = ?1
-       )
+       ) m
        ORDER BY blocked, stage_name COLLATE NOCASE, user_id`,
     )
-    .bind(me)
+    .bind(me, utcDate(now))
     .all<{
       user_id: string;
       stage_name: string;
       color: number;
-      opening_night: string | null;
-      tour_name: string | null;
       since: string;
       blocked: number;
+      tour: string | null;
     }>();
   return results.map((r) => ({
     userId: r.user_id,
     stageName: r.stage_name,
     color: r.color,
     since: r.since,
-    openingNight: r.opening_night,
-    tourName: r.tour_name,
+    tour: toTourSummary(r.tour),
     blocked: r.blocked === 1,
   }));
+}
+
+function mateNotFound(): ApiError {
+  return new ApiError("not_found", "That runner isn't in your Crew.");
+}
+
+/**
+ * One Crew mate (or yourself): who they are, their active Tour (the whole
+ * Tour JSON) and their Shows, newest first. 404 unless they're in your Crew.
+ */
+export async function mateDetail(
+  db: D1Database,
+  me: string,
+  other: string,
+  now: Date = new Date(),
+) {
+  const row = await db
+    .prepare(
+      `SELECT coalesce(p.stage_name, 'Runner') AS stage_name,
+              coalesce(p.color, 0) AS color,
+              CASE WHEN u.id = ?1 THEN u.created_at
+                ELSE (SELECT l.created_at FROM crew_links l
+                      WHERE (l.user_a = ?1 AND l.user_b = u.id)
+                         OR (l.user_b = ?1 AND l.user_a = u.id)) END AS since,
+              ${ACTIVE_TOUR("u.id", "t.data")} AS tour
+       FROM users u
+       LEFT JOIN crew_profiles p ON p.user_id = u.id
+       WHERE u.id = ?3 AND (u.id = ?1 OR ${IS_CREW("u.id")})`,
+    )
+    .bind(me, utcDate(now), other)
+    .first<{ stage_name: string; color: number; since: string; tour: string | null }>();
+  if (!row) throw mateNotFound();
+  return {
+    mate: {
+      userId: other,
+      stageName: row.stage_name,
+      color: row.color,
+      since: row.since,
+    },
+    tour: row.tour ? JSON.parse(row.tour) : null,
+    shows: await crewShows(db, me, { owner: other, limit: MATE_SHOWS_LIMIT }),
+  };
 }
 
 export async function leaveCrew(db: D1Database, me: string, other: string) {
@@ -432,168 +491,152 @@ export async function unblock(db: D1Database, me: string, other: string) {
     .run();
 }
 
-// ---- Shared Shows ----
+// ---- Shows the Crew sees ----
 
-/** A post the signed-in runner [me] can see (their own, or their Crew's). */
-async function visiblePost(db: D1Database, me: string, postId: string) {
-  return db
-    .prepare(
-      `SELECT p.id, p.owner, p.data FROM crew_posts p
-       WHERE p.id = ?2 AND (p.owner = ?1 OR ${IS_CREW("p.owner")})`,
-    )
-    .bind(me, postId)
-    .first<{ id: string; owner: string; data: string }>();
+/**
+ * SQL true when the synced Show `s` can be seen by its owner's Crew: not
+ * deleted and not marked "Keep off the Crew".
+ */
+const CREW_SHOW = `(s.kind = 'shows' AND s.deleted_at IS NULL
+  AND coalesce(json_extract(s.data, '$.crewPrivate'), 0) = 0)`;
+
+/** The ids of ?1 (me) and everyone in my Crew. */
+const ME_AND_CREW = `(
+  SELECT ?1
+  UNION
+  SELECT CASE WHEN l.user_a = ?1 THEN l.user_b ELSE l.user_a END
+  FROM crew_links l WHERE ?1 IN (l.user_a, l.user_b))`;
+
+/** "<ownerId>:<showId>" -> its parts, or null. */
+export function parsePostId(postId: string): { owner: string; showId: string } | null {
+  const i = postId.indexOf(":");
+  if (i < 1 || i === postId.length - 1) return null;
+  return { owner: postId.slice(0, i), showId: postId.slice(i + 1) };
 }
 
-function postNotFound(): ApiError {
-  return new ApiError("not_found", "That Show isn't shared with you anymore.");
+export function postId(owner: string, showId: string): string {
+  return `${owner}:${showId}`;
 }
 
-export async function feed(db: D1Database, me: string) {
+/**
+ * Shows [me] can see, newest Show date first, as feed posts: from [owner]
+ * only, or from me and my whole Crew. Leaves out Shows I reported.
+ */
+async function crewShows(
+  db: D1Database,
+  me: string,
+  opts: { owner?: string; limit: number },
+) {
+  const owners = opts.owner ? "(?2)" : ME_AND_CREW;
   const { results } = await db
     .prepare(
-      `SELECT p.id, p.owner, p.show_id, p.data, p.created_at,
+      `SELECT s.user_id AS owner, s.id, s.data, s.updated_at,
               pr.stage_name, pr.color,
-              (SELECT count(*) FROM crew_encores e WHERE e.post_id = p.id) AS encores,
-              EXISTS (SELECT 1 FROM crew_encores e
-                      WHERE e.post_id = p.id AND e.user_id = ?1) AS encored_by_me
-       FROM crew_posts p
-       JOIN crew_profiles pr ON pr.user_id = p.owner
-       WHERE (p.owner = ?1 OR ${IS_CREW("p.owner")})
+              json_extract(g.data, '$.name') AS gear_name,
+              (SELECT count(*) FROM crew_encores_v2 e
+               WHERE e.owner = s.user_id AND e.show_id = s.id) AS encores,
+              EXISTS (SELECT 1 FROM crew_encores_v2 e
+                      WHERE e.owner = s.user_id AND e.show_id = s.id
+                        AND e.user_id = ?1) AS encored_by_me
+       FROM records s
+       JOIN crew_profiles pr ON pr.user_id = s.user_id
+       LEFT JOIN records g ON g.kind = 'gear'
+         AND g.id = json_extract(s.data, '$.gearId')
+         AND g.user_id = s.user_id AND g.deleted_at IS NULL
+       WHERE s.user_id IN ${owners}
+         AND ${CREW_SHOW}
+         AND (s.user_id = ?1 OR ${IS_CREW("s.user_id")})
          AND NOT EXISTS (SELECT 1 FROM crew_reports r
-                         WHERE r.reporter = ?1 AND r.post_id = p.id)
-       ORDER BY p.created_at DESC, p.id DESC
-       LIMIT ${FEED_LIMIT}`,
+                         WHERE r.reporter = ?1 AND r.post_id = s.id
+                           AND r.reported_user = s.user_id)
+       ORDER BY json_extract(s.data, '$.date') DESC, s.id DESC
+       LIMIT ${opts.limit}`,
     )
-    .bind(me)
+    .bind(me, ...(opts.owner ? [opts.owner] : []))
     .all<{
-      id: string;
       owner: string;
-      show_id: string;
+      id: string;
       data: string;
-      created_at: string;
+      updated_at: string;
       stage_name: string;
       color: number;
+      gear_name: unknown;
       encores: number;
       encored_by_me: number;
     }>();
   return results.map((r) => ({
-    id: r.id,
+    id: postId(r.owner, r.id),
     ownerId: r.owner,
     stageName: r.stage_name,
     color: r.color,
-    showId: r.show_id,
+    showId: r.id,
     show: JSON.parse(r.data),
-    sharedAt: r.created_at,
+    gearName: typeof r.gear_name === "string" ? r.gear_name : null,
+    sharedAt: r.updated_at,
     encores: r.encores,
     encoredByMe: r.encored_by_me === 1,
     mine: r.owner === me,
   }));
 }
 
-export async function listShared(db: D1Database, me: string) {
-  const { results } = await db
-    .prepare(
-      `SELECT show_id, show_updated_at,
-              json_type(data, '$.notes') = 'text' AS includes_notes
-       FROM crew_posts WHERE owner = ?`,
-    )
-    .bind(me)
-    .all<{ show_id: string; show_updated_at: string; includes_notes: number }>();
-  const shared: Record<string, { showUpdatedAt: string; includesNotes: boolean }> = {};
-  for (const r of results) {
-    shared[r.show_id] = {
-      showUpdatedAt: r.show_updated_at,
-      includesNotes: r.includes_notes === 1,
-    };
-  }
-  return shared;
+export async function feed(db: D1Database, me: string) {
+  return crewShows(db, me, { limit: FEED_LIMIT });
 }
 
-export async function share(
-  db: D1Database,
-  me: string,
-  showId: string,
-  body: Record<string, unknown>,
-  now: Date = new Date(),
-) {
-  await requireProfile(db, me);
-  if (!showId || showId.length > 100) {
-    throw new ApiError("bad_request", "That Show can't be shared.");
-  }
-  if (!isObject(body.show)) {
-    throw new ApiError("bad_request", "That Show can't be shared.");
-  }
-  const data = JSON.stringify(body.show);
-  if (byteLength(data) > MAX_SHOW_BYTES) {
-    throw new ApiError(
-      "bad_request",
-      "That Show is too big to share. Try leaving the notes out.",
-    );
-  }
-  const showUpdatedAt = normalizeIso(body.showUpdatedAt);
-  if (!showUpdatedAt) {
-    throw new ApiError("bad_request", "That Show can't be shared.");
-  }
-  // sharedAt (created_at) is the server's clock and survives re-sharing, so
-  // nobody can pin a post to the top of the feed.
-  await db
+/** A Show the signed-in runner [me] can see (their own, or their Crew's). */
+async function visibleShow(db: D1Database, me: string, id: string) {
+  const parsed = parsePostId(id);
+  if (!parsed) return null;
+  return db
     .prepare(
-      `INSERT INTO crew_posts
-         (id, owner, show_id, data, show_updated_at, created_at, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
-       ON CONFLICT (owner, show_id) DO UPDATE SET
-         data = excluded.data, show_updated_at = excluded.show_updated_at,
-         updated_at = excluded.updated_at`,
+      `SELECT s.user_id AS owner, s.id, s.data FROM records s
+       WHERE s.user_id = ?2 AND s.id = ?3 AND ${CREW_SHOW}
+         AND (s.user_id = ?1 OR ${IS_CREW("s.user_id")})`,
     )
-    .bind(crypto.randomUUID(), me, showId, data, showUpdatedAt, iso(now))
-    .run();
+    .bind(me, parsed.owner, parsed.showId)
+    .first<{ owner: string; id: string; data: string }>();
 }
 
-/** Stops sharing a Show. Its Encores go with it; reports stay. */
-export async function unshare(db: D1Database, me: string, showId: string) {
-  await db.batch([
-    db.prepare(
-      `DELETE FROM crew_encores WHERE post_id IN
-         (SELECT id FROM crew_posts WHERE owner = ? AND show_id = ?)`,
-    ).bind(me, showId),
-    db.prepare("DELETE FROM crew_posts WHERE owner = ? AND show_id = ?")
-      .bind(me, showId),
-  ]);
+function postNotFound(): ApiError {
+  return new ApiError("not_found", "That Show isn't in your Crew's feed anymore.");
 }
 
 export async function encore(
   db: D1Database,
   me: string,
-  postId: string,
+  id: string,
   now: Date = new Date(),
 ) {
-  const post = await visiblePost(db, me, postId);
-  if (!post) throw postNotFound();
-  if (post.owner === me) {
+  const show = await visibleShow(db, me, id);
+  if (!show) throw postNotFound();
+  if (show.owner === me) {
     throw new ApiError("bad_request", "You can't give your own Show an Encore.");
   }
   await db
     .prepare(
-      `INSERT INTO crew_encores (post_id, user_id, created_at) VALUES (?, ?, ?)
-       ON CONFLICT DO NOTHING`,
+      `INSERT INTO crew_encores_v2 (owner, show_id, user_id, created_at)
+       VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`,
     )
-    .bind(postId, me, iso(now))
+    .bind(show.owner, show.id, me, iso(now))
     .run();
 }
 
-export async function unencore(db: D1Database, me: string, postId: string) {
+export async function unencore(db: D1Database, me: string, id: string) {
+  const parsed = parsePostId(id);
+  if (!parsed) return;
   await db
-    .prepare("DELETE FROM crew_encores WHERE post_id = ? AND user_id = ?")
-    .bind(postId, me)
+    .prepare(
+      "DELETE FROM crew_encores_v2 WHERE owner = ? AND show_id = ? AND user_id = ?",
+    )
+    .bind(parsed.owner, parsed.showId, me)
     .run();
 }
 
-/** Reports a post. The server copies the post's data into the report. */
+/** Reports a Show. The server copies the Show's data into the report. */
 export async function report(
   db: D1Database,
   me: string,
-  postId: string,
+  id: string,
   reason: unknown,
   now: Date = new Date(),
 ) {
@@ -604,9 +647,9 @@ export async function report(
       "Tell us what's wrong in 1 to 500 characters.",
     );
   }
-  const post = await visiblePost(db, me, postId);
-  if (!post) throw postNotFound();
-  if (post.owner === me) {
+  const show = await visibleShow(db, me, id);
+  if (!show) throw postNotFound();
+  if (show.owner === me) {
     throw new ApiError("bad_request", "You can't report your own Show.");
   }
   await db
@@ -615,7 +658,7 @@ export async function report(
          (id, reporter, post_id, reported_user, post_data, reason, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(crypto.randomUUID(), me, post.id, post.owner, post.data, text, iso(now))
+    .bind(crypto.randomUUID(), me, show.id, show.owner, show.data, text, iso(now))
     .run();
 }
 
@@ -658,6 +701,9 @@ export async function crewRoute(
   if (a === "mates" && n === 1 && m === "GET") {
     return json({ mates: await listMates(db, me) });
   }
+  if (a === "mates" && n === 2 && m === "GET") {
+    return json(await mateDetail(db, me, b));
+  }
   if (a === "mates" && n === 2 && m === "DELETE") {
     await leaveCrew(db, me, b);
     return noContent();
@@ -673,18 +719,13 @@ export async function crewRoute(
   if (a === "feed" && n === 1 && m === "GET") {
     return json({ posts: await feed(db, me) });
   }
+  // Hand-picked sharing is gone (your Crew sees every Show). These answer
+  // as before and do nothing, so older app builds don't show errors.
   if (a === "shared" && n === 1 && m === "GET") {
-    return json({ shared: await listShared(db, me) });
+    return json({ shared: {} });
   }
-  if (a === "shared" && n === 2) {
-    if (m === "PUT") {
-      await share(db, me, b, await readJson(request));
-      return noContent();
-    }
-    if (m === "DELETE") {
-      await unshare(db, me, b);
-      return noContent();
-    }
+  if (a === "shared" && n === 2 && (m === "PUT" || m === "DELETE")) {
+    return noContent();
   }
   if (a === "posts" && n === 3 && c === "encore") {
     if (m === "PUT") {

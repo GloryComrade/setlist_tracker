@@ -151,47 +151,100 @@ can't succeed.
 
 ## The Crew
 
-The rules are the same as the old Supabase version:
+Being in someone's Crew means you see **all their activity**. Nothing is
+shared by hand: the Crew reads the Shows, Gear and Tours the app already
+syncs (Backstage Pass, the `records` table). The rules:
 
-- You see your own posts and profile, plus your Crew's. Anyone you blocked,
+- You see your own Shows and profile, plus your Crew's. Anyone you blocked,
   or who blocked you, is never in your Crew.
+- A Show is seen by the Crew unless it is deleted (`deleted_at`) or its
+  owner marked it "Keep off the Crew" (Show JSON `crewPrivate: true`; a
+  missing field means false). Your own private Shows are left out of your
+  own feed too.
+- A post is one synced Show, named `"<ownerId>:<showId>"`. It carries the
+  whole Show JSON (effort, feel, notes, Tracks, song, everything the app
+  wrote) and `gearName`, the `name` of the owner's non-deleted Gear whose id
+  is the Show's `gearId` (`null` otherwise). `sharedAt` is the Show's
+  `updatedAt` as synced.
+- A runner's **active Tour** is their non-deleted Tour with the latest
+  `setup.raceDate` that is today (UTC) or later; `null` when there is none.
+  A missing `setup.raceDistance` means `marathon`.
+- Two Tours are **co-headlined** when `setup.raceDate` and
+  `setup.raceDistance` match. There is no server table for this: the app
+  works it out from both runners' Tours. A Tour booked featuring a friend
+  carries `featuring: {userId, stageName}` (informational).
 - Joining needs an unexpired 8-character code from the alphabet
   `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, made with crypto randomness. Codes last
   7 days, and the same code is reused while it has more than a day left.
 - Ten wrong codes in an hour gets `too_many_tries`. Wrong codes include
   codes from a blocked runner.
 - Each block is its own row. Unblocking removes only your own block.
-- Encores: only on a post you can see, and never on your own. The feed
-  returns how many Encores a post has and whether one is yours, never who
-  gave them.
-- The server sets the time a post was shared (`sharedAt`).
-- A report copies the post's data on the server.
+- Encores: only on a Show you can see, and never on your own. Posts return
+  how many Encores a Show has and whether one is yours, never who gave them.
+- A report copies the Show's data on the server and hides that Show from the
+  reporter (feed and mate page).
 
 All Crew routes need sign-in.
 
 | Route | Body | Answer |
 | --- | --- | --- |
 | `GET /api/crew/profile` | | profile or `null` |
-| `PUT /api/crew/profile` | `{stageName, color, alwaysShare, showOpeningNight, openingNight: "YYYY-MM-DD"\|null, tourName}` | profile |
+| `PUT /api/crew/profile` | `{stageName, color}` (other fields, such as the old `alwaysShare`, are ignored) | profile |
 | `POST /api/crew/invite` | | `{"code"}` (`need_stage_name` without a profile) |
 | `GET /api/crew/invite/{code}` | | `{stageName, color, alreadyCrew, ownInvite}`, or 404 `invite_invalid` (counts a miss) |
 | `POST /api/crew/join` | `{code}` | `{"userId"}`, or `invite_invalid` / `own_invite` / `need_stage_name` / `too_many_tries` |
-| `GET /api/crew/mates` | | `{"mates": [{userId, stageName, color, since, openingNight, tourName, blocked}]}`: your Crew first, then the runners you blocked |
+| `GET /api/crew/mates` | | `{"mates": [Mate]}`: your Crew first, then the runners you blocked |
+| `GET /api/crew/mates/{userId}` | | `{mate: {userId, stageName, color, since}, tour: <Tour JSON>\|null, shows: [Post]}`, or 404 `not_found` unless they're in your Crew (or it's you) |
 | `DELETE /api/crew/mates/{userId}` | | 204 (leave each other's Crew) |
 | `POST /api/crew/blocks` | `{userId}` | 204 (also ends the Crew link; `cant_block` for yourself or an unknown id) |
 | `DELETE /api/crew/blocks/{userId}` | | 204 |
-| `GET /api/crew/feed` | | `{"posts": [{id, ownerId, stageName, color, showId, show: {...SharedShow json}, sharedAt, encores, encoredByMe, mine}]}`: newest 60, leaving out posts you reported |
-| `GET /api/crew/shared` | | `{"shared": {"<showId>": {showUpdatedAt, includesNotes}}}` |
-| `PUT /api/crew/shared/{showId}` | `{show: {...}, showUpdatedAt}` | 204 (share, or replace the copy; `need_stage_name` without a profile; `show` at most 8 KB) |
-| `DELETE /api/crew/shared/{showId}` | | 204 (its Encores go with it) |
-| `PUT /api/crew/posts/{postId}/encore` | | 204 |
+| `GET /api/crew/feed` | | `{"posts": [Post]}`: newest 60 by Show `date`, from you and your Crew, leaving out Shows you reported |
+| `PUT /api/crew/posts/{postId}/encore` | | 204 (404 `not_found` if you can't see that Show) |
 | `DELETE /api/crew/posts/{postId}/encore` | | 204 |
 | `POST /api/crew/posts/{postId}/report` | `{reason}` (1 to 500 characters) | 204 |
+| `GET /api/crew/shared` | | `{"shared": {}}` (old route, kept for older app builds) |
+| `PUT /api/crew/shared/{showId}` | anything | 204, does nothing (old route) |
+| `DELETE /api/crew/shared/{showId}` | | 204, does nothing (old route) |
 
-Profile JSON: `{userId, stageName, color, alwaysShare, showOpeningNight,
-openingNight, tourName}`. When `showOpeningNight` is false, `openingNight`
-and `tourName` are stored as `null`. `stageName` is trimmed to 1 to 30
-characters, and `color` is 0 to 7.
+`{postId}` is `"<ownerId>:<showId>"`; the colon may be sent as is or as `%3A`.
+
+Profile JSON: `{userId, stageName, color}`. `stageName` is trimmed to 1 to
+30 characters, and `color` is 0 to 7.
+
+Post JSON:
+
+```json
+{
+  "id": "<ownerId>:<showId>",
+  "ownerId": "…", "stageName": "Maya", "color": 3,
+  "showId": "…",
+  "show": { "...": "the whole Show JSON as synced" },
+  "gearName": "Pegasus 41",
+  "sharedAt": "2026-11-21T08:00:00.000Z",
+  "encores": 2, "encoredByMe": true, "mine": false
+}
+```
+
+Mate JSON (`GET /api/crew/mates`), with the mate's active Tour summarized
+(`null` for blocked runners):
+
+```json
+{
+  "userId": "…", "stageName": "Ryan", "color": 1,
+  "since": "2026-11-22T03:04:05.678Z",
+  "tour": {
+    "id": "…", "name": "Boston Tour", "raceDate": "2027-04-19",
+    "raceDistance": "fiveK|tenK|half|marathon",
+    "featuring": {"userId": "…", "stageName": "Maya"}
+  },
+  "blocked": false
+}
+```
+
+`tour.featuring` is `null` when the Tour wasn't booked featuring anyone.
+`GET /api/crew/mates/{userId}` returns the whole active Tour JSON as synced
+and up to 500 of their Shows (same shape as feed posts), newest Show `date`
+first. For your own id, `since` is when your account was made.
 
 ## Spotify search
 
