@@ -52,7 +52,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final db = await openAppDatabase();
   final now = DateTime.now();
-  final crew = previewCrew(now);
+  final crew = previewCrew(now)
+    // Ryan's own Tours count as backstage, so his Tour invites go out.
+    ..myTour = SembastTourRepository(db).getById;
 
   // One of Ryan's own Shows: the Crew sees it too.
   final shows = SembastShowRepository(db);

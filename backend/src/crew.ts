@@ -20,6 +20,7 @@
 
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
+import { tourInvitesRoute } from "./tour_invites";
 import { addMs, DAY, HOUR, iso, isObject, randomBytes } from "./util";
 
 export const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -32,7 +33,7 @@ export const MATE_SHOWS_LIMIT = 500;
 // ---- Shared SQL ----
 
 /** SQL true when ?1 (me) and the user in [col] are in each other's Crew. */
-const IS_CREW = (col: string) => `(
+export const IS_CREW = (col: string) => `(
   EXISTS (SELECT 1 FROM crew_links l
           WHERE (l.user_a = ?1 AND l.user_b = ${col})
              OR (l.user_b = ?1 AND l.user_a = ${col}))
@@ -754,6 +755,10 @@ export async function crewRoute(
   }
   if (a === "feed" && n === 1 && m === "GET") {
     return json({ posts: await feed(db, me) });
+  }
+  if (a === "tour-invites") {
+    const res = await tourInvitesRoute(request, db, me, parts.slice(1));
+    if (res) return res;
   }
   // Hand-picked sharing is gone (your Crew sees every Show). These answer
   // as before and do nothing, so older app builds don't show errors.

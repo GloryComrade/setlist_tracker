@@ -284,3 +284,68 @@ class CrewWeekProgress {
     );
   }
 }
+
+/// "Ryan invited you on the Spring 2027 Half Tour": a Crew mate asking you
+/// to book a Tour for the same Opening Night.
+class CrewTourInvite {
+  const CrewTourInvite({
+    required this.id,
+    required this.fromUserId,
+    required this.fromStageName,
+    required this.tourId,
+    required this.tourName,
+    required this.raceDate,
+    required this.createdAt,
+    this.fromColor = 0,
+    this.raceDistance = RaceDistance.marathon,
+  });
+
+  final String id;
+  final String fromUserId;
+  final String fromStageName;
+  final int fromColor;
+  final String tourId;
+  final String tourName;
+
+  /// Opening Night, a local calendar date.
+  final DateTime raceDate;
+  final RaceDistance raceDistance;
+  final DateTime createdAt;
+
+  /// What "Join the Tour" hands to Book The Tour.
+  TourFeaturing get featuring => TourFeaturing(
+    userId: fromUserId,
+    stageName: fromStageName,
+    raceDate: raceDate,
+    raceDistance: raceDistance,
+    tourName: tourName,
+  );
+
+  /// True when [tour] races the same Opening Night.
+  bool sameRaceAs(Tour tour) => sameRace(
+    raceDate,
+    raceDistance,
+    tour.setup.raceDate,
+    tour.setup.raceDistance,
+  );
+
+  /// `{id, from: {userId, stageName, color}, tourId, tourName,
+  /// raceDate: "YYYY-MM-DD", raceDistance, createdAt}`. Null without a
+  /// race date.
+  static CrewTourInvite? fromJson(Map<String, Object?> json) {
+    final date = parseDateOnly(json['raceDate']);
+    if (date == null) return null;
+    final from = asMap(json['from']) ?? const {};
+    return CrewTourInvite(
+      id: '${json['id']}',
+      fromUserId: '${from['userId']}',
+      fromStageName: asStringOrNull(from['stageName']) ?? 'Runner',
+      fromColor: asInt(from['color']),
+      tourId: '${json['tourId']}',
+      tourName: asStringOrNull(json['tourName']) ?? 'The Tour',
+      raceDate: date,
+      raceDistance: RaceDistance.fromName(asStringOrNull(json['raceDistance'])),
+      createdAt: parseDate(json['createdAt'])?.toLocal() ?? DateTime.now(),
+    );
+  }
+}
