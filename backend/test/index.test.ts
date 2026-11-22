@@ -30,6 +30,23 @@ describe("routing", () => {
     expect(seen).toEqual(["/", "/crew", "/apiary"]);
   });
 
+  it("plain http is sent to https, keeping the path and query", async () => {
+    const http = ORIGIN.replace("https://", "http://");
+    for (const path of ["/", "/api/auth/google/start?return=x", "/api/auth/apple/callback"]) {
+      const res = await worker.fetch(new Request(`${http}${path}`, { method: "GET" }), env as Env);
+      expect(res.status).toBe(308);
+      expect(res.headers.get("Location")).toBe(`${ORIGIN}${path}`);
+    }
+  });
+
+  it("local http (wrangler dev) is not redirected", async () => {
+    const res = await worker.fetch(
+      new Request("http://localhost:8787/api/nothing"),
+      env as Env,
+    );
+    expect(res.status).toBe(404);
+  });
+
   it("bad JSON is a 400", async () => {
     const r = await newRunner();
     const res = await callJson("PUT", "/api/crew/profile", { token: r.token, body: "{not json" });

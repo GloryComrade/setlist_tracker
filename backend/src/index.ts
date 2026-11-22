@@ -110,9 +110,24 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
   throw notFound();
 }
 
+function isLocalHost(host: string): boolean {
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    // Someone who types http://setlisttracker.com would otherwise get a
+    // "not secure" page, and sign-in would send Google and Apple an http://
+    // callback they don't know (redirect_uri_mismatch). Send every plain-http
+    // visit to the https address first. 308 keeps the method (Apple's POST).
+    if (url.protocol === "http:" && !isLocalHost(url.hostname)) {
+      url.protocol = "https:";
+      return new Response(null, {
+        status: 308,
+        headers: { Location: url.toString() },
+      });
+    }
     if (url.pathname !== "/api" && !url.pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
