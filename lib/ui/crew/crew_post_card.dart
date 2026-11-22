@@ -15,6 +15,7 @@ import '../widgets/album_art.dart';
 import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
 import 'crew_widgets.dart';
+import 'shoutouts_sheet.dart';
 
 /// A Show on the Crew feed: the Setlist's ticket stub, signed by the runner
 /// who logged it, with everything about the run and an Encore to cheer it.
@@ -203,7 +204,10 @@ class CrewPostCard extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: 2),
-                    _EncoreButton(post: post),
+                    ShowReactionsRow(
+                      encore: _EncoreButton(post: post),
+                      post: post,
+                    ),
                   ],
                 ),
               ),
@@ -880,6 +884,37 @@ Future<void> showReportPhotoSheet(BuildContext context, CrewMate mate) {
           .reportAvatar(mate, reason, block: block),
     ),
   );
+}
+
+/// Report a Shout-out: pick a reason, optionally block its writer too.
+/// True once the report is sent.
+Future<bool> showReportShoutoutSheet(
+  BuildContext context,
+  CrewPost post,
+  CrewShoutout shoutout,
+) async {
+  var sent = false;
+  await showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _ReportSheet(
+      title: 'REPORT THIS SHOUT-OUT',
+      body:
+          'The app’s owner reads every report. The Shout-out disappears for '
+          'you right away.',
+      name: shoutout.stageName,
+      done: 'Thanks. The Shout-out is hidden.',
+      send: (ref, reason, block) async {
+        await ref
+            .read(crewControllerProvider.notifier)
+            .reportShoutout(post, shoutout, reason, block: block);
+        sent = true;
+      },
+    ),
+  );
+  return sent;
 }
 
 class _ReportSheet extends ConsumerStatefulWidget {
