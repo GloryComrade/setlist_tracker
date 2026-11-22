@@ -241,7 +241,7 @@ class _SongCard extends StatelessWidget {
                   children: [
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: spotifyGreen,
+                        backgroundColor: StageColors.spotifyGreen,
                         foregroundColor: Colors.black,
                       ),
                       // An exact track link when we have one; otherwise

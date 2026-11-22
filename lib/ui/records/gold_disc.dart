@@ -4,20 +4,16 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../theme/app_theme.dart';
 
-/// Gold-foil colors for Gold Records. Dark text sits on the foil; the foil
-/// is never used for body text on the dark stage (amber does that job).
+/// Short names for the gold-foil tokens in [StageColors], kept so Gold
+/// Records code reads naturally. Dark [ink] sits on the foil; the foil is
+/// never used for body text on the dark stage (amber does that job).
 class GoldColors {
-  static const light = Color(0xFFFFE9A8);
-  static const mid = Color(0xFFF5C451);
-  static const deep = Color(0xFFB7791F);
-  static const ink = Color(0xFF1A1206);
+  static const light = StageColors.goldLight;
+  static const mid = StageColors.goldMid;
+  static const deep = StageColors.goldDeep;
+  static const ink = StageColors.goldInk;
 
-  static const foil = LinearGradient(
-    colors: [light, mid, deep, mid],
-    stops: [0, 0.35, 0.75, 1],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static const foil = StageColors.goldFoil;
 }
 
 /// A record disc: gold with grooves and a label once it's pressed, a faint

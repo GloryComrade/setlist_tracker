@@ -410,7 +410,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             TextButton(
               onPressed: _saving ? null : _save,
               child: const Text(
-                'SAVE',
+                'Save',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),

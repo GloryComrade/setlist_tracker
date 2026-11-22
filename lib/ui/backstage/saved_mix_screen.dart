@@ -110,7 +110,7 @@ class _SavedMixScreenState extends ConsumerState<SavedMixScreen> {
           TextButton(
             onPressed: _save,
             child: const Text(
-              'SAVE',
+              'Save',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
