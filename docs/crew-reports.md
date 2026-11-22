@@ -7,6 +7,11 @@ objectionable content within 24 hours. Here's the routine.
 
 ### By email (Cloudflare Email Routing)
 
+**On** since Nov 22, 2026: every report emails ryanchengpictures@gmail.com
+from reports@setlisttracker.com. Email Routing also forwards
+support@setlisttracker.com there (rule "support to Ryan"). The steps below
+are how it was set up:
+
 1. Cloudflare dashboard → setlisttracker.com → **Email** → **Email Routing**
    → **Get started** → let it add its DNS records.
 2. **Destination addresses** → add the address that should get reports and
