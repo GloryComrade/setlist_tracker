@@ -211,6 +211,8 @@ class CrewPostCard extends ConsumerWidget {
                       encore: _EncoreButton(post: post),
                       post: post,
                     ),
+                    // Who saw it: only on your own Shows.
+                    if (post.mine) SeenByLine(post: post),
                   ],
                 ),
               ),
@@ -717,39 +719,33 @@ class _EncoreButton extends ConsumerWidget {
           ),
         ],
       );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (n == 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: row,
-            )
-          else
-            Semantics(
-              container: true,
-              button: true,
-              label: '$counted. See who.',
-              excludeSemantics: true,
-              onTap: openList,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: openList,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: 1,
-                      child: row,
-                    ),
-                  ),
-                ),
+      if (n == 0) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: row,
+        );
+      }
+      return Semantics(
+        container: true,
+        button: true,
+        label: '$counted. See who.',
+        excludeSemantics: true,
+        onTap: openList,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: openList,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: 1,
+                child: row,
               ),
             ),
-          SeenByLine(post: post),
-        ],
+          ),
+        ),
       );
     }
     return Align(
