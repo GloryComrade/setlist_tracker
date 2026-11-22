@@ -105,10 +105,10 @@ Upload the 6.9-inch iPhone set (1320 × 2868), in the numbered order. App
 Store Connect scales them down for smaller iPhones. The app is iPhone only
 (no iPad screenshots needed).
 
-The set in the project files at `build2/app-store/` shows build 2. Retake it
-for build 3 once the flat-colors restyle is merged, so the screenshots match
-the app (Guideline 2.3.3), and add one of Go Live. Tooling:
-`build2/tooling/` (440 × 956 at 3x).
+The build 3 set is in the project files at `build3/app-store/`
+(`01-setlist` to `08-go-live`), shot from the flat-colors app on main so it
+matches the app (Guideline 2.3.3). Retake it if the screens change again.
+Tooling: `build2/tooling/` (440 × 956 at 3x).
 
 ## Age Rating questionnaire
 
