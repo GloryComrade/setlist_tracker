@@ -41,7 +41,7 @@ class TourManagerSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 16, 4, 10),
           child: Text(
-            'Tour Manager',
+            'TOUR MANAGER',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
         ),

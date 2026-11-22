@@ -69,7 +69,7 @@ void main() {
     expect(find.text('NOTHING ON THE CHARTS YET'), findsOneWidget);
     // No Tour, so no countdown.
     expect(find.textContaining('OPENING NIGHT'), findsNothing);
-    expect(find.text('Weekly miles'), findsNothing);
+    expect(find.text('WEEKLY MILES'), findsNothing);
   });
 
   testWidgets('The Charts charts Shows, Headliners and the Tour', (
@@ -162,7 +162,7 @@ void main() {
     );
 
     // The Gold Records door opens the existing screen.
-    final door = find.text('Gold Records');
+    final door = find.text('GOLD RECORDS');
     await tester.ensureVisible(door);
     await tester.pumpAndSettle();
     expect(

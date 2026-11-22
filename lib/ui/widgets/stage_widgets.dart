@@ -403,7 +403,7 @@ class SectionCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    title,
+                    title.toUpperCase(),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),

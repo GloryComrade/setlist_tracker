@@ -74,7 +74,7 @@ void main() {
 
     await tester.pumpWidget(app(_tour));
     await tester.pumpAndSettle();
-    expect(find.text('Tour Manager'), findsOneWidget);
+    expect(find.text('TOUR MANAGER'), findsOneWidget);
     expect(find.text('Missed: Easy (5 mi)'), findsOneWidget);
 
     await tester.tap(find.text('Move to Thu'));

@@ -87,7 +87,10 @@ class _Door extends StatelessWidget {
               children: [
                 art,
                 const SizedBox(height: 14),
-                Text(label, style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  label.toUpperCase(),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 2),
                 Text(
                   caption,

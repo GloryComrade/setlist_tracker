@@ -273,7 +273,10 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(title, style: Theme.of(context).textTheme.displaySmall),
+              Text(
+                title.toUpperCase(),
+                style: Theme.of(context).textTheme.displaySmall,
+              ),
               if (hint != null) ...[
                 const SizedBox(height: 8),
                 Text(

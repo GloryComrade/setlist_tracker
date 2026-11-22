@@ -58,7 +58,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1 song'), findsOneWidget);
 
-    await tester.tap(find.text('Gold Records'));
+    await tester.tap(find.text('GOLD RECORDS'));
     await tester.pumpAndSettle();
     expect(find.text('GOLD RECORDS'), findsOneWidget);
     expect(find.text('6.2 mi'), findsWidgets);

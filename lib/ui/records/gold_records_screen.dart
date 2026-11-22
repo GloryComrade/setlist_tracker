@@ -77,7 +77,7 @@ class _GoldRecordsScreenState extends ConsumerState<GoldRecordsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(left: 4, bottom: 10),
                   child: Text(
-                    group.label,
+                    group.label.toUpperCase(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),

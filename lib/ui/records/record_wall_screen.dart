@@ -115,7 +115,7 @@ class _TopArtists extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 10),
-          child: Text('Top Artists', style: theme.textTheme.headlineSmall),
+          child: Text('TOP ARTISTS', style: theme.textTheme.headlineSmall),
         ),
         Card(
           child: Padding(
@@ -231,7 +231,7 @@ class _WallHeading extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Text(
-              'The Wall',
+              'THE WALL',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
           ),
@@ -365,12 +365,12 @@ class _PrintedSleeve extends StatelessWidget {
       decoration: BoxDecoration(gradient: gradient),
       child: LayoutBuilder(
         builder: (context, c) {
-          // Bebas letters are about 0.42 em wide. Shrink the type until the
+          // Anybody condensed capitals average about 0.42 em wide. Shrink the type until the
           // longest word fits on one line, so no word breaks in the middle.
           final longest = title
               .split(RegExp(r'\s+'))
               .fold(1, (n, w) => w.length > n ? w.length : n);
-          final fit = (c.maxWidth - 20) / (longest * 0.42);
+          final fit = (c.maxWidth - 20) / (longest * 0.44);
           final fontSize =
               fit.clamp(10.0, 22.0) * (c.maxWidth / 115).clamp(0.6, 1.0);
           return Padding(

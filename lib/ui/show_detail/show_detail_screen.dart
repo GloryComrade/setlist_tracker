@@ -142,7 +142,7 @@ class _Poster extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return PosterHeader(
-      title: formatMiles(show.distanceMiles).toUpperCase(),
+      title: formatMiles(show.distanceMiles),
       gradient: gradientFor(show.venue),
       children: [
         Text(
