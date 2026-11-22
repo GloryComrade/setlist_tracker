@@ -16,6 +16,7 @@ import 'ui/charts/charts_screen.dart';
 import 'ui/crew/crew_mate_screen.dart';
 import 'ui/crew/crew_screen.dart';
 import 'ui/crew/join_crew_screen.dart';
+import 'ui/live_show/on_stage_screen.dart';
 import 'ui/records/gold_records_screen.dart';
 import 'ui/records/record_wall_screen.dart';
 import 'ui/setlist/setlist_screen.dart';
@@ -68,9 +69,12 @@ final appRouter = GoRouter(
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(
       path: '/show/new',
-      builder: (_, state) =>
-          ShowFormScreen(plannedShowId: state.uri.queryParameters['plan']),
+      builder: (_, state) => ShowFormScreen(
+        plannedShowId: state.uri.queryParameters['plan'],
+        fromRecording: state.uri.queryParameters['live'] == '1',
+      ),
     ),
+    GoRoute(path: '/live', builder: (_, _) => const OnStageScreen()),
     GoRoute(
       path: '/crew/join/:code',
       builder: (_, state) =>

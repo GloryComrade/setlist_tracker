@@ -83,6 +83,7 @@ class Show implements Entity {
     DateTime? updatedAt,
     DateTime? deletedAt,
     bool? crewPrivate,
+    String? healthWorkoutId,
   }) => Show(
     id: id,
     date: date,
@@ -98,7 +99,7 @@ class Show implements Entity {
     studio: studio,
     live: live,
     plannedShowId: plannedShowId,
-    healthWorkoutId: healthWorkoutId,
+    healthWorkoutId: healthWorkoutId ?? this.healthWorkoutId,
     crewPrivate: crewPrivate ?? this.crewPrivate,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
