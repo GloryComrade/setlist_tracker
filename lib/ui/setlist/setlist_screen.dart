@@ -52,6 +52,8 @@ class SetlistScreen extends ConsumerWidget {
     final filter = ref.watch(setlistFilterProvider);
 
     return Scaffold(
+      // The tab shell paints the stage and its glow behind every tab.
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: showsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -219,30 +221,13 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.filtered});
   final bool filtered;
 
+  // The floating Book a Show button is the action here, so none is repeated.
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.queue_music, size: 64, color: StageColors.textMuted),
-          const SizedBox(height: 12),
-          Text(
-            filtered ? 'NO SHOWS LIKE THAT YET' : 'NO SHOWS YET',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            filtered
-                ? 'Try another filter.'
-                : 'Book your first one and start the Setlist.',
-            style: const TextStyle(color: StageColors.textMuted),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => EmptyStage(
+    icon: Icons.queue_music,
+    title: filtered ? 'No Shows like that yet' : 'No Shows yet',
+    message: filtered
+        ? 'Try another filter.'
+        : 'Book your first one and start the Setlist.',
+  );
 }

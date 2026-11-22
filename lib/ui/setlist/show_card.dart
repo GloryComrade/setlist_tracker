@@ -17,6 +17,7 @@ class ShowCard extends StatelessWidget {
     final theme = Theme.of(context);
     final song = show.song;
     return Card(
+      shape: const TicketBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/show/${show.id}'),
@@ -79,31 +80,39 @@ class ShowCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 16,
-                        crossAxisAlignment: WrapCrossAlignment.end,
-                        children: [
-                          Text(
-                            formatMiles(show.distanceMiles),
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontFeatures: StageFonts.tabular,
+                      // One line of numbers, like a ticket's print run. A
+                      // long Headliner shrinks to fit rather than wrapping.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              formatMiles(show.distanceMiles),
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontFeatures: StageFonts.tabular,
+                              ),
                             ),
-                          ),
-                          Text(
-                            formatPace(show.paceSecondsPerMile),
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: StageColors.amber,
-                              fontFeatures: StageFonts.tabular,
+                            const SizedBox(width: 14),
+                            Text(
+                              formatPace(show.paceSecondsPerMile),
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                color: StageColors.amber,
+                                fontFeatures: StageFonts.tabular,
+                              ),
                             ),
-                          ),
-                          Text(
-                            formatDuration(show.durationSeconds),
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: StageColors.textMuted,
-                              fontFeatures: StageFonts.tabular,
+                            const SizedBox(width: 14),
+                            Text(
+                              formatDuration(show.durationSeconds),
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                color: StageColors.textMuted,
+                                fontFeatures: StageFonts.tabular,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(

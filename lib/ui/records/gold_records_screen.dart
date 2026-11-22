@@ -129,20 +129,10 @@ class _FoilHeader extends StatelessWidget {
         : pressed == total
         ? 'All $total records pressed.'
         : '$pressed of $total records pressed.';
-    return Container(
+    return PosterSurface(
+      gradient: GoldColors.foil,
+      ink: GoldColors.deep,
       padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
-      decoration: BoxDecoration(
-        gradient: GoldColors.foil,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: GoldColors.deep.withValues(alpha: 0.35),
-            offset: const Offset(0, 10),
-            blurRadius: 28,
-            spreadRadius: -8,
-          ),
-        ],
-      ),
       child: Row(
         children: [
           Expanded(

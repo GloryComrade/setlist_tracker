@@ -13,6 +13,7 @@ import 'ui/show_form/show_form_screen.dart';
 import 'ui/tour/book_tour_screen.dart';
 import 'ui/tour/planned_show_screen.dart';
 import 'ui/tour/tour_screen.dart';
+import 'ui/widgets/stage_widgets.dart';
 
 /// Every screen has a URL, so links work on web and deep links on iOS later.
 final appRouter = GoRouter(
@@ -160,14 +161,14 @@ class _TabShell extends StatelessWidget {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: shell),
+            Expanded(child: StageGlow(child: shell)),
           ],
         ),
       );
     }
     return Scaffold(
       floatingActionButton: fab,
-      body: shell,
+      body: StageGlow(child: shell),
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
         onDestinationSelected: _go,

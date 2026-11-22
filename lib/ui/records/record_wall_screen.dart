@@ -508,30 +508,13 @@ class _EmptyWall extends StatelessWidget {
   const _EmptyWall();
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(32),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'The wall is bare',
-          style: Theme.of(context).textTheme.headlineMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Pick a Song of the Show when you log your next run and its album '
-          'art goes up here.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: StageColors.textMuted, height: 1.4),
-        ),
-        const SizedBox(height: 20),
-        GradientButton(
-          label: 'Book a Show',
-          icon: Icons.add,
-          onPressed: () => context.push('/show/new'),
-        ),
-      ],
-    ),
+  Widget build(BuildContext context) => EmptyStage(
+    icon: Icons.album_outlined,
+    title: 'The wall is bare',
+    message:
+        'Pick a Song of the Show when you log your next Show and its album '
+        'art goes up here.',
+    actionLabel: 'Book a Show',
+    onAction: () => context.push('/show/new'),
   );
 }

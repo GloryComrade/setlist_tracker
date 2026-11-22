@@ -21,6 +21,8 @@ class TourScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tourAsync = ref.watch(activeTourProvider);
     return Scaffold(
+      // The tab shell paints the stage and its glow behind every tab.
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: tourAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -303,13 +305,9 @@ class _Header extends StatelessWidget {
       TourGoal.targetTime => 'Goal: ${_hm(tour.setup.goalTimeSeconds)}',
       TourGoal.bq => 'Goal: BQ in ${_hm(tour.setup.goalTimeSeconds)}',
     };
-    return Container(
-      width: double.infinity,
+    return PosterSurface(
+      gradient: StageColors.headlineGradient,
       padding: const EdgeInsets.fromLTRB(20, 16, 8, 20),
-      decoration: BoxDecoration(
-        gradient: StageColors.headlineGradient,
-        borderRadius: BorderRadius.circular(20),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -32,6 +32,8 @@ class ChartsScreen extends ConsumerWidget {
     final now = ref.watch(chartsClockProvider)();
 
     return Scaffold(
+      // The tab shell paints the stage and its glow behind every tab.
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: showsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -138,41 +140,15 @@ class _NoShows extends StatelessWidget {
   const _NoShows();
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.leaderboard_outlined,
-              size: 56,
-              color: StageColors.textMuted,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'NOTHING ON THE CHARTS YET',
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Book your first Show and your weekly miles, Headliners and '
-              'streaks start charting here.',
-              style: TextStyle(color: StageColors.textMuted, height: 1.4),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: () => context.push('/show/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('Book a Show'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => EmptyStage(
+    icon: Icons.leaderboard_outlined,
+    title: 'Nothing on The Charts yet',
+    message:
+        'Book your first Show and your weekly miles, Headliners and '
+        'streaks start charting here.',
+    actionLabel: 'Book a Show',
+    onAction: () => context.push('/show/new'),
+  );
 }
 
 // ---------------------------------------------------------------------------
