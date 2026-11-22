@@ -16,6 +16,7 @@
 // your Crew (GET /api/crew/avatar wouldn't serve it otherwise).
 
 import { avatarFields } from "./avatars";
+import { hasBlockedWords } from "./filter";
 import { IS_CREW, visibleShow } from "./crew";
 import { ApiError, json, noContent, readJson } from "./http";
 import { addMs, HOUR, iso } from "./util";
@@ -134,6 +135,9 @@ export async function addShoutout(
   if (chars < 1 || chars > MAX_SHOUTOUT_CHARS) {
     throw bad(`A Shout-out needs 1 to ${MAX_SHOUTOUT_CHARS} characters.`);
   }
+  if (hasBlockedWords(text)) {
+    throw bad("That Shout-out has words The Crew doesn't allow. Try saying it another way.");
+  }
   const show = await visibleShow(db, me, postId);
   if (!show) throw showNotFound();
   const mine = await db
@@ -219,13 +223,17 @@ export async function postShoutoutsRoute(
   db: D1Database,
   me: string,
   postId: string,
+  /** Called with each new Shout-out (push notification, src/push.ts). */
+  added: (postId: string, shoutout: Shoutout) => void = () => {},
 ): Promise<Response | null> {
   if (request.method === "GET") {
     return json({ shoutouts: await listShoutouts(db, me, postId) });
   }
   if (request.method === "POST") {
     const body = await readJson(request);
-    return json(await addShoutout(db, me, postId, body.body), 201);
+    const shoutout = await addShoutout(db, me, postId, body.body);
+    added(postId, shoutout);
+    return json(shoutout, 201);
   }
   return null;
 }

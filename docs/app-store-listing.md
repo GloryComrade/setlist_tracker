@@ -10,7 +10,7 @@ version page below, screenshots, review notes, and a TestFlight build.
 Shout-outs and Seen by changed two answers since then: add **Usage Data →
 Product Interaction** on App Privacy, and switch **Messaging and chat** to
 Yes on Age Rating.
-Push notifications (build 5, version 1.1) change no App Privacy answer and
+Push notifications (build 5, version 1.0) change no App Privacy answer and
 no Age Rating answer; the review notes below mention them.
 
 ## App Information
@@ -194,7 +194,8 @@ account.
 > who reviews it within 24 hours and removes the content and the account.
 >
 > Shout-outs are short comments (up to 280 characters) on a Show, seen
-> only by the Show's owner and their Crew. Tap Shout-out under a Show to
+> only by the Show's owner and their Crew. The server filters slurs and
+> profanity out of Shout-outs and stage names before anyone sees them. Tap Shout-out under a Show to
 > open them, and long-press one for Report or Delete. Each report alerts
 > the developer, who reviews it within 24 hours, and the reported
 > Shout-out leaves the reporter's view right away. The writer or the
