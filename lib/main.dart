@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +12,8 @@ import 'data/remote/supabase_remote_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Light clock and battery on the dark stage (iPhone status bar).
+  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
   final db = await openAppDatabase();
   final overrides = [databaseProvider.overrideWithValue(db)];
   if (backendConfigured) {
