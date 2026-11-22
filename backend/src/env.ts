@@ -23,4 +23,10 @@ export interface Env {
   REPORT_EMAIL_TO?: string;
   /** Sender on the Email Routing domain. */
   REPORT_EMAIL_FROM?: string;
+  /** APNs auth key (.p8 contents, PKCS#8 PEM) for push notifications (optional). */
+  APNS_KEY?: string;
+  /** The APNs key's Key ID. */
+  APNS_KEY_ID?: string;
+  /** The Apple Developer Team ID that owns the key. */
+  APNS_TEAM_ID?: string;
 }

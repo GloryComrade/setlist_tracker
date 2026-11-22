@@ -2,6 +2,7 @@
 
 import type { Env } from "./env";
 import { ApiError, json, readJson } from "./http";
+import { type Background, detached, notifyNewShows } from "./push";
 import { byteLength, iso, isObject, normalizeIso } from "./util";
 
 export const SYNC_TABLES = ["shows", "gear", "saved_mixes", "tours"] as const;
@@ -66,6 +67,7 @@ function parseRows(body: Record<string, unknown>): InRow[] {
  * Everything runs in a single D1 batch: first the lookup of foreign ids,
  * then the upserts, whose ON CONFLICT clause also refuses to touch another
  * runner's row, so the result is the same even if the lookup races.
+ * `added` lists the ids this runner didn't have on the server before.
  */
 export async function upsertRows(
   db: D1Database,
@@ -73,9 +75,9 @@ export async function upsertRows(
   table: SyncTable,
   rows: InRow[],
   now: Date = new Date(),
-): Promise<{ rejected: string[]; syncedAt: string }> {
+): Promise<{ rejected: string[]; added: string[]; syncedAt: string }> {
   const syncedAt = iso(now);
-  if (rows.length === 0) return { rejected: [], syncedAt };
+  if (rows.length === 0) return { rejected: [], added: [], syncedAt };
 
   const chunks: InRow[][] = [];
   let current: InRow[] = [];
@@ -98,6 +100,13 @@ export async function upsertRows(
       .prepare(
         `SELECT id FROM records
          WHERE kind = ?1 AND user_id <> ?2
+           AND id IN (SELECT value FROM json_each(?3))`,
+      )
+      .bind(table, userId, ids),
+    db
+      .prepare(
+        `SELECT id FROM records
+         WHERE kind = ?1 AND user_id = ?2
            AND id IN (SELECT value FROM json_each(?3))`,
       )
       .bind(table, userId, ids),
@@ -124,8 +133,11 @@ export async function upsertRows(
         .bind(userId, table, syncedAt, JSON.stringify(chunk))
     ),
   ];
-  const [foreign] = await db.batch<{ id: string }>(statements);
-  return { rejected: foreign.results.map((r) => r.id), syncedAt };
+  const [foreign, mine] = await db.batch<{ id: string }>(statements);
+  const rejected = foreign.results.map((r) => r.id);
+  const known = new Set([...rejected, ...mine.results.map((r) => r.id)]);
+  const added = [...new Set(rows.map((r) => r.id))].filter((id) => !known.has(id));
+  return { rejected, added, syncedAt };
 }
 
 export interface OutRow {
@@ -198,10 +210,15 @@ export async function pushRoute(
   env: Env,
   userId: string,
   tableName: string,
+  background: Background = detached,
 ): Promise<Response> {
   const table = syncTable(tableName);
   const rows = parseRows(await readJson(request));
-  const { rejected } = await upsertRows(env.DB, userId, table, rows);
+  const { rejected, added } = await upsertRows(env.DB, userId, table, rows);
+  // A Crew mate's new Show: push notification (src/push.ts).
+  if (table === "shows" && added.length > 0) {
+    background(notifyNewShows(env, userId, added));
+  }
   if (rejected.length > 0) {
     throw new ApiError(
       "bad_request",

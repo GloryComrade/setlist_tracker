@@ -122,6 +122,8 @@ class MemoryCrewService implements CrewService {
       avatarBadge: profiles[me]?.avatarBadge,
       avatarUrl: profiles[me]?.avatarUrl,
       shareViews: profiles[me]?.shareViews ?? true,
+      pushShows: profiles[me]?.pushShows ?? true,
+      pushShoutouts: profiles[me]?.pushShoutouts ?? true,
     );
     return profiles[me]!;
   }
@@ -467,10 +469,12 @@ class MemoryCrewService implements CrewService {
   /// Whether [user] is the owner of [postId] or in their Crew, and not
   /// blocked either way with [me].
   bool _canSpeak(String user, _Post p) =>
-      (user == p.owner || (isCrew(user, p.owner) && !_blocked(user, p.owner))) &&
+      (user == p.owner ||
+          (isCrew(user, p.owner) && !_blocked(user, p.owner))) &&
       !_blocked(me, user);
 
-  bool _named(String user) => user == me || (isCrew(me, user) && !_blocked(me, user));
+  bool _named(String user) =>
+      user == me || (isCrew(me, user) && !_blocked(me, user));
 
   List<MapEntry<String, DateTime>> _viewers(String postId) {
     final out = [
@@ -511,6 +515,16 @@ class MemoryCrewService implements CrewService {
   }
 
   @override
+  Future<CrewProfile> setPushPrefs(
+    CrewProfile profile, {
+    bool? shows,
+    bool? shoutouts,
+  }) async => profiles[me] = (profiles[me] ?? profile).copyWith(
+    pushShows: shows,
+    pushShoutouts: shoutouts,
+  );
+
+  @override
   Future<CrewProfile> setShareViews(CrewProfile profile, bool on) async {
     profiles[me] = (profiles[me] ?? profile).copyWith(shareViews: on);
     if (!on) {
@@ -532,7 +546,10 @@ class MemoryCrewService implements CrewService {
   Future<CrewAudience> audience(String postId) async {
     final p = _visiblePost(postId);
     final fans = encores[postId] ?? const <String>{};
-    final named = [for (final u in fans) if (_named(u)) u];
+    final named = [
+      for (final u in fans)
+        if (_named(u)) u,
+    ];
     return CrewAudience(
       encores: [for (final u in named) _person(u, _clock)],
       otherEncores: fans.length - named.length,

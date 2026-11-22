@@ -1,6 +1,7 @@
 // Test helpers. Users and sessions are made by calling the Worker's own
 // functions directly; there is no HTTP backdoor.
 
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { vi } from "vitest";
 import { createSession, findOrCreateUser, type User } from "../src/auth";
@@ -53,10 +54,16 @@ export async function call(
       headers.set("Content-Type", "application/json");
     }
   }
-  return worker.fetch(
+  // Waits for background work (push notifications) before answering, so
+  // tests can check what was sent.
+  const ctx = createExecutionContext();
+  const res = await worker.fetch(
     new Request(`${ORIGIN}${path}`, { method, headers, body, redirect: "manual" }),
     opts.env ?? env,
+    ctx,
   );
+  await waitOnExecutionContext(ctx);
+  return res;
 }
 
 /** Calls and parses the JSON answer. */

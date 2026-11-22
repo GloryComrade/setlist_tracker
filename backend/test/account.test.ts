@@ -26,6 +26,8 @@ const TABLES: [string, string][] = [
   ["crew_avatars", "user_id = ?1"],
   ["crew_show_views", "?1 IN (user_id, owner)"],
   ["crew_shoutouts", "?1 IN (user_id, owner)"],
+  ["push_devices", "user_id = ?1"],
+  ["push_sent", "?1 IN (from_user, to_user)"],
 ];
 
 async function rowsOf(userId: string): Promise<Record<string, number>> {
@@ -97,6 +99,14 @@ describe("DELETE /api/me", () => {
     await oldPost("old-theirs", friend.user.id);
     await env.DB.prepare("INSERT INTO crew_encores (post_id, user_id, created_at) VALUES ('old-mine', ?, ?)").bind(friend.user.id, now).run();
     await env.DB.prepare("INSERT INTO crew_encores (post_id, user_id, created_at) VALUES ('old-theirs', ?, ?)").bind(me.user.id, now).run();
+    // A push device, and Show pushes sent both ways.
+    await call("PUT", "/api/push/device", { token: me.token, body: { token: "ab".repeat(32), environment: "production" } });
+    await call("PUT", "/api/push/device", { token: friend.token, body: { token: "cd".repeat(32), environment: "production" } });
+    for (const [from, to] of [[me, friend], [friend, me]]) {
+      await env.DB.prepare(
+        "INSERT INTO push_sent (from_user, to_user, kind, sent_at) VALUES (?, ?, 'show', ?)",
+      ).bind(from.user.id, to.user.id, now).run();
+    }
     // A login code, an Apple token.
     await createLoginCode(env.DB, me.user.id);
     await env.DB.prepare(
@@ -136,6 +146,8 @@ describe("DELETE /api/me", () => {
     expect(friendAfter.crew_tour_invites).toBe(0);
     expect(friendAfter.crew_show_views).toBe(0);
     expect(friendAfter.crew_shoutouts).toBe(0);
+    expect(friendAfter.push_devices).toBe(1);
+    expect(friendAfter.push_sent).toBe(0);
 
     // The old token no longer works.
     expect((await call("GET", "/api/me", { token: me.token })).status).toBe(401);

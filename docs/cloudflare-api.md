@@ -6,8 +6,8 @@ Everything runs as **one Cloudflare Worker** (`backend/`):
   API under `/api/*` from the same address, so the website needs no CORS and
   no separate API URL.
 - Data lives in one **D1** database (SQLite), binding name `DB`.
-- Sign-in (Google, Apple), syncing, The Crew, Spotify search and account
-  deletion are all routes in this Worker. There is no Supabase anymore.
+- Sign-in (Google, Apple), syncing, The Crew, push notifications, Spotify
+  search and account deletion are all routes in this Worker. There is no Supabase anymore.
 
 This file is the contract between `backend/` and the app (`lib/`). Change
 both sides together.
@@ -38,6 +38,7 @@ clear error when its secrets are missing:
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Continue with Google |
 | `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (the .p8 text) | Sign in with Apple, and revoking it on Delete account |
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | song search |
+| `APNS_KEY` (the push .p8 text), `APNS_KEY_ID`, `APNS_TEAM_ID` | iPhone push notifications (optional: without them nothing is sent and nothing fails; see [push-setup.md](push-setup.md)) |
 
 ## Conventions
 
@@ -402,6 +403,79 @@ Crew; `canDelete` is true when you wrote it or it's on your Show):
   "mine": false, "canDelete": true
 }
 ```
+
+## Push notifications (iPhone)
+
+Migration `0007_push.sql`; code in `backend/src/push.ts`, with the triggers
+in `backend/src/sync.ts` (Shows) and `backend/src/shoutouts.ts`
+(Shout-outs). Apple's setup is in [push-setup.md](push-setup.md).
+
+Tables:
+
+- `push_devices (token PK, user_id, platform 'ios', environment
+  'sandbox'|'production', created_at, updated_at)`, indexed on `user_id`.
+- `crew_profiles` gains `push_shows` and `push_shoutouts` (integers,
+  default 1).
+- `push_sent (from_user, to_user, kind, sent_at)`: the log behind "one Show
+  push per mate per hour".
+
+All three cascade when either account is deleted.
+
+| Route | Body | Answer |
+| --- | --- | --- |
+| `PUT /api/push/device` | `{token, environment}`: `token` a hex string of 32 to 200 characters, `environment` `"sandbox"` or `"production"` | 204. Upserts; a token another account had moves to you (same phone, new account) |
+| `DELETE /api/push/device/{token}` | | 204. Only your own tokens; the app calls it on sign-out and when both switches are off |
+
+`GET`/`PUT /api/crew/profile` carry two more booleans, `pushShows` and
+`pushShoutouts` (both `true` by default). `PUT` takes each one optionally;
+leaving it out keeps the saved value. They are the Settings switches "When
+my Crew logs a Show" and "Shout-outs on my Shows".
+
+**When a push goes out.** Sending runs in `ctx.waitUntil`, so it never slows
+or fails the request. Without the three `APNS_*` secrets nothing is sent.
+
+- **New Show**: a sync upsert of kind `shows` for a record that didn't
+  exist before, not deleted, not `crewPrivate`, whose `date` is within the
+  last 12 hours (and no more than 1 hour ahead), from an owner with a Crew
+  profile. It goes to each Crew mate (not blocked either way) with
+  `push_shows = 1` and at least one device, skipping a mate who already
+  got a Show push from this owner in the last hour. Re-syncing or editing a
+  Show sends nothing.
+  - Title `"<stageName> just played a Show"`, body `"<workout label> ·
+    <miles> mi"` (for example `Tempo · 6.2 mi`, miles to one decimal).
+  - Data `{"type": "show", "postId": "<ownerId>:<showId>"}`.
+- **Shout-out**: after a Shout-out is added on a Show whose owner isn't the
+  writer, the owner has `push_shoutouts = 1`, and neither has blocked the
+  other.
+  - Title `"<stageName> gave you a Shout-out"`, body the Shout-out text cut
+    to 120 characters.
+  - Data `{"type": "shoutout", "postId": "<ownerId>:<showId>"}`.
+
+**APNs request.** `POST https://api.push.apple.com/3/device/<token>`
+(`api.sandbox.push.apple.com` for sandbox tokens), with a provider JWT
+(ES256, `kid` = `APNS_KEY_ID`, `iss` = `APNS_TEAM_ID`, reused for about 50
+minutes), `apns-topic` = `APPLE_BUNDLE_ID`, `apns-push-type: alert`,
+`apns-priority: 10`:
+
+```json
+{
+  "aps": {
+    "alert": {"title": "Maya just played a Show", "body": "Tempo · 6.2 mi"},
+    "sound": "default",
+    "thread-id": "crew"
+  },
+  "type": "show",
+  "postId": "<ownerId>:<showId>"
+}
+```
+
+A 410, or a 400 `BadDeviceToken` or `Unregistered`, deletes that token.
+
+**The app's side.** The MethodChannel `setlist/push` (Swift in
+`ios/Runner/AppDelegate.swift`, Dart in `lib/data/push/`) asks for
+permission, hands the token to Dart (with `sandbox` for debug builds,
+`production` otherwise), and passes the data map of a tapped notification,
+which opens The Crew. The web build has no push.
 
 ## Spotify search
 

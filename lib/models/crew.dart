@@ -23,6 +23,8 @@ class CrewProfile {
     this.avatarBadge,
     this.avatarUrl,
     this.shareViews = true,
+    this.pushShows = true,
+    this.pushShoutouts = true,
   });
 
   final String userId;
@@ -46,12 +48,22 @@ class CrewProfile {
   /// their Shows aren't recorded (and the old ones are forgotten).
   final bool shareViews;
 
+  /// "When my Crew logs a Show": a push notification on iPhone when a Crew
+  /// mate logs a new Show.
+  final bool pushShows;
+
+  /// "Shout-outs on my Shows": a push notification on iPhone when someone
+  /// gives a Shout-out on one of your Shows.
+  final bool pushShoutouts;
+
   /// Pass null as [avatarBadge] or [avatarUrl] to clear it.
   CrewProfile copyWith({
     String? stageName,
     int? color,
     bool? allActivityPending,
     bool? shareViews,
+    bool? pushShows,
+    bool? pushShoutouts,
     Object? avatarBadge = _keep,
     Object? avatarUrl = _keep,
   }) => CrewProfile(
@@ -66,10 +78,12 @@ class CrewProfile {
         ? this.avatarUrl
         : avatarUrl as String?,
     shareViews: shareViews ?? this.shareViews,
+    pushShows: pushShows ?? this.pushShows,
+    pushShoutouts: pushShoutouts ?? this.pushShoutouts,
   );
 
   /// `{userId, stageName, color, allActivityPending, avatarBadge, avatarUrl,
-  /// shareViews}`.
+  /// shareViews, pushShows, pushShoutouts}`.
   factory CrewProfile.fromJson(Map<String, Object?> r) => CrewProfile(
     userId: '${r['userId']}',
     stageName: '${r['stageName']}',
@@ -78,6 +92,8 @@ class CrewProfile {
     avatarBadge: asStringOrNull(r['avatarBadge']),
     avatarUrl: asStringOrNull(r['avatarUrl']),
     shareViews: r['shareViews'] != false,
+    pushShows: r['pushShows'] != false,
+    pushShoutouts: r['pushShoutouts'] != false,
   );
 }
 

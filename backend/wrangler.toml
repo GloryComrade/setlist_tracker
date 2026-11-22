@@ -5,7 +5,8 @@
 #   SESSION_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 #   APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY,
 #   SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET,
-#   REPORT_WEBHOOK_URL (optional, docs/crew-reports.md)
+#   REPORT_WEBHOOK_URL (optional, docs/crew-reports.md),
+#   APNS_KEY, APNS_KEY_ID, APNS_TEAM_ID (optional, docs/push-setup.md)
 # For `wrangler dev`, put them in backend/.dev.vars instead.
 
 name = "setlist-tracker"
