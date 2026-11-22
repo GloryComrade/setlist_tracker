@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:material_ui/material_ui.dart';
 
+import '../../logic/spoken.dart';
 import '../../models/enums.dart';
 import '../../theme/app_theme.dart';
 
@@ -150,9 +151,14 @@ class PosterHeader extends StatelessWidget {
     required this.title,
     this.gradient = StageColors.headlineGradient,
     this.children = const [],
+    this.semanticsTitle,
   });
 
   final String title;
+
+  /// What a screen reader says for [title] when it differs, e.g. "15 miles"
+  /// for "15 mi".
+  final String? semanticsTitle;
   final Gradient gradient;
   final List<Widget> children;
 
@@ -166,6 +172,7 @@ class PosterHeader extends StatelessWidget {
         children: [
           Text(
             title,
+            semanticsLabel: semanticsTitle,
             style: theme.textTheme.displayMedium?.copyWith(color: Colors.white),
           ),
           ...children,
@@ -419,15 +426,28 @@ class StatTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.leading,
+    this.spokenValue,
   });
   final String label;
   final String value;
+
+  /// What a screen reader says for [value]. Defaults to [spokenStat], which
+  /// turns "8:42 /mi" into "8 minutes 42 seconds per mile".
+  final String? spokenValue;
 
   /// Drawn before the value, e.g. the [FeelFace] on the Show page.
   final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: '$label: ${spokenValue ?? spokenStat(value)}',
+      child: ExcludeSemantics(child: _tile(context)),
+    );
+  }
+
+  Widget _tile(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -524,34 +544,46 @@ class GradientButton extends StatelessWidget {
           gradient: StageColors.headlineGradient,
           borderRadius: BorderRadius.circular(28),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: onPressed,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, color: Colors.white),
-                    const SizedBox(width: 8),
-                  ],
-                  // Wraps rather than overflowing on a narrow phone.
-                  Flexible(
-                    child: Text(
-                      label.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
+        child: Semantics(
+          container: true,
+          button: true,
+          enabled: enabled,
+          // Said in its own case; the caps are only for the eye.
+          label: label,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(28),
+              onTap: onPressed,
+              child: ExcludeSemantics(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, color: Colors.white),
+                        const SizedBox(width: 8),
+                      ],
+                      // Wraps rather than overflowing on a narrow phone.
+                      Flexible(
+                        child: Text(
+                          label.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

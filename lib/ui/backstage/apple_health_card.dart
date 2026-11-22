@@ -7,6 +7,7 @@ import '../../data/health/health_source.dart';
 import '../../data/providers.dart';
 import '../../logic/health_import.dart';
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
 
@@ -316,6 +317,7 @@ class _RunRow extends StatelessWidget {
                         children: [
                           Text(
                             formatMiles(run.distanceMiles),
+                            semanticsLabel: spokenMiles(run.distanceMiles),
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontFeatures: StageFonts.tabular,
                             ),
@@ -323,6 +325,12 @@ class _RunRow extends StatelessWidget {
                           const SizedBox(width: 12),
                           Text(
                             formatPace(
+                              paceSecondsPerMileFor(
+                                run.distanceMiles,
+                                run.durationSeconds,
+                              ),
+                            ),
+                            semanticsLabel: spokenPace(
                               paceSecondsPerMileFor(
                                 run.distanceMiles,
                                 run.durationSeconds,
@@ -336,6 +344,7 @@ class _RunRow extends StatelessWidget {
                           const SizedBox(width: 12),
                           Text(
                             formatDuration(run.durationSeconds),
+                            semanticsLabel: spokenDuration(run.durationSeconds),
                             style: theme.textTheme.titleLarge?.copyWith(
                               color: StageColors.textMuted,
                               fontFeatures: StageFonts.tabular,
