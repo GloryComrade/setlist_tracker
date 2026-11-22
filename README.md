@@ -6,6 +6,8 @@ Marathon training tracker with a music-tour theme. Phase 1: log Shows (Studio Se
 
 Every merge to `main` publishes the app and its backend to Cloudflare: https://setlisttracker.com (works on a phone too). Setup: [docs/cloudflare-setup.md](docs/cloudflare-setup.md).
 
+A first visit to https://setlisttracker.com shows the front page, which explains the app; "Open the app" starts it. After that, the same address goes straight to the app. The front page stays at https://setlisttracker.com/?front=1.
+
 ## Run it locally
 
 Needs Flutter 3.50 or newer (it uses the new `material_ui` package).
@@ -60,6 +62,11 @@ lib/
     crew/                       The Crew: feed, invites, sharing, block and report
     widgets/                    shared pieces, including the Track editor
 test/
+web/
+  index.html                    the front page, and the shell the web app boots in;
+                                the script at the top decides which (DESIGN.md, "Front page")
+  front/                        the front page's CSS, fonts and screenshots
+  privacy.html, support.html    plain pages linked from the app and the App Store listing
 backend/                        the Cloudflare Worker: website, /api/*, D1 database
 ```
 

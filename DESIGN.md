@@ -343,3 +343,46 @@ Detail screens name the kind of screen ("THE SHOW", "TOUR DATE · WEEK 3", "BOOK
 - **Don't** use more than one Gradient Button on a screen.
 - **Don't** use brand colors; Spotify Green on the Open in Spotify button is the only exception.
 - **Don't** wrap widgets in hover-only `Tooltip`s; they do nothing on iPhone. Give icon-only buttons a `tooltip:` (it is also their screen reader label) and anything else a `Semantics` label.
+
+## Front page
+
+The page a first-time visitor sees at setlisttracker.com (`web/index.html`, `web/front/`). It is plain HTML and CSS, not Flutter, and it has its own rules. Nothing in this section applies inside the app.
+
+**The idea.** The inner sleeve of the record: stage black with a faint paper grain, a narrow reading column written in the first person, real app screens tipped in as slightly crooked prints, and one amber pen writing notes in the margin.
+
+### Rules
+
+- **Two inks.** Stage Black and Spotlight White, with Marquee Amber as the only accent. No gradients, glows or cards of the page's own; the only gradients are inside the app screenshots. Magenta, violet and cyan do not appear outside the screenshots.
+- **Amber at page scale, twice.** The Track listing insert and the closing band ("Doors are open" plus the footer, one piece). Everywhere else amber is the pen, a button or a number.
+- **Three faces.** Archivo for reading, Archivo ExtraCondensed Black in capitals for headlines, and Mynerve (OFL, `web/front/fonts/`) for handwriting only: margin notes, the week's setlist, a few asides. Never a paragraph in Mynerve.
+- **Loud twice, quiet otherwise.** The opening headline, "The plan is arithmetic." and "Doors are open" run the full width. Other headings stay at or under 3.9rem. Reading text is 18px on a 35rem measure; nothing is smaller than 16px.
+- **Imagery is the real app.** Screenshots of the sample data, cropped tight, at slight angles, fixed three ways: tape, photo corners, or laid flat in the column. Every handwritten note points at, or sits under, something that is actually in the picture. Sample data is labelled as sample. No stock photos, icons or emoji.
+- **Marks share one hand.** Arrows, rings, underlines and strike-throughs are inline SVG paths, stroke 2.6, round caps, `currentColor`.
+- **Depth is paper, not light.** Prints and paper carry an offset, soft, black shadow. This is the one place shadows are allowed, because the page is a physical sleeve; the app's no-shadow rule stands inside the app.
+- **Voice.** First person, plain, American spelling, no em-dashes. Every claim has to be true of the shipped app, and the page says what the app does not do. No testimonials until there are real ones. Anything written in Ryan's voice needs his sign-off.
+- **Motion.** One authored moment: margin notes are written in as a print scrolls into view. Notes are visible by default; the script only arms prints below the fold, and never under `prefers-reduced-motion`.
+
+### Page-only tokens
+
+| Token | Value | Use |
+|---|---|---|
+| `--paper` | #ECE7DA | print borders, tape, photo corners, the handwritten setlist |
+| `--paper-ink-2` | #4B4536 | secondary text on paper (7.6:1) |
+| `--amber-ink-2` | #4A3204 | secondary text on amber (6.6:1) |
+| `--amber-deep` | #9A6406 | the bottom edge of the amber button |
+| `--pen` | Mynerve | handwriting, 1.32rem, line-height 1.32 |
+| `--measure` | 35rem | reading column |
+
+Stage Black, Stage Surface, Stage Outline, Spotlight White, House Lights Grey, Marquee Amber and Gold Ink are used as defined above. Radii are 1 to 3px (paper, not app cards).
+
+### How it shares `/` with the app
+
+`web/index.html` is both the front page and the Flutter shell. A script in `<head>` decides before first paint:
+
+- Straight to the app when the address has an app route (`#/...`, which covers Crew invite links), on the return leg of sign-in (`?login_code=` or `?login_error=`), when installed to a home screen, when `localStorage` has `st.opened`, or when the app's `setlist_tracker` database already exists in IndexedDB.
+- Otherwise the front page. If storage cannot be read, the page shows and one tap opens the app.
+- `/?front=1` always shows the front page, for returning visitors and for linking to it.
+- "Open the app" sets the flag, covers the page, loads `flutter_bootstrap.js`, and on Flutter's first frame removes the page and its stylesheet.
+
+Every selector in `web/front/front.css` is scoped to `#front` (or `html.st-front`) so nothing leaks into the app. Keep URLs relative: `<base href>` is set per build. In-page links are scrolled by script because of that `<base>`.
+
