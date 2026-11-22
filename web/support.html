@@ -3,71 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Help with Setlist Tracker.">
-<meta name="theme-color" content="#0B0A12">
 <title>Support · Setlist Tracker</title>
+<meta name="description" content="Help with Setlist Tracker: how to report a problem, and answers about syncing, The Crew and deleting your account.">
+<meta name="theme-color" content="#0B0A12">
 <link rel="icon" type="image/png" href="favicon.png">
-<style>
-  @font-face { font-family: "ArchivoCondensed"; src: url("assets/assets/fonts/Archivo-ExtraCondensedBlack.ttf") format("truetype"); font-weight: 800; font-display: swap; }
-  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-400.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-700.ttf") format("truetype"); font-weight: 700; font-display: swap; }
-  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-800.ttf") format("truetype"); font-weight: 800; font-display: swap; }
-  :root { color-scheme: dark; --stage: #0B0A12; --surface: #16141F; --outline: #3A3548; --text: #F5F3FA; --muted: #A8A3B8; --magenta: #FF4D9A; --amber: #FFB020; }
-  * { box-sizing: border-box; }
-  html { background: var(--stage); }
-  body { margin: 0; color: var(--text); font: 400 16px/1.6 "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: radial-gradient(ellipse 70% 420px at 0% 0%, rgba(224,21,122,.22), transparent 70%),
-                radial-gradient(ellipse 60% 420px at 100% 0%, rgba(109,40,217,.25), transparent 70%), var(--stage);
-    background-repeat: no-repeat; min-height: 100vh; }
-  ::selection { background: #E0157A; color: #fff; }
-  main { max-width: 680px; margin: 0 auto; padding: 24px 16px 64px; }
-  .poster { border-radius: 20px; padding: 28px 24px; color: #fff;
-    background: linear-gradient(135deg, #6D28D9, #E0157A 55%, #C2410C); }
-  .poster h1 { font: 800 clamp(44px, 11vw, 64px)/1 "ArchivoCondensed", Impact, sans-serif; letter-spacing: 0; text-transform: uppercase; margin: 0 0 10px; }
-  .poster p { margin: 0; max-width: 46ch; }
-  h2 { font: 800 28px/1.05 "ArchivoCondensed", Impact, sans-serif; letter-spacing: 0; text-transform: uppercase; margin: 40px 0 10px; }
-  p, li { color: var(--text); }
-  .muted { color: var(--muted); }
-  ul { padding-left: 20px; }
-  li { margin: 6px 0; }
-  a { color: var(--magenta); text-underline-offset: 3px; }
-  a:focus-visible { outline: 2px solid var(--magenta); outline-offset: 3px; border-radius: 4px; }
-  .card { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 16px 18px; margin: 14px 0; }
-  .card strong { display: block; font-weight: 700; }
-  .label { font: 800 12px/1 "Archivo", sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
-  footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
-  .back { display: inline-block; margin: 0 0 18px; font-weight: 700; text-decoration: none; }
-</style>
+<link rel="preload" href="front/fonts/Archivo-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="front/fonts/Archivo-ExtraCondensedBlack.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="front/pages.css">
 </head>
 <body>
-<main>
-<a class="back" href="./">← Back to Setlist Tracker</a>
-<header class="poster">
-  <h1>SUPPORT</h1>
-  <p>Questions, bugs, or an idea for the next Tour? Here’s how to reach us.</p>
+<a class="skip" href="#top">Skip to support</a>
+
+<svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
+  <symbol id="arrow" viewBox="0 0 72 34"><path d="M3 25 C 16 6, 40 3, 64 15" /><path d="M52 6.5 L65.5 15.5 L50.5 22" /></symbol>
+  <symbol id="scribble" viewBox="0 0 220 14" preserveAspectRatio="none"><path d="M3 8 C 40 2, 70 12, 108 6 S 180 3, 217 8" /></symbol>
+  <symbol id="ring" viewBox="0 0 120 54" preserveAspectRatio="none"><path d="M62 5 C 24 3, 5 14, 6 28 C 7 44, 40 50, 68 49 C 98 48, 115 39, 114 25 C 113 10, 84 3, 50 7" /></symbol>
+</svg>
+
+<header class="mast wrap">
+  <a class="wordmark" href="./?front=1">Setlist Tracker</a>
+  <nav aria-label="Site">
+    <a href="./?front=1">Front page</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="support.html" aria-current="page">Support</a>
+  </nav>
+  <a class="btn btn--small" href="./#/setlist">Open the app</a>
 </header>
 
-<h2>Get in touch</h2>
-<div class="card">
-  <strong>Report a problem or ask a question</strong>
-  <span class="muted">Open an issue on <a href="https://github.com/GloryComrade/setlist_tracker/issues">GitHub</a>. Say what you tapped, what you expected, and what happened.</span>
+<main id="top" tabindex="-1">
+
+<section class="opening wrap" aria-labelledby="h-top">
+  <div>
+    <h1 id="h-top"><span class="under">Support<svg class="mark" aria-hidden="true"><use href="#scribble"/></svg></span></h1>
+    <p class="lede">Something broke, a Tour did something strange to your week, or you have an idea for the next one? Tell me. Below is how, and answers to a few questions you might have first.</p>
+    <p><a class="back" href="./?front=1"><svg class="mark" aria-hidden="true"><use href="#arrow"/></svg><span>Back to the front page</span></a></p>
+  </div>
+</section>
+
+<div class="wrap">
+<section class="insert" aria-labelledby="h-contact">
+  <div class="insert__grid">
+    <div>
+      <h2 id="h-contact">Report a problem or ask a question</h2>
+      <p class="insert__lede">Open an issue on GitHub. That’s where reports and questions go, and any reply lands in the same thread.</p>
+      <a class="btn btn--dark" href="https://github.com/GloryComrade/setlist_tracker/issues">Open an issue on GitHub</a>
+      <p class="insert__fine">Issues can be read by other people, so leave out your email address and anything private. For questions about your data, see <a href="privacy.html">Privacy</a>.</p>
+    </div>
+    <div class="ask">
+      <h3>What helps me fix it</h3>
+      <ol>
+        <li>What you tapped<span>Which tab, which button, which Show.</span></li>
+        <li>What you expected<span>The miles, the pace, the screen you meant to land on.</span></li>
+        <li>What happened<span>A screenshot says it fastest, if you have one.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
 </div>
 
-<h2>Common questions</h2>
-<div class="card"><strong>How do I sync between my iPhone and the website?</strong>
-<span class="muted">Sign in with the same Google or Apple account on both, under Backstage → Backstage Pass.</span></div>
-<div class="card"><strong>How do I add a friend to my Crew?</strong>
-<span class="muted">Open The Crew, tap Invite a friend, and send them the link or code. Codes last 7 days.</span></div>
-<div class="card"><strong>How do I stop sharing a Show?</strong>
-<span class="muted">Open the Show and turn off Share with your Crew. It leaves your Crew’s feed right away.</span></div>
-<div class="card"><strong>How do I block or report someone?</strong>
-<span class="muted">On their Show, tap ⋯ and choose Report or Block. You can also open them from Your Crew and tap Block.</span></div>
-<div class="card"><strong>How do I delete my account?</strong>
-<span class="muted">Backstage → Backstage Pass → ⋮ → Delete account. Everything is deleted on every device. See <a href="privacy.html">Privacy</a>.</span></div>
+<section class="faq wrap" aria-labelledby="h-faq">
+  <h2 id="h-faq">Common questions</h2>
+  <p class="faq__intro">Short answers, in the app’s own words. If yours isn’t here, the GitHub link above is the way in.</p>
 
-<h2>Training advice</h2>
-<p class="muted">Setlist Tracker gives general training guidance, not medical advice. If you’re injured or unsure, check with a doctor or coach.</p>
-<footer>Setlist Tracker · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a></footer>
+  <div class="group">
+    <h3>Your Backstage Pass</h3>
+    <dl class="qa">
+      <div>
+        <dt>How do I sync between my iPhone and the website?</dt>
+        <dd><p>Sign in with the same Google or Apple account on both, under <span class="path"><span>Backstage</span>, then <span>Backstage Pass</span></span>. The Shows already on each device come along, and from then on they stay in step.</p></dd>
+      </div>
+      <div>
+        <dt>How do I delete my account?</dt>
+        <dd><p>Go to <span class="path"><span>Backstage</span>, then <span>Backstage Pass</span>, then the <span>three-dot menu</span>, then <span>Delete account</span></span>. Everything is deleted on every device. <a href="privacy.html#h-delete">Privacy</a> has the details.</p></dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="group">
+    <h3>The Crew</h3>
+    <dl class="qa">
+      <div>
+        <dt>How do I add a friend to my Crew?</dt>
+        <dd><p>Open The Crew, tap <b>Invite a friend</b>, and send them the link or the code. Codes last 7 days, so if a friend sits on it past next weekend’s Headliner, send a new one.</p></dd>
+      </div>
+      <div>
+        <dt>How do I keep a Show to myself?</dt>
+        <dd><p>Open the Show and turn on <b>Keep off the Crew</b>. Only you see it after that.</p></dd>
+      </div>
+      <div>
+        <dt>How do I block or report someone?</dt>
+        <dd><p>On one of their shared Shows, tap the three-dot menu and choose <b>Report this Show</b> or <b>Block</b>. You can also open them from Your Crew and tap Block.</p></dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<section class="advice wrap" aria-labelledby="h-advice">
+  <h2 id="h-advice">Training advice</h2>
+  <div>
+    <blockquote>
+      <p>Setlist Tracker gives general training guidance, not medical advice. If you’re injured or unsure, check with a doctor or coach.</p>
+    </blockquote>
+    <p class="hand" style="margin-top:18px"><span class="ringed">The Tour is arithmetic, not a coach.<svg class="mark" aria-hidden="true"><use href="#ring"/></svg></span></p>
+  </div>
+</section>
+
 </main>
+
+<footer class="foot">
+  <div class="wrap foot__grid">
+    <div class="foot__id">
+      <p class="wordmark wordmark--foot">Setlist Tracker</p>
+      <p>Marathon training, on tour. Miles, mph and °F, because that’s what the treadmill says.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="./?front=1">Front page <span>what the app is, from the top</span></a>
+      <a href="privacy.html">Privacy <span>where your data goes, in plain words</span></a>
+      <a href="support.html" aria-current="page">Support <span>something broke, or you have a question</span></a>
+    </nav>
+  </div>
+  <p class="wrap foot__fine">© 2026 Ryan. Made by one person with Claude. Set in Archivo, with handwriting in Mynerve.</p>
+</footer>
 </body>
 </html>

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../data/providers.dart';
 import '../../logic/gold_records.dart';
+import '../../logic/record_wall.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/album_art.dart';
 import 'gold_disc.dart';
@@ -19,9 +20,10 @@ class RecordsEntry extends ConsumerWidget {
     final pressed = computeGoldRecords(shows).length;
     final total = RecordKind.values.length;
     final wall = ref.watch(recordWallProvider);
+    // Real covers first, then printed sleeves for songs without art.
     final covers = [
-      for (final r in wall)
-        if (r.albumArtUrl != null) r.albumArtUrl!,
+      ...wall.where((r) => r.albumArtUrl != null),
+      ...wall.where((r) => r.albumArtUrl == null),
     ].take(4).toList();
 
     return IntrinsicHeight(
@@ -108,10 +110,11 @@ class _Door extends StatelessWidget {
   }
 }
 
-/// Up to four of the newest covers in a 2 × 2 square.
+/// Up to four records from the wall in a 2 × 2 square: covers, or each
+/// song's printed sleeve.
 class _Mosaic extends StatelessWidget {
   const _Mosaic({required this.covers});
-  final List<String> covers;
+  final List<WallRecord> covers;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +131,13 @@ class _Mosaic extends StatelessWidget {
           children: [
             for (var i = 0; i < 4; i++)
               i < covers.length
-                  ? AlbumArt(url: covers[i], size: cell, radius: 0)
+                  ? AlbumArt(
+                      url: covers[i].albumArtUrl,
+                      title: covers[i].song.title,
+                      artist: covers[i].song.artist,
+                      size: cell,
+                      radius: 0,
+                    )
                   : Container(
                       width: cell,
                       height: cell,

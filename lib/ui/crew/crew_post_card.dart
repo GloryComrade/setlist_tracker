@@ -540,7 +540,13 @@ class _SongLine extends StatelessWidget {
     final note = song.note;
     final line = Row(
       children: [
-        AlbumArt(url: song.albumArtUrl, size: 36, radius: 6),
+        AlbumArt(
+          url: song.albumArtUrl,
+          size: 36,
+          radius: 6,
+          title: song.title,
+          artist: song.artist,
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

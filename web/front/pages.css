@@ -1,0 +1,218 @@
+/* Setlist Tracker: the small pages (privacy.html, support.html).
+   Same sleeve as the front page: stage black with paper grain, one reading column,
+   Archivo for reading, ArchivoCondensed for headlines, Mynerve for the amber pen only.
+   Tokens and marks are copied from front/front.css; rules are in DESIGN.md, "Front page".
+   These pages have no <base href>, so every URL here is relative to /front/. */
+@font-face{font-family:"Archivo";src:url("fonts/Archivo-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Archivo";src:url("fonts/Archivo-400-Italic.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Archivo";src:url("fonts/Archivo-600.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Archivo";src:url("fonts/Archivo-800.woff2") format("woff2");font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:"ArchivoCondensed";src:url("fonts/Archivo-ExtraCondensedBlack.woff2") format("woff2");font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:"Mynerve";src:url("fonts/Mynerve-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:dark;
+  --stage-black:#0B0A12; --stage-surface:#16141F; --stage-outline:#3A3548;
+  --white:#F5F3FA; --grey:#A8A3B8; --amber:#FFB020; --gold-ink:#1A1206;
+  --amber-ink-2:#4A3204; --amber-deep:#9A6406;
+  --paper:#ECE7DA; --paper-ink-2:#4B4536;
+  --body:"Archivo",system-ui,sans-serif;
+  --poster:"ArchivoCondensed","Archivo",sans-serif;
+  --pen:"Mynerve","Archivo",cursive;
+  --measure:35rem;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --gut:clamp(16px,5vw,64px);
+}
+html{background:var(--stage-black);overflow-x:clip;scrollbar-color:var(--stage-outline) var(--stage-black);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--white);font:400 1.125rem/1.62 var(--body);overflow-x:clip;background-color:var(--stage-black);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+::selection{background:var(--amber);color:var(--gold-ink)}
+a{color:inherit;text-decoration-color:var(--amber);text-decoration-thickness:2px;text-underline-offset:.2em}
+a:not(.btn):hover{color:var(--amber)}
+:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:2px}
+[tabindex="-1"]:focus{outline:none}
+p{margin:0 0 1.15em}
+ul,ol{margin:0;padding:0;list-style:none}
+strong,b{font-weight:800}
+q{quotes:"\201C" "\201D"}
+.defs{position:absolute}
+.wrap{width:min(100% - 2*var(--gut),1180px);margin-inline:auto}
+.skip{position:absolute;left:12px;top:0;transform:translateY(-120%);background:var(--amber);color:var(--gold-ink);padding:.6em 1em;font-weight:800;z-index:10;text-decoration:none}
+.skip:focus{transform:translateY(12px)}
+
+/* the pen: one hand, one weight */
+.mark{fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.hand{font-family:var(--pen);font-size:1.32rem;line-height:1.32;color:var(--amber);margin:0}
+.hand--ink{color:var(--gold-ink)}
+.ringed{position:relative;display:inline-block;padding:.45em 1.15em}
+.ringed svg{position:absolute;inset:0;width:100%;height:100%;stroke-width:2.2}
+
+/* type */
+h1,h2,h3,.wordmark{margin:0;text-wrap:balance;font-family:var(--poster);font-weight:800;text-transform:uppercase;line-height:.92;letter-spacing:.005em}
+h2{font-size:clamp(2.3rem,4.4vw,3.25rem);margin-bottom:.45em}
+.under{position:relative;white-space:nowrap}
+.under svg{position:absolute;left:-2%;bottom:-.1em;width:104%;height:.2em;color:var(--amber);stroke-width:5}
+
+/* masthead */
+.mast{display:flex;align-items:center;flex-wrap:wrap;gap:10px clamp(16px,3vw,40px);padding-block:22px}
+.wordmark{font-size:min(1.7rem,7.4vw);text-decoration:none;letter-spacing:.02em;margin-right:auto}
+.mast nav{display:flex;gap:clamp(14px,2.4vw,32px);font-size:1rem}
+.mast nav a{text-decoration:none;color:var(--grey);padding-block:.5em}
+.mast nav a:hover{color:var(--white);text-decoration:underline;text-decoration-color:var(--amber)}
+.mast nav a[aria-current="page"]{color:var(--white);text-decoration:underline;text-decoration-color:var(--amber)}
+
+.btn{display:inline-block;background:var(--amber);color:var(--gold-ink);font:800 1.2rem/1 var(--body);text-decoration:none;padding:1.05em 1.5em 1em;border-radius:3px;
+  box-shadow:0 3px 0 var(--amber-deep),0 14px 24px -12px rgba(0,0,0,.8);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.btn:hover{color:var(--gold-ink);transform:translateY(-2px) rotate(-1deg);box-shadow:0 5px 0 var(--amber-deep),0 20px 28px -12px rgba(0,0,0,.85)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--amber-deep)}
+.btn--small{font-size:1rem;padding:.75em 1.05em .7em}
+.btn--dark{background:var(--gold-ink);color:var(--amber);font-size:clamp(1.25rem,2.2vw,1.55rem);box-shadow:0 3px 0 #000,0 16px 22px -12px rgba(0,0,0,.5)}
+.btn--dark:hover{color:var(--amber);box-shadow:0 5px 0 #000,0 22px 26px -12px rgba(0,0,0,.55)}
+.btn--dark:active{box-shadow:0 1px 0 #000}
+
+/* opening: the title, the lede, and a sheet of paper tucked in beside them */
+.opening{display:grid;gap:44px;padding-top:clamp(8px,2.4vw,28px);padding-bottom:clamp(56px,8vw,110px)}
+h1{font-size:clamp(3.6rem,15vw,6.6rem);line-height:.86;margin-bottom:.32em}
+.lede{font-size:clamp(1.2rem,1.7vw,1.4rem);line-height:1.5;max-width:32rem}
+.stamp{display:inline-block;margin:.4em 0 0;font:800 1rem/1.3 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);border:2px solid var(--stage-outline);padding:.45em .7em .4em;transform:rotate(-1.5deg);border-radius:2px}
+.back{display:inline-flex;align-items:center;gap:10px;margin-top:1.6rem;font-size:1rem;color:var(--grey);text-decoration:none;padding-block:.4em}
+.back svg{width:38px;height:20px;color:var(--amber);transform:scaleX(-1)}
+.back:hover{color:var(--white)}
+.back:hover span{text-decoration:underline;text-decoration-color:var(--amber)}
+
+.paper{position:relative;background:var(--paper);color:var(--gold-ink);padding:30px 26px 26px;transform:rotate(1.4deg);border-radius:2px;max-width:26rem;
+  box-shadow:0 1px 1px rgba(0,0,0,.5),0 22px 34px -14px rgba(0,0,0,.9),0 44px 64px -30px rgba(0,0,0,.75)}
+.paper ::selection{background:var(--gold-ink);color:var(--paper)}
+.paper :focus-visible{outline-color:var(--gold-ink)}
+.paper h2{font:800 1rem/1.2 var(--body);letter-spacing:.09em;margin:0 0 6px}
+.paper li{position:relative;padding:10px 0 11px 1.9rem;border-bottom:1px dashed rgba(26,18,6,.3);font-size:1.0625rem;line-height:1.4}
+.paper li:last-child{border-bottom:0}
+.paper li svg{position:absolute;left:0;top:.9em;width:1.15rem;height:1rem;color:var(--gold-ink)}
+.paper li b{font-weight:800}
+.paper .hand{margin-top:12px;transform:rotate(-1.5deg);transform-origin:left}
+.paper a{text-decoration-color:var(--gold-ink)}
+.paper a:hover{color:var(--gold-ink);text-decoration-thickness:3px}
+.tape{position:absolute;width:92px;height:28px;background:var(--paper);opacity:.82;z-index:2;top:-14px;left:50%;transform:translateX(-50%) rotate(-3deg);
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+  clip-path:polygon(0 8%,4% 0,9% 9%,14% 0,100% 4%,97% 50%,100% 100%,91% 92%,86% 100%,0 96%,3% 52%)}
+.paper .tape{filter:brightness(.93)}
+
+/* the long version: a reading column with a margin for the pen */
+.body{padding-bottom:clamp(72px,10vw,140px)}
+.part{display:grid;gap:14px 0;padding-top:clamp(36px,4.6vw,60px)}
+.part + .part{border-top:1px dashed var(--stage-outline);margin-top:clamp(36px,4.6vw,60px)}
+.part__text{max-width:var(--measure)}
+.part__text > :last-child{margin-bottom:0}
+.part__text ul{margin:0 0 1.15em}
+.part__text li{position:relative;padding:12px 0 13px;border-top:1px solid var(--stage-outline)}
+.part__text li:last-child{border-bottom:1px solid var(--stage-outline)}
+.part__text li strong{display:block;font-family:var(--poster);font-weight:800;font-size:1.5rem;line-height:1;text-transform:uppercase;letter-spacing:.01em;margin-bottom:4px}
+.path{font-weight:800;white-space:normal}
+.path span{white-space:nowrap}
+.note{max-width:22rem;transform:rotate(-1.6deg);transform-origin:left}
+.note svg{display:none}
+.quiet{color:var(--grey)}
+
+.who{margin:0 0 1.15em}
+.who div{display:grid;grid-template-columns:1fr;gap:2px 24px;padding:13px 0;border-top:1px solid var(--stage-outline)}
+.who div:last-child{border-bottom:1px solid var(--stage-outline)}
+.who dt{font:800 1rem/1.4 var(--body);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)}
+.who dd{margin:0}
+
+/* support: the amber insert with the one way to reach me */
+.insert{position:relative;background:var(--amber);color:var(--gold-ink);padding:clamp(30px,4.6vw,56px) clamp(20px,4.6vw,56px) clamp(30px,4vw,48px);transform:rotate(-.7deg);
+  box-shadow:0 30px 50px -26px rgba(0,0,0,.95);margin-bottom:clamp(72px,10vw,130px)}
+.insert ::selection{background:var(--gold-ink);color:var(--amber)}
+.insert :focus-visible{outline-color:var(--gold-ink)}
+.insert h2{font-size:clamp(2.6rem,7vw,4.6rem);line-height:.88;margin-bottom:.35em;max-width:12ch}
+.insert__grid{display:grid;gap:32px clamp(36px,5vw,84px)}
+.insert__lede{font-weight:600;font-size:clamp(1.15rem,1.6vw,1.3rem);line-height:1.45;max-width:30rem}
+.insert__fine{font-size:1rem;line-height:1.45;color:var(--amber-ink-2);font-weight:600;max-width:30rem;margin:1.4em 0 0}
+.insert a:not(.btn){text-decoration-color:var(--gold-ink)}
+.insert a:not(.btn):hover{color:var(--gold-ink);text-decoration-thickness:3px}
+.ask h3{font:400 1.5rem/1.32 var(--pen);text-transform:none;letter-spacing:0;transform:rotate(-1.5deg);transform-origin:left;margin-bottom:10px}
+.ask ol{counter-reset:ask}
+.ask li{counter-increment:ask;position:relative;padding:10px 0 11px 2.1rem;border-top:1px solid rgba(26,18,6,.34);font-family:var(--poster);font-size:clamp(1.55rem,2.6vw,2rem);line-height:1;text-transform:uppercase}
+.ask li:last-child{border-bottom:1px solid rgba(26,18,6,.34)}
+.ask li::before{content:counter(ask) ".";position:absolute;left:0;top:.55rem;font-family:var(--pen);font-size:1.4rem;line-height:1;text-transform:none}
+.ask li span{display:block;margin-top:4px;font:600 1rem/1.35 var(--body);text-transform:none;color:var(--amber-ink-2)}
+
+/* questions: the question in the gutter, the answer in the column */
+.faq{padding-bottom:clamp(56px,8vw,110px)}
+.faq > h2{margin-bottom:.2em}
+.faq__intro{max-width:var(--measure);color:var(--grey)}
+.group{margin-top:clamp(40px,5vw,64px)}
+.group h3{font:400 1.45rem/1.32 var(--pen);text-transform:none;letter-spacing:0;color:var(--amber);transform:rotate(-1.5deg);transform-origin:left;margin:0 0 12px}
+.qa{margin:0}
+.qa div{display:grid;gap:6px 56px;padding:18px 0 20px;border-top:1px solid var(--stage-outline)}
+.qa div:last-child{border-bottom:1px solid var(--stage-outline)}
+.qa dt{font-family:var(--poster);font-size:clamp(1.6rem,2.6vw,2.1rem);line-height:1;text-transform:uppercase;max-width:22ch}
+.qa dd{margin:0;max-width:var(--measure)}
+.qa dd p:last-child{margin-bottom:0}
+
+.advice{display:grid;gap:18px 56px;padding-bottom:clamp(72px,10vw,140px)}
+.advice blockquote{margin:0;max-width:var(--measure);font-size:clamp(1.2rem,1.7vw,1.4rem);line-height:1.5;font-weight:600}
+.advice blockquote p{margin:0}
+.advice__src{margin:10px 0 0;font-size:1rem;color:var(--grey);font-weight:400}
+
+/* footer: the amber label, smaller than the front page's */
+.foot{background:var(--amber);color:var(--gold-ink);padding-block:clamp(40px,5vw,64px) 28px}
+.foot ::selection{background:var(--gold-ink);color:var(--amber)}
+.foot :focus-visible{outline-color:var(--gold-ink)}
+.foot a,.foot a:hover{color:var(--gold-ink);text-decoration-color:var(--gold-ink)}
+.foot__grid{display:grid;gap:32px}
+.wordmark--foot{font-size:clamp(2.4rem,5.4vw,3.4rem);margin-bottom:10px}
+.foot__id p{max-width:24rem;margin:0;font-weight:600;color:var(--amber-ink-2)}
+.foot nav{display:grid;gap:2px;align-content:start}
+.foot nav a{font-family:var(--poster);font-size:1.7rem;line-height:1.1;text-transform:uppercase;text-decoration:none;padding:9px 0;border-bottom:1px solid rgba(26,18,6,.34)}
+.foot nav a span{display:block;font:600 1rem/1.35 var(--body);text-transform:none;color:var(--amber-ink-2)}
+.foot nav a:hover{text-decoration:underline;text-decoration-thickness:3px}
+.foot nav a[aria-current="page"]{text-decoration:underline;text-decoration-thickness:3px}
+.foot__fine{margin-top:40px;margin-bottom:0;font-size:1rem;line-height:1.5;color:var(--amber-ink-2);font-weight:600}
+
+@media (max-width:37.5em){
+  .mast nav{order:3;width:100%}
+}
+@media (max-width:22em){
+  .paper{padding:28px 18px 22px}
+  .insert .btn{display:block;text-align:center}
+}
+
+@media (min-width:43.75em){
+  .who div{grid-template-columns:12rem 1fr}
+}
+
+@media (min-width:56.25em){
+  .opening{grid-template-columns:minmax(0,1fr) minmax(0,25rem);gap:0 clamp(40px,6vw,96px);align-items:start}
+  .opening .paper{margin-top:clamp(72px,8vw,120px);justify-self:end;width:100%}
+  .insert__grid{grid-template-columns:minmax(0,1fr) minmax(0,26rem);align-items:start}
+  .qa div{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+  .advice{grid-template-columns:minmax(0,1fr) minmax(0,var(--measure));align-items:start}
+  .advice h2{padding-top:.1em}
+  .foot__grid{grid-template-columns:1.2fr 1fr;gap:56px}
+}
+
+/* from 1100 there is a margin, so the pen moves into it and points back at the column */
+@media (min-width:68.75em){
+  .body{padding-left:clamp(0px,7vw,110px)}
+  .part{grid-template-columns:minmax(0,var(--measure)) minmax(0,15rem);gap:0 clamp(40px,5vw,72px);align-items:start}
+  .note{display:flex;gap:10px;align-items:flex-start;margin-top:var(--y,1.2rem)}
+  .note svg{display:block;flex:none;width:52px;height:26px;margin-top:.1em;transform:scaleX(-1) rotate(10deg)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+@media print{
+  .mast nav,.mast .btn,.skip{display:none}
+}
+/* the ring only closes around one line, so narrow screens get the note without it */
+@media (max-width:43.6875em){
+  .advice .ringed{padding:0}
+  .advice .ringed svg{display:none}
+}
+@media (min-width:43.75em){
+  .advice .ringed{padding:.5em 1.7em}
+}
+.foot__id .wordmark{color:var(--gold-ink)}

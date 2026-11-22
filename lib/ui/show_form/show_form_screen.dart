@@ -931,7 +931,14 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                     Stack(
                       alignment: Alignment.center,
                       children: [
-                        AlbumArt(url: song.albumArtUrl, size: 64),
+                        AlbumArt(
+                          url: song.albumArtUrl,
+                          size: 64,
+                          title: song.title,
+                          artist: song.artist,
+                          // Titled beside it; a play button may cover it.
+                          printTitle: false,
+                        ),
                         if (song.hasClip) ClipPlayButton(song: song, size: 36),
                       ],
                     ),

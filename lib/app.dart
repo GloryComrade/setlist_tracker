@@ -7,6 +7,7 @@ import 'data/crew/crew_controller.dart';
 import 'data/sync/sync_controller.dart';
 import 'models/tour.dart';
 import 'theme/app_theme.dart';
+import 'theme/stage_art.dart';
 import 'ui/backstage/backstage_screen.dart';
 import 'ui/backstage/saved_mix_screen.dart';
 import 'ui/charts/charts_screen.dart';
@@ -130,8 +131,34 @@ class SetlistApp extends ConsumerWidget {
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.dark,
       routerConfig: appRouter,
+      builder: (context, child) => _PrecacheArt(child: child!),
     );
   }
+}
+
+/// Decodes the venue prints once at start, so a Show poster opened later
+/// paints with its print in the first frame.
+class _PrecacheArt extends StatefulWidget {
+  const _PrecacheArt({required this.child});
+  final Widget child;
+
+  @override
+  State<_PrecacheArt> createState() => _PrecacheArtState();
+}
+
+class _PrecacheArtState extends State<_PrecacheArt> {
+  var _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    StageArt.precache(context);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Bottom bar on phones, side rail on wide screens.

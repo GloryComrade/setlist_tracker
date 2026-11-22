@@ -10,6 +10,7 @@ import '../../logic/record_wall.dart';
 import '../../logic/show_math.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/album_art.dart';
+import '../widgets/song_sleeve.dart';
 import '../widgets/download/save_text_file.dart';
 import '../widgets/stage_widgets.dart';
 
@@ -306,7 +307,7 @@ class _WallTile extends StatelessWidget {
                     AlbumArt(url: art, size: c.maxWidth, radius: 0),
               )
             else
-              _PrintedSleeve(title: song.title, artist: song.artist),
+              SongSleeve(title: song.title, artist: song.artist),
             if (record.plays > 1)
               Positioned(
                 top: 6,
@@ -335,82 +336,15 @@ class _WallTile extends StatelessWidget {
               type: MaterialType.transparency,
               child: InkWell(
                 onTap: () => _showRecordSheet(context, record),
-                hoverColor: Colors.white.withValues(alpha: 0.08),
-                splashColor: StageColors.magenta.withValues(alpha: 0.25),
+                // Darken, never lighten: the sleeve's white type keeps its
+                // contrast while the tile is hovered or pressed.
+                hoverColor: Colors.black.withValues(alpha: 0.14),
+                highlightColor: Colors.black.withValues(alpha: 0.2),
+                splashColor: Colors.black.withValues(alpha: 0.16),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// A sleeve for a song typed in by hand, with no album art.
-class _PrintedSleeve extends StatelessWidget {
-  const _PrintedSleeve({required this.title, required this.artist});
-  final String title;
-  final String artist;
-
-  @override
-  Widget build(BuildContext context) {
-    // The same song always gets the same lights.
-    const lights = [
-      StageColors.liveGradient,
-      StageColors.studioGradient,
-      StageColors.headlineGradient,
-    ];
-    final gradient = lights[(title.hashCode ^ artist.hashCode).abs() % 3];
-    return DecoratedBox(
-      decoration: BoxDecoration(gradient: gradient),
-      child: LayoutBuilder(
-        builder: (context, c) {
-          // Archivo Condensed capitals average about 0.5 em wide. Shrink the type until the
-          // longest word fits on one line, so no word breaks in the middle.
-          final longest = title
-              .split(RegExp(r'\s+'))
-              .fold(1, (n, w) => w.length > n ? w.length : n);
-          final fit = (c.maxWidth - 20) / (longest * 0.5);
-          // Never below 11, the smallest size anyone reads on a phone; a
-          // word too long for that ellipsizes instead.
-          final fontSize =
-              (fit.clamp(11.0, 22.0) * (c.maxWidth / 115).clamp(0.6, 1.0))
-                  .clamp(11.0, 22.0);
-          return Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: Text(
-                    title.toUpperCase(),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: StageFonts.display,
-                      fontSize: fontSize,
-                      height: 0.95,
-                      letterSpacing: 0.4,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  artist,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
       ),
     );
   }
@@ -441,9 +375,11 @@ void _showRecordSheet(BuildContext context, WallRecord record) {
                       ? AlbumArt(url: record.albumArtUrl, size: 96)
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: _PrintedSleeve(
+                          // The title and artist are set right beside it.
+                          child: SongSleeve(
                             title: song.title,
                             artist: song.artist,
+                            printTitle: false,
                           ),
                         ),
                 ),
