@@ -201,6 +201,8 @@ class PlannedShow {
     this.targetPaceSecondsPerMile,
     this.plannedDurationSeconds,
     this.tracks = const [],
+    this.rescheduledFrom,
+    this.skipped = false,
   });
 
   final String id;
@@ -226,7 +228,41 @@ class PlannedShow {
   /// Ready-made treadmill program for Studio Sessions.
   final List<Track> tracks;
 
+  /// The original date, when the Tour Manager moved a missed run.
+  final DateTime? rescheduledFrom;
+
+  /// Dropped from the week (missed with no room to move it).
+  final bool skipped;
+
   bool get isRace => workoutType == WorkoutType.race;
+
+  PlannedShow copyWith({
+    DateTime? date,
+    WorkoutType? workoutType,
+    double? distanceMiles,
+    String? title,
+    String? detail,
+    double? targetPaceSecondsPerMile,
+    int? plannedDurationSeconds,
+    List<Track>? tracks,
+    DateTime? rescheduledFrom,
+    bool? skipped,
+  }) => PlannedShow(
+    id: id,
+    date: date ?? this.date,
+    workoutType: workoutType ?? this.workoutType,
+    distanceMiles: distanceMiles ?? this.distanceMiles,
+    venue: venue,
+    title: title ?? this.title,
+    detail: detail ?? this.detail,
+    targetPaceSecondsPerMile:
+        targetPaceSecondsPerMile ?? this.targetPaceSecondsPerMile,
+    plannedDurationSeconds:
+        plannedDurationSeconds ?? this.plannedDurationSeconds,
+    tracks: tracks ?? this.tracks,
+    rescheduledFrom: rescheduledFrom ?? this.rescheduledFrom,
+    skipped: skipped ?? this.skipped,
+  );
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -239,6 +275,10 @@ class PlannedShow {
     'targetPaceSecondsPerMile': targetPaceSecondsPerMile,
     'plannedDurationSeconds': plannedDurationSeconds,
     'tracks': tracks.map((t) => t.toJson()).toList(),
+    'rescheduledFrom': rescheduledFrom == null
+        ? null
+        : dateOnlyString(rescheduledFrom!),
+    'skipped': skipped,
   };
 
   factory PlannedShow.fromJson(Map<String, Object?> json) => PlannedShow(
@@ -254,6 +294,8 @@ class PlannedShow {
         ? null
         : asInt(json['plannedDurationSeconds']),
     tracks: asMapList(json['tracks']).map(Track.fromJson).toList(),
+    rescheduledFrom: parseDateOnly(json['rescheduledFrom']),
+    skipped: json['skipped'] == true,
   );
 }
 
@@ -277,7 +319,18 @@ class TourWeek {
   DateTime get endDate =>
       DateTime(startDate.year, startDate.month, startDate.day + 6);
 
-  double get plannedMiles => shows.fold(0.0, (sum, s) => sum + s.distanceMiles);
+  /// Skipped runs don't count toward the week's miles.
+  double get plannedMiles => shows
+      .where((s) => !s.skipped)
+      .fold(0.0, (sum, s) => sum + s.distanceMiles);
+
+  TourWeek copyWith({bool? isRestStop, List<PlannedShow>? shows}) => TourWeek(
+    number: number,
+    startDate: startDate,
+    phase: phase,
+    isRestStop: isRestStop ?? this.isRestStop,
+    shows: shows ?? this.shows,
+  );
 
   PlannedShow? get headliner {
     for (final s in shows) {
@@ -308,6 +361,47 @@ class TourWeek {
   );
 }
 
+/// What kind of change the Tour Manager made.
+enum AdjustmentKind {
+  rescheduled('Moved a missed Show'),
+  skipped('Skipped a missed Show'),
+  lighterWeek('Made a week a Rest Stop'),
+  paces('Updated paces');
+
+  const AdjustmentKind(this.label);
+  final String label;
+
+  static AdjustmentKind fromName(String? name) => AdjustmentKind.values
+      .firstWhere((v) => v.name == name, orElse: () => AdjustmentKind.paces);
+}
+
+/// One change the runner accepted from the Tour Manager.
+class TourAdjustment {
+  const TourAdjustment({
+    required this.kind,
+    required this.at,
+    required this.note,
+  });
+
+  final AdjustmentKind kind;
+  final DateTime at;
+
+  /// What changed, e.g. "Tempo moved from Tue 17 Nov to Thu 19 Nov".
+  final String note;
+
+  Map<String, Object?> toJson() => {
+    'kind': kind.name,
+    'at': utcString(at),
+    'note': note,
+  };
+
+  factory TourAdjustment.fromJson(Map<String, Object?> json) => TourAdjustment(
+    kind: AdjustmentKind.fromName(asStringOrNull(json['kind'])),
+    at: parseDate(json['at']) ?? DateTime.now().toUtc(),
+    note: asStringOrNull(json['note']) ?? '',
+  );
+}
+
 /// A training plan: every week from the first Rehearsal to Opening Night.
 class Tour implements Entity {
   const Tour({
@@ -319,6 +413,8 @@ class Tour implements Entity {
     required this.updatedAt,
     this.paces,
     this.warnings = const [],
+    this.adjustments = const [],
+    this.dismissed = const [],
     this.deletedAt,
   });
 
@@ -331,6 +427,12 @@ class Tour implements Entity {
 
   /// Notes from the builder, e.g. "Short Tour". Shown on the schedule.
   final List<String> warnings;
+
+  /// Changes accepted from the Tour Manager, oldest first.
+  final List<TourAdjustment> adjustments;
+
+  /// Tour Manager suggestion keys the runner said "Not now" to.
+  final List<String> dismissed;
 
   @override
   final DateTime createdAt;
@@ -369,13 +471,22 @@ class Tour implements Entity {
     return null;
   }
 
-  Tour copyWith({DateTime? updatedAt, DateTime? deletedAt}) => Tour(
+  Tour copyWith({
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    TourPaces? paces,
+    List<TourWeek>? weeks,
+    List<TourAdjustment>? adjustments,
+    List<String>? dismissed,
+  }) => Tour(
     id: id,
     name: name,
     setup: setup,
-    paces: paces,
-    weeks: weeks,
+    paces: paces ?? this.paces,
+    weeks: weeks ?? this.weeks,
     warnings: warnings,
+    adjustments: adjustments ?? this.adjustments,
+    dismissed: dismissed ?? this.dismissed,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt ?? this.deletedAt,
@@ -390,6 +501,8 @@ class Tour implements Entity {
     'paces': paces?.toJson(),
     'weeks': weeks.map((w) => w.toJson()).toList(),
     'warnings': warnings,
+    'adjustments': adjustments.map((a) => a.toJson()).toList(),
+    'dismissed': dismissed,
     'createdAt': utcString(createdAt),
     'updatedAt': utcString(updatedAt),
     'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
@@ -398,6 +511,7 @@ class Tour implements Entity {
   factory Tour.fromJson(Map<String, Object?> json) {
     final created = parseDate(json['createdAt']) ?? DateTime.now().toUtc();
     final rawWarnings = json['warnings'];
+    final rawDismissed = json['dismissed'];
     return Tour(
       id: '${json['id']}',
       name: asStringOrNull(json['name']) ?? 'The Tour',
@@ -406,6 +520,12 @@ class Tour implements Entity {
       weeks: asMapList(json['weeks']).map(TourWeek.fromJson).toList(),
       warnings: rawWarnings is List
           ? rawWarnings.map((w) => '$w').toList()
+          : const [],
+      adjustments: asMapList(json['adjustments'])
+          .map(TourAdjustment.fromJson)
+          .toList(),
+      dismissed: rawDismissed is List
+          ? rawDismissed.map((d) => '$d').toList()
           : const [],
       createdAt: created,
       updatedAt: parseDate(json['updatedAt']) ?? created,

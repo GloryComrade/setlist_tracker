@@ -10,6 +10,7 @@ import '../../models/show.dart';
 import '../../models/tour.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
+import 'tour_manager_cards.dart';
 import 'tour_widgets.dart';
 
 /// The Tour tab: the weekly Tour Schedule, or an invitation to book one.
@@ -184,6 +185,7 @@ class _ScheduleState extends ConsumerState<_Schedule> {
   Widget build(BuildContext context) {
     final tour = widget.tour;
     final done = ref.watch(tourProgressProvider);
+    final shows = ref.watch(showsProvider).value ?? const <Show>[];
     final current = _currentWeek;
     final daysToGo = daysBetween(today(), tour.raceDate);
 
@@ -205,6 +207,12 @@ class _ScheduleState extends ConsumerState<_Schedule> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             sliver: SliverToBoxAdapter(child: _PacesCard(paces: tour.paces)),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverToBoxAdapter(
+              child: TourManagerSection(tour: tour, now: DateTime.now()),
+            ),
           ),
           if (tour.warnings.isNotEmpty)
             SliverPadding(
@@ -238,6 +246,7 @@ class _ScheduleState extends ConsumerState<_Schedule> {
                   isCurrent: w.number == current,
                   open: _isOpen(w),
                   done: done,
+                  shows: shows,
                   onToggle: () => setState(() => _open[w.number] = !_isOpen(w)),
                 );
               },
@@ -478,9 +487,12 @@ class _WeekBlock extends StatelessWidget {
     required this.isCurrent,
     required this.open,
     required this.done,
+    required this.shows,
     required this.onToggle,
   });
 
+  /// Every Show on the Setlist; this week's ones count toward actual miles.
+  final List<Show> shows;
   final TourWeek week;
   final bool isCurrent;
   final bool open;
@@ -491,8 +503,13 @@ class _WeekBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = phaseColor(week.phase);
-    final logged = week.shows.where((s) => done.containsKey(s.id)).length;
-    final all = week.shows.length;
+    final active = week.shows.where((s) => !s.skipped).toList();
+    final logged = active.where((s) => done.containsKey(s.id)).length;
+    final all = active.length;
+    // Planned vs. actual: every Show run this week counts, planned or not.
+    final weekShows = shows.where((s) => week.contains(s.date)).toList();
+    final actualMiles = weekShows.fold(0.0, (a, s) => a + s.distanceMiles);
+    final hasActual = weekShows.isNotEmpty;
     final past = week.endDate.isBefore(today());
 
     return Container(
@@ -555,12 +572,36 @@ class _WeekBlock extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        // Rounded to the half mile: it's a target, not a measurement.
-                        formatMiles((week.plannedMiles * 2).round() / 2),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            if (hasActual)
+                              TextSpan(
+                                text:
+                                    '${formatMiles(actualMiles, withUnit: false)} / ',
+                              ),
+                            // Rounded to the half mile: it's a target, not a
+                            // measurement.
+                            TextSpan(
+                              text: formatMiles(
+                                (week.plannedMiles * 2).round() / 2,
+                              ),
+                              style: hasActual
+                                  ? const TextStyle(
+                                      color: StageColors.textMuted,
+                                    )
+                                  : null,
+                            ),
+                          ],
+                        ),
+                        semanticsLabel: hasActual
+                            ? '${formatMiles(actualMiles)} of '
+                                  '${formatMiles(week.plannedMiles)} planned'
+                            : '${formatMiles(week.plannedMiles)} planned',
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           color: StageColors.amber,
@@ -598,6 +639,8 @@ class _WeekBlock extends StatelessWidget {
   }
 }
 
+const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 class _DayRow extends StatelessWidget {
   const _DayRow({required this.show, required this.logged});
   final PlannedShow show;
@@ -607,8 +650,24 @@ class _DayRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = today();
     final isToday = show.date == now;
-    final missed = logged == null && show.date.isBefore(now);
+    final skipped = show.skipped && logged == null;
+    final missed = logged == null && (skipped || show.date.isBefore(now));
     final muted = missed ? StageColors.textMuted : StageColors.text;
+    final ran = logged;
+    final moved = show.rescheduledFrom;
+    final String subline;
+    if (ran != null) {
+      subline =
+          'Ran ${formatMiles(ran.distanceMiles)} · '
+          '${formatPace(ran.paceSecondsPerMile)}';
+    } else if (skipped) {
+      subline = 'Skipped';
+    } else {
+      final venue = show.venue == Venue.studio ? 'Studio Session' : 'Live Show';
+      subline = moved == null
+          ? venue
+          : '$venue · moved from ${_dayNames[moved.weekday - 1]}';
+    }
     const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
     return InkWell(
@@ -657,13 +716,21 @@ class _DayRow extends StatelessWidget {
                 children: [
                   Text(
                     show.title,
-                    style: TextStyle(fontWeight: FontWeight.w700, color: muted),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: muted,
+                      decoration: skipped ? TextDecoration.lineThrough : null,
+                      decorationColor: StageColors.textMuted,
+                    ),
                   ),
                   Text(
-                    show.venue == Venue.studio ? 'Studio Session' : 'Live Show',
-                    style: const TextStyle(
-                      color: StageColors.textMuted,
+                    subline,
+                    style: TextStyle(
+                      color: ran != null
+                          ? StageColors.amber
+                          : StageColors.textMuted,
                       fontSize: 12.5,
+                      fontFeatures: StageFonts.tabular,
                     ),
                   ),
                 ],
@@ -691,7 +758,11 @@ class _DayRow extends StatelessWidget {
                       Icons.radio_button_unchecked,
                       color: StageColors.outline,
                       size: 22,
-                      semanticLabel: missed ? 'Not logged' : 'Planned',
+                      semanticLabel: skipped
+                          ? 'Skipped'
+                          : missed
+                          ? 'Not logged'
+                          : 'Planned',
                     ),
             ),
           ],
