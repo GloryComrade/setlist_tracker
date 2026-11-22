@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'theme/app_theme.dart';
 import 'ui/backstage/backstage_screen.dart';
 import 'ui/backstage/saved_mix_screen.dart';
+import 'ui/charts/charts_screen.dart';
 import 'ui/records/gold_records_screen.dart';
 import 'ui/records/record_wall_screen.dart';
 import 'ui/setlist/setlist_screen.dart';
@@ -28,6 +29,11 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/tour', builder: (_, _) => const TourScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/charts', builder: (_, _) => const ChartsScreen()),
           ],
         ),
         StatefulShellBranch(
@@ -111,6 +117,11 @@ class _TabShell extends StatelessWidget {
       icon: Icons.confirmation_number_outlined,
       active: Icons.confirmation_number,
       label: 'Tour',
+    ),
+    (
+      icon: Icons.leaderboard_outlined,
+      active: Icons.leaderboard,
+      label: 'The Charts',
     ),
     (
       icon: Icons.inventory_2_outlined,
