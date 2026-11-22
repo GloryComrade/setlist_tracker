@@ -14,10 +14,9 @@ You need:
 
 - Your Mac with Xcode 27 and Flutter 3.50 (`flutter --version` shows it).
 - Your iPhone (iOS 16 or newer) and its USB cable.
-- Your Cloudflare site address (SITE in
-  [cloudflare-setup.md](cloudflare-setup.md)), for example
-  `https://setlist-tracker.ryan.workers.dev`. Without it the app still runs,
-  but only on this phone, with no sign-in or Crew.
+- The site address, `https://setlisttracker.com` (SITE in
+  [cloudflare-setup.md](cloudflare-setup.md)). Without it the app still
+  runs, but only on this phone, with no sign-in or Crew.
 
 ---
 
@@ -103,12 +102,16 @@ You can quit Xcode now (Cmd+Q). It remembers the team.
 ### 6. Build and install
 
 In Terminal (still in `~/Downloads/setlist_tracker`), paste this as one
-command, with your own site address:
+command:
 
 ```
 flutter run --release \
-  --dart-define=API_URL=https://setlist-tracker.YOUR-SUBDOMAIN.workers.dev
+  --dart-define=API_URL=https://setlisttracker.com \
+  --dart-define=APPLE_SIGN_IN=true
 ```
+
+(Leave out the last line on a free Apple ID: Sign in with Apple needs the
+paid team.)
 
 - If Flutter asks which device to use, type the number next to your iPhone.
 - The first build takes a few minutes. Your Mac may ask for your login
@@ -193,10 +196,10 @@ offer Sign in with Apple, so turn it on before sending the app for review.
 
 ### F. TestFlight (install without a cable, no 7-day limit)
 
-1. **Create the app in App Store Connect** (only once): go to
-   https://appstoreconnect.apple.com → **Apps → + → New App**. Platform
-   **iOS**, Name `Setlist Tracker`, primary language English (U.S.), Bundle
-   ID `com.glorycomrade.setlisttracker`, SKU `setlist-tracker`, **Create**.
+1. **The app in App Store Connect** already exists ("Setlist Tracker",
+   SKU `setlisttracker`). If you ever need to make it again: **Apps → + →
+   New App**, Platform **iOS**, primary language English (U.S.), Bundle ID
+   `com.glorycomrade.setlisttracker`.
 2. **Build the upload** in Terminal:
 
    ```
@@ -204,7 +207,7 @@ offer Sign in with Apple, so turn it on before sending the app for review.
    git pull
    flutter pub get
    flutter build ipa --release \
-     --dart-define=API_URL=https://setlist-tracker.YOUR-SUBDOMAIN.workers.dev \
+     --dart-define=API_URL=https://setlisttracker.com \
      --dart-define=APPLE_SIGN_IN=true
    ```
 
@@ -240,8 +243,8 @@ Everything Apple asks for is ready, and
 - **Account deletion**: Backstage → Backstage Pass → ⋮ → Delete account.
   It removes the account and everything in it (Shows, Tours, Gear, Saved
   Mixes, The Crew), and revokes Sign in with Apple.
-- **Privacy policy URL**: `SITE/privacy.html`. **Support URL**:
-  `SITE/support.html`.
+- **Privacy policy URL**: `https://setlisttracker.com/privacy.html`.
+  **Support URL**: `https://setlisttracker.com/support.html`.
 - **The App Privacy answers** and **review notes** are in the listing file.
 - **Blocking and reporting** in The Crew (Apple asks for this in apps where
   people share with each other).
