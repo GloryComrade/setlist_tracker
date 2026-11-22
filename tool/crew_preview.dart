@@ -1,5 +1,5 @@
 // A preview of The Crew with made-up friends, for screenshots and trying the
-// screens without a Supabase project. Not part of the app.
+// screens without a backend. Not part of the app.
 //
 //   flutter run -d chrome -t tool/crew_preview.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';

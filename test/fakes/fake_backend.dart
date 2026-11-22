@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:setlist_tracker/data/auth/auth_service.dart';
 import 'package:setlist_tracker/data/sync/remote_store.dart';
 
-/// Behaves like the Supabase tables: newest updatedAt wins, and the server
+/// Behaves like the Cloudflare Worker's sync tables: newest updatedAt wins, and the server
 /// stamps syncedAt from its own steadily rising clock.
 class FakeRemote implements RemoteStore {
   final tables = <String, Map<String, RemoteRow>>{};

@@ -1,0 +1,122 @@
+import { env } from "cloudflare:workers";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLoginCode } from "../src/auth";
+import { call, callJson, count, jsonResponse, mockFetch, newRunner } from "./helpers";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+const TABLES: [string, string][] = [
+  ["users", "id = ?1"],
+  ["sessions", "user_id = ?1"],
+  ["login_codes", "user_id = ?1"],
+  ["apple_tokens", "user_id = ?1"],
+  ["records", "user_id = ?1"],
+  ["crew_profiles", "user_id = ?1"],
+  ["crew_links", "?1 IN (user_a, user_b)"],
+  ["crew_blocks", "?1 IN (blocker, blocked)"],
+  ["crew_invites", "owner = ?1"],
+  ["crew_invite_misses", "user_id = ?1"],
+  ["crew_posts", "owner = ?1"],
+  ["crew_encores", "user_id = ?1"],
+  ["crew_reports", "?1 IN (reporter, reported_user)"],
+];
+
+async function rowsOf(userId: string): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  for (const [table, where] of TABLES) {
+    out[table] = await count(`SELECT count(*) AS n FROM ${table} WHERE ${where}`, userId);
+  }
+  return out;
+}
+
+const SHOW = { date: "2026-11-21T07:30:00.000", distanceMiles: 3.1, notes: null };
+
+describe("DELETE /api/me", () => {
+  it("removes the runner and every row of theirs, and revokes Apple", async () => {
+    const me = await newRunner("Me");
+    const friend = await newRunner("Friend");
+    const blocker = await newRunner("Blocker");
+    for (const r of [me, friend, blocker]) {
+      await call("PUT", "/api/crew/profile", { token: r.token, body: { stageName: r.user.name } });
+    }
+    // Crew link both ways, a block each way, invites, a miss.
+    const myCode = (await callJson("POST", "/api/crew/invite", { token: me.token })).body.code;
+    await call("POST", "/api/crew/join", { token: friend.token, body: { code: myCode } });
+    await call("POST", "/api/crew/join", { token: me.token, body: { code: "ZZZZZZZZ" } });
+    await call("POST", "/api/crew/blocks", { token: me.token, body: { userId: blocker.user.id } });
+    await call("POST", "/api/crew/blocks", { token: blocker.token, body: { userId: me.user.id } });
+    // Posts both ways, Encores given and received, reports made and naming me.
+    const shareBody = { show: SHOW, showUpdatedAt: "2026-11-21T08:00:00.000Z" };
+    await call("PUT", "/api/crew/shared/mine", { token: me.token, body: shareBody });
+    await call("PUT", "/api/crew/shared/theirs", { token: friend.token, body: shareBody });
+    const posts = (await callJson("GET", "/api/crew/feed", { token: me.token })).body.posts;
+    const mine = posts.find((p: any) => p.mine).id;
+    const theirs = posts.find((p: any) => !p.mine).id;
+    await call("PUT", `/api/crew/posts/${theirs}/encore`, { token: me.token });
+    await call("PUT", `/api/crew/posts/${mine}/encore`, { token: friend.token });
+    await call("POST", `/api/crew/posts/${theirs}/report`, { token: me.token, body: { reason: "a" } });
+    await call("POST", `/api/crew/posts/${mine}/report`, { token: friend.token, body: { reason: "b" } });
+    // Synced records, a login code, an Apple token.
+    await call("POST", "/api/sync/shows", {
+      token: me.token,
+      body: { rows: [{ id: crypto.randomUUID(), data: {}, updatedAt: "2026-11-21T08:00:00.000Z", deletedAt: null }] },
+    });
+    await createLoginCode(env.DB, me.user.id);
+    await env.DB.prepare(
+      "INSERT INTO apple_tokens (user_id, client_id, refresh_token, created_at) VALUES (?, ?, ?, ?)",
+    ).bind(me.user.id, env.APPLE_BUNDLE_ID, "apple-refresh", new Date().toISOString()).run();
+
+    const before = await rowsOf(me.user.id);
+    for (const [table, n] of Object.entries(before)) {
+      expect(n, table).toBeGreaterThan(0);
+    }
+    const friendBefore = await rowsOf(friend.user.id);
+
+    const calls = mockFetch((url) =>
+      url.href === "https://appleid.apple.com/auth/revoke"
+        ? new Response(null, { status: 200 })
+        : jsonResponse({}, 500));
+
+    const res = await call("DELETE", "/api/me", { token: me.token });
+    expect(res.status).toBe(204);
+
+    expect(Object.values(await rowsOf(me.user.id)).every((n) => n === 0)).toBe(true);
+
+    // Apple was asked to revoke the stored token.
+    const revoke = calls.find((c) => c.url.pathname === "/auth/revoke")!;
+    const form = new URLSearchParams(revoke.body!);
+    expect(form.get("token")).toBe("apple-refresh");
+    expect(form.get("token_type_hint")).toBe("refresh_token");
+    expect(form.get("client_id")).toBe(env.APPLE_BUNDLE_ID);
+
+    // The friend keeps their account, post and profile.
+    const friendAfter = await rowsOf(friend.user.id);
+    expect(friendAfter.users).toBe(1);
+    expect(friendAfter.crew_posts).toBe(friendBefore.crew_posts);
+    expect(friendAfter.crew_profiles).toBe(1);
+    expect(friendAfter.crew_links).toBe(0);
+    expect(await count("SELECT count(*) AS n FROM crew_encores WHERE post_id = ?", theirs)).toBe(0);
+
+    // The old token no longer works.
+    expect((await call("GET", "/api/me", { token: me.token })).status).toBe(401);
+    expect((await callJson("POST", "/api/auth/refresh", { body: { refreshToken: me.refreshToken } })).status).toBe(401);
+  });
+
+  it("still deletes when Apple's revoke fails", async () => {
+    const me = await newRunner("Me");
+    await env.DB.prepare(
+      "INSERT INTO apple_tokens (user_id, client_id, refresh_token, created_at) VALUES (?, ?, ?, ?)",
+    ).bind(me.user.id, env.APPLE_SERVICES_ID, "t", new Date().toISOString()).run();
+    mockFetch(() => {
+      throw new Error("network down");
+    });
+    expect((await call("DELETE", "/api/me", { token: me.token })).status).toBe(204);
+    expect(await count("SELECT count(*) AS n FROM users WHERE id = ?", me.user.id)).toBe(0);
+  });
+
+  it("needs sign-in", async () => {
+    expect((await call("DELETE", "/api/me")).status).toBe(401);
+  });
+});

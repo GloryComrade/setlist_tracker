@@ -1,6 +1,6 @@
 /// The storage contracts the UI depends on.
 ///
-/// Nothing in here knows about Sembast, Supabase or Firebase. To move to a
+/// Nothing in here knows about Sembast or Cloudflare. To move to a
 /// cloud backend, write new classes that implement these and change
 /// `lib/data/providers.dart` to use them. The screens don't change.
 library;

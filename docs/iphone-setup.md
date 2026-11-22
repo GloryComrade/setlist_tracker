@@ -14,9 +14,10 @@ You need:
 
 - Your Mac with Xcode 27 and Flutter 3.50 (`flutter --version` shows it).
 - Your iPhone (iOS 16 or newer) and its USB cable.
-- The Project URL and Publishable key from Supabase (see
-  [backstage-pass-setup.md](backstage-pass-setup.md), step 3). Without them
-  the app still runs, but only on this phone, with no sign-in.
+- Your Cloudflare site address (SITE in
+  [cloudflare-setup.md](cloudflare-setup.md)), for example
+  `https://setlist-tracker.ryan.workers.dev`. Without it the app still runs,
+  but only on this phone, with no sign-in or Crew.
 
 ---
 
@@ -102,12 +103,11 @@ You can quit Xcode now (Cmd+Q). It remembers the team.
 ### 6. Build and install
 
 In Terminal (still in `~/Downloads/setlist_tracker`), paste this as one
-command, with your own URL and key:
+command, with your own site address:
 
 ```
 flutter run --release \
-  --dart-define=SUPABASE_URL=https://YOUR-PROJECT.supabase.co \
-  --dart-define=SUPABASE_KEY=sb_publishable_...
+  --dart-define=API_URL=https://setlist-tracker.YOUR-SUBDOMAIN.workers.dev
 ```
 
 - If Flutter asks which device to use, type the number next to your iPhone.
@@ -133,13 +133,10 @@ Then run the `flutter run` command from step 6 again, or just tap the icon.
 - The app **stops opening after 7 days**. Plug in and run step 6 again to
   renew it. Your Shows stay on the phone (and in the cloud if you're signed
   in).
-- **Continue with Google** opens Safari. After you sign in, Safari asks
-  **Open in "Setlist Tracker"?** Tap **Open** and you're back in the app
-  with your Backstage Pass. (This needs the
-  `com.glorycomrade.setlisttracker://login-callback` redirect URL from
-  [backstage-pass-setup.md](backstage-pass-setup.md), step 4.) Google uses
-  this browser sign-in on iPhone on purpose: it needs no separate iOS
-  client ID in Google Cloud.
+- **Continue with Google** opens a secure Safari sheet inside the app. After
+  you sign in it closes by itself and you're back in Backstage with your
+  Backstage Pass. It uses the same Google setup as the website, so there's
+  no separate iOS client ID in Google Cloud.
 
 ---
 
@@ -172,55 +169,13 @@ git checkout ios/Runner/Runner.entitlements
 4. Note your **Team ID**: it's the 10-character code at the top right of
    the developer site, next to your name.
 
-### B. A Services ID (for Apple sign-in on the website)
+### B. Services ID, signing key and Cloudflare secrets
 
-The iPhone uses Apple's own sign-in sheet and doesn't need this, but the web
-version signs in through Supabase and does.
-
-1. **Identifiers → +** → **Services IDs → Continue**.
-2. Description `Setlist Tracker Web`, Identifier
-   `com.glorycomrade.setlisttracker.web`. **Continue → Register**.
-3. Click the new Services ID, tick **Sign In with Apple**, click
-   **Configure**:
-   - **Primary App ID**: `com.glorycomrade.setlisttracker`
-   - **Domains and Subdomains**: `YOUR-PROJECT.supabase.co` (your Supabase
-     project address, without `https://`)
-   - **Return URLs**: `https://YOUR-PROJECT.supabase.co/auth/v1/callback`
-     (Supabase shows this exact address on its Apple provider page)
-   - **Next → Done → Continue → Save**.
-
-### C. A signing key
-
-1. **Keys → +**. Key Name `Setlist Tracker Sign in with Apple`.
-2. Tick **Sign in with Apple**, click **Configure**, choose the App ID
-   `com.glorycomrade.setlisttracker`, **Save → Continue → Register**.
-3. Click **Download**. You get a file like `AuthKey_ABC123DEFG.p8`. You can
-   only download it once, so keep it in your password manager. **Never put
-   it in the repository or a chat.**
-4. Note the **Key ID** (the 10 characters in the file name).
-
-### D. Turn on Apple in Supabase
-
-1. In Supabase: **Authentication → Sign In / Providers → Apple**. Turn
-   **Enable Sign in with Apple** on.
-2. **Client IDs**: enter both, separated by a comma:
-
-   ```
-   com.glorycomrade.setlisttracker.web,com.glorycomrade.setlisttracker
-   ```
-
-   The first is the Services ID (website). The second is the bundle ID: it
-   lets the iPhone's native sign-in sheet sign in to Supabase.
-3. **Secret Key (for OAuth)**: Apple doesn't give you this directly; it's
-   made from the `.p8` key. Open Supabase's guide
-   https://supabase.com/docs/guides/auth/social-login/auth-apple, scroll to
-   the secret key generator, and fill in the Team ID, Key ID, Services ID
-   (`com.glorycomrade.setlisttracker.web`) and the contents of the `.p8`
-   file. Copy the result into **Secret Key** and click **Save**.
-
-   This secret **expires after 6 months**. Put a reminder in your calendar
-   to make a new one. Only the website sign-in needs it. The iPhone app's
-   sign-in keeps working without it.
+Follow [cloudflare-setup.md](cloudflare-setup.md), Part 5, steps 4 to 7.
+It makes the Services ID (for Apple sign-in on the website) and the signing
+key, and puts the key into Cloudflare. The backend uses the same key for the
+iPhone's native sign-in sheet and to revoke Apple sign-in when someone
+deletes their account.
 
 ### E. Switch the Apple button on
 
@@ -228,7 +183,7 @@ version signs in through Supabase and does.
   and `flutter build ipa` commands.
 - Website: in GitHub, **Settings → Secrets and variables → Actions →
   Variables**, add `APPLE_SIGN_IN` with the value `true`, then re-run
-  **Deploy web app**.
+  **Deploy to Cloudflare**.
 
 On the iPhone, **Sign in with Apple** now opens Apple's own sheet (Face ID).
 On the website it goes through Apple's sign-in page.
@@ -249,8 +204,7 @@ offer Sign in with Apple, so turn it on before sending the app for review.
    git pull
    flutter pub get
    flutter build ipa --release \
-     --dart-define=SUPABASE_URL=https://YOUR-PROJECT.supabase.co \
-     --dart-define=SUPABASE_KEY=sb_publishable_... \
+     --dart-define=API_URL=https://setlist-tracker.YOUR-SUBDOMAIN.workers.dev \
      --dart-define=APPLE_SIGN_IN=true
    ```
 
@@ -280,12 +234,17 @@ offer Sign in with Apple, so turn it on before sending the app for review.
 
 ### Before sending it to the App Store
 
-- **Account deletion** is required by Apple and already built: Backstage →
-  Backstage Pass → **⋮ → Delete account**. It removes the account and every
-  synced Show, Gear, Saved Mix and Tour.
-- App Store Connect also asks for a **privacy policy URL** and the **App
-  Privacy** answers (the app stores your email and name for sign-in, and
-  your training data, linked to you, not used for tracking).
+Everything Apple asks for is ready, and
+[app-store-listing.md](app-store-listing.md) has the text to paste in:
+
+- **Account deletion**: Backstage → Backstage Pass → ⋮ → Delete account.
+  It removes the account and everything in it (Shows, Tours, Gear, Saved
+  Mixes, The Crew), and revokes Sign in with Apple.
+- **Privacy policy URL**: `SITE/privacy.html`. **Support URL**:
+  `SITE/support.html`.
+- **The App Privacy answers** and **review notes** are in the listing file.
+- **Blocking and reporting** in The Crew (Apple asks for this in apps where
+  people share with each other).
 
 ---
 
@@ -293,9 +252,10 @@ offer Sign in with Apple, so turn it on before sending the app for review.
 
 - **"No profiles for 'com.glorycomrade.setlisttracker' were found"**: open
   `ios/Runner.xcworkspace` and choose your Team again (Part 1, step 3).
-- **Sign-in opens Safari but doesn't come back**: check that
-  `com.glorycomrade.setlisttracker://login-callback` is in Supabase under
-  **Authentication → URL Configuration → Redirect URLs**.
+- **Sign-in shows an error and doesn't finish**: check that the build
+  passed `--dart-define=API_URL=...` with your site address, and that the
+  Google (or Apple) secrets are set in Cloudflare
+  ([cloudflare-setup.md](cloudflare-setup.md)).
 - **"Sign in with Apple capability" error**: you're on a free team. See Part
   1, step 4.
 - **The phone isn't listed by `flutter run`**: unlock it, check the cable,

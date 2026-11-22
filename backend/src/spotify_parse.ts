@@ -1,5 +1,6 @@
 // Turns a Spotify Web API search response into the small shape the app reads.
-// Kept free of Deno APIs so it is easy to test.
+// Ported from supabase/functions/spotify-search/parse.ts. Kept free of
+// Worker APIs so it is easy to test.
 
 export interface SongResult {
   title: string;
@@ -28,7 +29,6 @@ function largestImage(images: unknown): string | null {
 }
 
 export function parseSpotifyTracks(body: unknown): SongResult[] {
-  // deno-lint-ignore no-explicit-any
   const items = (body as any)?.tracks?.items;
   if (!Array.isArray(items)) return [];
   const out: SongResult[] = [];

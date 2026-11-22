@@ -1,6 +1,6 @@
 /// Small helpers for turning JSON maps back into Dart values.
 ///
-/// Storage engines (Sembast today, Supabase later) hand back loosely typed
+/// Storage engines (Sembast on the device, the Cloudflare Worker's JSON) hand back loosely typed
 /// maps, so every read goes through these to stay null-safe.
 library;
 

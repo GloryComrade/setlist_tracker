@@ -1,6 +1,6 @@
 /// Signing in for the Backstage Pass.
 ///
-/// The UI only knows [AuthService]. [SupabaseAuthService] is the real one;
+/// The UI only knows [AuthService]. [CloudflareAuthService] is the real one;
 /// [NoAuthService] is used when the build has no backend settings, so the
 /// app stays local-only.
 library;
