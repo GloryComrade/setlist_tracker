@@ -12,6 +12,7 @@ import '../../models/show.dart';
 import '../../models/tour.dart';
 import '../../models/track.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/stage_art.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
 import 'tour_widgets.dart';
@@ -139,6 +140,7 @@ class _Hero extends StatelessWidget {
       gradient: show.isRace
           ? StageColors.headlineGradient
           : gradientFor(show.venue),
+      venuePrint: show.isRace ? null : StageArt.printFor(show.venue),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

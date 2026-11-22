@@ -13,7 +13,7 @@ Needs Flutter 3.50 or newer (it uses the new `material_ui` package).
 ```
 flutter pub get
 flutter run -d chrome          # web
-flutter test                   # 133 tests
+flutter test                   # 216 tests
 flutter build web              # production web build in build/web
 ```
 
@@ -21,7 +21,7 @@ Data is saved in the browser (IndexedDB) on web and in a file on iOS. Clearing s
 
 ## On an iPhone
 
-Step-by-step, from `git pull` to the app on your phone (free Apple ID), then Sign in with Apple and TestFlight once you join the Apple Developer Program: [docs/iphone-setup.md](docs/iphone-setup.md). The app icon and web icons are drawn by `tool/app_icon.py` (`python3 tool/app_icon.py`, needs Pillow).
+Step-by-step, from `git pull` to the app on your phone (free Apple ID), then Sign in with Apple and TestFlight once you join the Apple Developer Program: [docs/iphone-setup.md](docs/iphone-setup.md). The app icon and web icons are drawn by `tool/app_icon.py` (`python3 tool/app_icon.py`, needs Pillow). The venue prints on Show posters are drawn by `tool/sample_art.py` (`python3 tool/sample_art.py`, needs Pillow and numpy; `--check` confirms the committed files match).
 
 ## Design rules
 

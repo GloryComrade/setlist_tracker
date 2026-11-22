@@ -1,0 +1,297 @@
+import 'dart:math' as math;
+
+import 'package:material_ui/material_ui.dart';
+
+import '../../theme/app_theme.dart';
+
+/// The printed design of one song's stand-in sleeve, worked out from its
+/// title and artist alone, so the same song gets the same sleeve on every
+/// device and run, and different songs almost never match.
+///
+/// Every sleeve is two of the deep shades, always one warm and one cool, so
+/// a sleeve never reads as a Live Show or a Studio Session, and white type
+/// on either ink stays at 4.6:1 or better.
+@immutable
+class SleeveDesign {
+  const SleeveDesign({
+    required this.ground,
+    required this.ink,
+    required this.layout,
+    required this.turn,
+    required this.screenCorner,
+  });
+
+  factory SleeveDesign.of(String title, String artist) {
+    final h = fnv1a(
+      '${title.trim().toLowerCase()}|${artist.trim().toLowerCase()}',
+    );
+    final (warm, cool) = _pairs[h & 3];
+    final coolGround = (h >> 2) & 1 == 1;
+    return SleeveDesign(
+      ground: coolGround ? cool : warm,
+      ink: coolGround ? warm : cool,
+      layout: SleeveLayout.values[(h >> 3) % SleeveLayout.values.length],
+      turn: ((h >> 6) & 0xff) / 255,
+      screenCorner: (h >> 14) & 3,
+    );
+  }
+
+  static const _pairs = [
+    (StageColors.magentaDeep, StageColors.violetDeep),
+    (StageColors.magentaDeep, StageColors.tealDeep),
+    (StageColors.orangeDeep, StageColors.violetDeep),
+    (StageColors.orangeDeep, StageColors.tealDeep),
+  ];
+
+  /// The paper color: the whole sleeve before the second ink.
+  final Color ground;
+
+  /// The second ink, printed in the [layout]'s shape.
+  final Color ink;
+  final SleeveLayout layout;
+
+  /// 0–1: the layout's angle or position.
+  final double turn;
+
+  /// Which corner the halftone screen grows toward (0 top-left, clockwise).
+  final int screenCorner;
+
+  /// FNV-1a, 32 bit: stable across platforms, unlike `String.hashCode`.
+  /// The prime is 2^24 + 0x193, multiplied in two parts so no product
+  /// passes 2^53, where web numbers lose their low bits.
+  static int fnv1a(String s) {
+    var h = 0x811c9dc5;
+    for (final u in s.codeUnits) {
+      h = (h ^ u) & 0xffffffff;
+      h = (h * 0x193 + ((h & 0xff) << 24)) & 0xffffffff;
+    }
+    // Xorshift finish, so the low bits (ink pair, layout) spread evenly.
+    h ^= (h << 13) & 0xffffffff;
+    h ^= h >> 17;
+    h ^= (h << 5) & 0xffffffff;
+    return h;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is SleeveDesign &&
+      other.ground == ground &&
+      other.ink == ink &&
+      other.layout == layout &&
+      other.turn == turn &&
+      other.screenCorner == screenCorner;
+
+  @override
+  int get hashCode => Object.hash(ground, ink, layout, turn, screenCorner);
+}
+
+/// The second ink's shape.
+enum SleeveLayout {
+  /// A straight cut across the sleeve at an angle.
+  split,
+
+  /// A big disc rising off the top edge.
+  disc,
+
+  /// Three bands of growing weight.
+  bands,
+
+  /// Quarter rings from a top corner.
+  rings,
+}
+
+/// The stand-in sleeve for a song with no album art: a two-ink screen print
+/// with the title printed on it, so it is plainly ours and never passes for
+/// the record's real cover.
+///
+/// [printTitle] sets the title and artist across the foot (use it at 90 pt
+/// and up); otherwise the sleeve carries the title's first letter. The type
+/// is part of the art and does not grow with text size: the title and artist
+/// are always written out next to it, or in the tile's spoken label.
+class SongSleeve extends StatelessWidget {
+  const SongSleeve({
+    super.key,
+    required this.title,
+    required this.artist,
+    this.printTitle = true,
+  });
+
+  final String title;
+  final String artist;
+  final bool printTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final design = SleeveDesign.of(title, artist);
+    return ExcludeSemantics(
+      child: MediaQuery.withNoTextScaling(
+        child: CustomPaint(
+          painter: SleevePainter(design),
+          child: LayoutBuilder(
+            builder: (context, c) =>
+                printTitle ? _titleBlock(c.maxWidth) : _monogram(c.maxWidth),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _monogram(double size) {
+    final letter = RegExp(r'[A-Za-z0-9]').firstMatch(title)?.group(0) ?? '';
+    return Padding(
+      padding: EdgeInsets.only(left: size * 0.1, bottom: size * 0.1),
+      child: Align(
+        alignment: Alignment.bottomLeft,
+        child: Text(
+          letter.toUpperCase(),
+          style: TextStyle(
+            fontFamily: StageFonts.display,
+            fontSize: size * 0.62,
+            height: 0.8,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _titleBlock(double width) {
+    // Archivo Condensed capitals average about 0.5 em wide. Shrink the type
+    // until the longest word fits on one line, so no word breaks in the
+    // middle. Never below 11, the smallest size anyone reads on a phone; a
+    // word too long for that ellipsizes instead.
+    final longest = title
+        .split(RegExp(r'\s+'))
+        .fold(1, (n, w) => w.length > n ? w.length : n);
+    final fit = (width - 20) / (longest * 0.5);
+    final fontSize = (fit.clamp(11.0, 22.0) * (width / 115).clamp(0.6, 1.0))
+        .clamp(11.0, 22.0);
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Text(
+              title.toUpperCase(),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: StageFonts.display,
+                fontSize: fontSize,
+                height: 0.95,
+                letterSpacing: 0.4,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            artist,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Paints a [SleeveDesign]: the ground, the second ink, then the same black
+/// 20% halftone screen the posters use, growing toward one corner.
+class SleevePainter extends CustomPainter {
+  const SleevePainter(this.design);
+  final SleeveDesign design;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final s = size.shortestSide;
+    final d = design;
+    final t = d.turn;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.drawColor(d.ground, BlendMode.src);
+    final ink = Paint()
+      ..color = d.ink
+      ..isAntiAlias = true;
+    switch (d.layout) {
+      case SleeveLayout.split:
+        // A cut from the left edge to the right edge, tilted either way.
+        final yl = s * (0.30 + 0.35 * t);
+        final yr = s * (0.65 - 0.35 * t);
+        canvas.drawPath(
+          Path()
+            ..moveTo(0, yl)
+            ..lineTo(size.width, yr)
+            ..lineTo(size.width, size.height)
+            ..lineTo(0, size.height)
+            ..close(),
+          ink,
+        );
+      case SleeveLayout.disc:
+        canvas.drawCircle(
+          Offset(s * (0.25 + 0.6 * t), s * 0.08),
+          s * (0.42 + 0.12 * t),
+          ink,
+        );
+      case SleeveLayout.bands:
+        canvas.save();
+        canvas.translate(size.width / 2, size.height / 2);
+        canvas.rotate((t - 0.5) * 0.6);
+        canvas.translate(-size.width / 2, -size.height / 2);
+        var y = s * 0.06;
+        for (final w in const [0.06, 0.10, 0.16]) {
+          canvas.drawRect(Rect.fromLTWH(-s * 0.5, y, s * 2, s * w), ink);
+          y += s * (w + 0.07);
+        }
+        canvas.restore();
+      case SleeveLayout.rings:
+        final c = Offset(t < 0.5 ? 0 : size.width, 0);
+        final ring = Paint()
+          ..color = d.ink
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = s * 0.07
+          ..isAntiAlias = true;
+        for (var r = 0.3; r < 0.95; r += 0.24) {
+          canvas.drawCircle(c, s * r, ring);
+        }
+    }
+    _halftone(canvas, size, s);
+    canvas.restore();
+  }
+
+  void _halftone(Canvas canvas, Size size, double s) {
+    final dot = Paint()
+      ..color = Colors.black.withValues(alpha: 0.2)
+      ..isAntiAlias = true;
+    final cell = math.max(3.0, s / 16);
+    final maxR = cell * 0.36;
+    final corner = design.screenCorner;
+    final fx = corner == 1 || corner == 2;
+    final fy = corner >= 2;
+    var row = 0;
+    for (var y = cell / 2; y < size.height + cell; y += cell * 0.866) {
+      final off = row.isOdd ? cell / 2 : 0.0;
+      for (var x = off; x < size.width + cell; x += cell) {
+        final ax = fx ? x / size.width : 1 - x / size.width;
+        final ay = fy ? y / size.height : 1 - y / size.height;
+        final k = ((ax + ay) / 2 - 0.35) / 0.65;
+        if (k <= 0) continue;
+        final r = maxR * math.min(1.0, k);
+        if (r < 0.35) continue;
+        canvas.drawCircle(Offset(x, y), r, dot);
+      }
+      row++;
+    }
+  }
+
+  @override
+  bool shouldRepaint(SleevePainter old) => old.design != design;
+}

@@ -12,6 +12,7 @@ import '../../models/gear.dart';
 import '../../models/show.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/stage_art.dart';
 import '../crew/share_with_crew_card.dart';
 import '../widgets/album_art.dart';
 import '../widgets/clip_player.dart';
@@ -146,6 +147,7 @@ class _Poster extends StatelessWidget {
       title: formatMiles(show.distanceMiles),
       semanticsTitle: spokenMiles(show.distanceMiles),
       gradient: gradientFor(show.venue),
+      venuePrint: StageArt.printFor(show.venue),
       children: [
         Text(
           '${formatPace(show.paceSecondsPerMile)}  ·  '
@@ -214,7 +216,12 @@ class _SongCard extends StatelessWidget {
           Stack(
             alignment: Alignment.center,
             children: [
-              AlbumArt(url: song.albumArtUrl, size: 96),
+              AlbumArt(
+                url: song.albumArtUrl,
+                size: 96,
+                title: song.title,
+                artist: song.artist,
+              ),
               if (song.hasClip) ClipPlayButton(song: song),
             ],
           ),

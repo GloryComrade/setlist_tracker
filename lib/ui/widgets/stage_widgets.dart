@@ -71,6 +71,10 @@ class VenueBadge extends StatelessWidget {
 /// A gradient block printed like a screen-printed gig poster: the stage-light
 /// gradient with a halftone dot screen that fades in toward the bottom-right
 /// corner. The dots are dark ink, so white type on top only gains contrast.
+///
+/// A Show poster can add its [venuePrint] from [StageArt]: one more pass of
+/// the same dark ink (a route map or a treadmill deck) between the gradient
+/// and the dots, on the right where no type sits.
 class PosterSurface extends StatelessWidget {
   const PosterSurface({
     super.key,
@@ -79,6 +83,7 @@ class PosterSurface extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.radius = 20,
     this.ink = Colors.black,
+    this.venuePrint,
   });
 
   final Gradient gradient;
@@ -89,8 +94,15 @@ class PosterSurface extends StatelessWidget {
   /// The halftone dot color, drawn at low opacity.
   final Color ink;
 
+  /// A venue print (`StageArt.printFor(venue)`), Show posters only.
+  final ImageProvider? venuePrint;
+
   @override
   Widget build(BuildContext context) {
+    final body = CustomPaint(
+      painter: HalftonePainter(ink: ink),
+      child: Padding(padding: padding, child: child),
+    );
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
@@ -98,10 +110,43 @@ class PosterSurface extends StatelessWidget {
         gradient: gradient,
         borderRadius: BorderRadius.circular(radius),
       ),
-      child: CustomPaint(
-        painter: HalftonePainter(ink: ink),
-        child: Padding(padding: padding, child: child),
-      ),
+      child: venuePrint == null
+          ? body
+          : Stack(
+              children: [
+                Positioned.fill(child: _PosterPrint(image: venuePrint!)),
+                body,
+              ],
+            ),
+    );
+  }
+}
+
+/// The venue print, cover-fit and centered, faded in if it was not decoded
+/// in time (the app precaches both, so this is rare).
+class _PosterPrint extends StatelessWidget {
+  const _PosterPrint({required this.image});
+  final ImageProvider image;
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return Image(
+      image: image,
+      fit: BoxFit.cover,
+      excludeFromSemantics: true,
+      gaplessPlayback: true,
+      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      frameBuilder: (context, child, frame, sync) => sync
+          ? child
+          : AnimatedOpacity(
+              opacity: frame == null ? 0 : 1,
+              duration: still
+                  ? Duration.zero
+                  : const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              child: child,
+            ),
     );
   }
 }
@@ -152,9 +197,13 @@ class PosterHeader extends StatelessWidget {
     this.gradient = StageColors.headlineGradient,
     this.children = const [],
     this.semanticsTitle,
+    this.venuePrint,
   });
 
   final String title;
+
+  /// See [PosterSurface.venuePrint].
+  final ImageProvider? venuePrint;
 
   /// What a screen reader says for [title] when it differs, e.g. "15 miles"
   /// for "15 mi".
@@ -167,6 +216,7 @@ class PosterHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return PosterSurface(
       gradient: gradient,
+      venuePrint: venuePrint,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
