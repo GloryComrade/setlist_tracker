@@ -9,7 +9,9 @@ import 'song_sleeve.dart';
 ///   mark, which also stays if the art fails to load. A made-up cover never
 ///   stands in for a real one, not even while it loads.
 /// - A song with no art at all ([url] null with a [title]) gets its own
-///   printed [SongSleeve], with the title (90 pt and up) or its first letter.
+///   printed [SongSleeve]. It prints the title and artist only where the
+///   sleeve is the song's label ([printTitle]); slots that set the title
+///   beside the art, or put a play button on it, pass `printTitle: false`.
 /// - With no song (an empty mosaic), the quiet tile.
 ///
 /// The art is decoration: the song's title and artist always sit next to it
@@ -22,6 +24,7 @@ class AlbumArt extends StatelessWidget {
     this.radius = 8,
     this.title,
     this.artist = '',
+    this.printTitle,
   });
 
   final String? url;
@@ -31,6 +34,10 @@ class AlbumArt extends StatelessWidget {
   /// The song, for its printed sleeve when there is no [url].
   final String? title;
   final String artist;
+
+  /// Whether a sleeve prints the title and artist. Defaults to sleeves of
+  /// 90 pt and up; below that the sleeve is the print alone.
+  final bool? printTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +62,7 @@ class AlbumArt extends StatelessWidget {
               child: SongSleeve(
                 title: title!,
                 artist: artist,
-                printTitle: size >= 90,
+                printTitle: (printTitle ?? true) && size >= 90,
               ),
             );
     } else {

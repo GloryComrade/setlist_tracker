@@ -336,8 +336,11 @@ class _WallTile extends StatelessWidget {
               type: MaterialType.transparency,
               child: InkWell(
                 onTap: () => _showRecordSheet(context, record),
-                hoverColor: Colors.white.withValues(alpha: 0.08),
-                splashColor: StageColors.magenta.withValues(alpha: 0.25),
+                // Darken, never lighten: the sleeve's white type keeps its
+                // contrast while the tile is hovered or pressed.
+                hoverColor: Colors.black.withValues(alpha: 0.14),
+                highlightColor: Colors.black.withValues(alpha: 0.2),
+                splashColor: Colors.black.withValues(alpha: 0.16),
               ),
             ),
           ],
@@ -372,9 +375,11 @@ void _showRecordSheet(BuildContext context, WallRecord record) {
                       ? AlbumArt(url: record.albumArtUrl, size: 96)
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(8),
+                          // The title and artist are set right beside it.
                           child: SongSleeve(
                             title: song.title,
                             artist: song.artist,
+                            printTitle: false,
                           ),
                         ),
                 ),

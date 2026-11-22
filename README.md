@@ -13,7 +13,7 @@ Needs Flutter 3.50 or newer (it uses the new `material_ui` package).
 ```
 flutter pub get
 flutter run -d chrome          # web
-flutter test                   # 216 tests
+flutter test                   # 225 tests
 flutter build web              # production web build in build/web
 ```
 

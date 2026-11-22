@@ -105,9 +105,12 @@ enum SleeveLayout {
 /// the record's real cover.
 ///
 /// [printTitle] sets the title and artist across the foot (use it at 90 pt
-/// and up); otherwise the sleeve carries the title's first letter. The type
-/// is part of the art and does not grow with text size: the title and artist
-/// are always written out next to it, or in the tile's spoken label.
+/// and up, where the sleeve is the song's only label). Without it the
+/// sleeve is the print alone: no letter, which at small sizes reads as a
+/// Crew avatar or a letter puzzle, and the title is written next to it
+/// anyway. The type is part of the art and does not grow with text size:
+/// the title and artist are always written out next to it, or in the
+/// tile's spoken label.
 class SongSleeve extends StatelessWidget {
   const SongSleeve({
     super.key,
@@ -120,6 +123,10 @@ class SongSleeve extends StatelessWidget {
   final String artist;
   final bool printTitle;
 
+  /// The title's size for a sleeve [width] wide: one size per sleeve size,
+  /// so sleeves side by side match whatever their titles.
+  static double titleSizeFor(double width) => (width * 0.14).clamp(11.0, 22.0);
+
   @override
   Widget build(BuildContext context) {
     final design = SleeveDesign.of(title, artist);
@@ -127,47 +134,45 @@ class SongSleeve extends StatelessWidget {
       child: MediaQuery.withNoTextScaling(
         child: CustomPaint(
           painter: SleevePainter(design),
-          child: LayoutBuilder(
-            builder: (context, c) =>
-                printTitle ? _titleBlock(c.maxWidth) : _monogram(c.maxWidth),
-          ),
+          child: printTitle
+              ? LayoutBuilder(
+                  builder: (context, c) => _titleBlock(context, c.maxWidth),
+                )
+              : const SizedBox.expand(),
         ),
       ),
     );
   }
 
-  Widget _monogram(double size) {
-    final letter = RegExp(r'[A-Za-z0-9]').firstMatch(title)?.group(0) ?? '';
-    return Padding(
-      padding: EdgeInsets.only(left: size * 0.1, bottom: size * 0.1),
-      child: Align(
-        alignment: Alignment.bottomLeft,
-        child: Text(
-          letter.toUpperCase(),
-          style: TextStyle(
-            fontFamily: StageFonts.display,
-            fontSize: size * 0.62,
-            height: 0.8,
-            color: Colors.white,
-          ),
-        ),
-      ),
+  Widget _titleBlock(BuildContext context, double width) {
+    const inset = 10.0;
+    final style = TextStyle(
+      fontFamily: StageFonts.display,
+      fontSize: titleSizeFor(width),
+      height: 0.95,
+      letterSpacing: 0.4,
+      color: Colors.white,
     );
-  }
-
-  Widget _titleBlock(double width) {
-    // Archivo Condensed capitals average about 0.5 em wide. Shrink the type
-    // until the longest word fits on one line, so no word breaks in the
-    // middle. Never below 11, the smallest size anyone reads on a phone; a
-    // word too long for that ellipsizes instead.
-    final longest = title
-        .split(RegExp(r'\s+'))
-        .fold(1, (n, w) => w.length > n ? w.length : n);
-    final fit = (width - 20) / (longest * 0.5);
-    final fontSize = (fit.clamp(11.0, 22.0) * (width / 115).clamp(0.6, 1.0))
-        .clamp(11.0, 22.0);
+    // Lines break between words. Only a single word too long for the
+    // sleeve at its size (rare) sets this sleeve's title smaller, down to
+    // 11, so no word is broken in the middle; past that it ellipsizes.
+    final words = title.toUpperCase().split(RegExp(r'\s+'));
+    final widest = words.fold(0.0, (w, word) {
+      final p = TextPainter(
+        text: TextSpan(text: word, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: TextScaler.noScaling,
+      )..layout();
+      final n = p.width;
+      p.dispose();
+      return math.max(w, n);
+    });
+    final room = width - inset * 2;
+    final fontSize = widest > room
+        ? math.max(11.0, style.fontSize! * room / widest * 0.98)
+        : style.fontSize!;
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(inset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
@@ -177,13 +182,7 @@ class SongSleeve extends StatelessWidget {
               title.toUpperCase(),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: StageFonts.display,
-                fontSize: fontSize,
-                height: 0.95,
-                letterSpacing: 0.4,
-                color: Colors.white,
-              ),
+              style: style.copyWith(fontSize: fontSize),
             ),
           ),
           const SizedBox(height: 4),
@@ -209,6 +208,8 @@ class SleevePainter extends CustomPainter {
   const SleevePainter(this.design);
   final SleeveDesign design;
 
+  static const _inkStrength = 0.55;
+
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
@@ -218,8 +219,13 @@ class SleevePainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawColor(d.ground, BlendMode.src);
+    // The second ink prints thin over the ground, so the two inks sit close
+    // and the title, not the shape, carries the sleeve. A mix of two deep
+    // shades is never lighter than the lighter of them, so white type keeps
+    // 4.6:1.
+    final inkColor = d.ink.withValues(alpha: _inkStrength);
     final ink = Paint()
-      ..color = d.ink
+      ..color = inkColor
       ..isAntiAlias = true;
     switch (d.layout) {
       case SleeveLayout.split:
@@ -255,7 +261,7 @@ class SleevePainter extends CustomPainter {
       case SleeveLayout.rings:
         final c = Offset(t < 0.5 ? 0 : size.width, 0);
         final ring = Paint()
-          ..color = d.ink
+          ..color = inkColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = s * 0.07
           ..isAntiAlias = true;

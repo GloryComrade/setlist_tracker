@@ -8,8 +8,14 @@ the two deep shades of the gradient plus this black overprint. Because the
 ink is only ever black at low opacity, it can only darken the gradient, so
 white type on the poster never loses contrast.
 
-  print_live.png    Live Show: a topographic map with a route and mile ticks
-  print_studio.png  Studio Session: a treadmill seen from behind
+  print_live.png    Live Show: a topographic map with a loop route and ticks
+  print_studio.png  Studio Session: a treadmill seen side-on, console first
+
+The app sets each print beside the poster's type, never under it: it is
+drawn to the poster's height, starts past the widest line of type, and runs
+off the poster's right edge (PrintBeside in lib/ui/widgets/stage_widgets.dart).
+So each print is a tall 9:10 sheet whose subject sits in its left 60%, the
+part that always shows, with a soft left edge where it meets the type.
 
 Everything is drawn here from math, so the images are ours, with no photos,
 no stock licenses and no outside source material.
@@ -28,25 +34,26 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "images")
 
-# 1080 px square: a 358 pt poster at @3x, cover-fit and centered, so the
-# motif sits on the right half and the left 45% (where the type sits) stays
-# clear in every crop from 358 x 160 to 358 x 400.
-S = 1080
+# 810 x 900 px: 9:10, about a 300 pt tall poster at @3x. Keep in step with
+# StageArt.printAspect.
+W, H = 810, 900
 
 # Ink densities, as alpha of black. The halftone screen in the app prints at
-# 20%, so the prints sit on the same scale.
+# 20%, so the prints sit on the same scale. Passes combine with max(), the
+# way one screen of a single ink works, so no pixel ever passes HEAVY.
 LIGHT = 0.16
 MID = 0.24
 HEAVY = 0.40
 
 
 def grid():
-    y, x = np.mgrid[0:S, 0:S].astype(np.float64)
-    return x / S, y / S
+    """x and y in 0..1 across the width and the height."""
+    y, x = np.mgrid[0:H, 0:W].astype(np.float64)
+    return x / W, y / H
 
 
 def smoothstep(a, b, t):
@@ -54,43 +61,57 @@ def smoothstep(a, b, t):
     return k * k * (3 - 2 * k)
 
 
-def text_side_fade(x):
-    """0 over the type on the left, 1 from just past the middle."""
-    return smoothstep(0.46, 0.64, x)
+def soft_left(x):
+    """0 at the print's left edge, where it meets the type, 1 by 16% in."""
+    return smoothstep(0.0, 0.16, x)
+
+
+def _px(points):
+    k = 4
+    return [(px * W * k, py * H * k) for px, py in points], k
+
+
+def _reduce(big):
+    return np.asarray(big.resize((W, H), Image.LANCZOS), np.float64) / 255
 
 
 def stroke(points, width):
-    """Coverage (0..1) of an anti-aliased polyline, drawn 4x and reduced."""
-    from PIL import ImageDraw
-
-    k = 4
-    big = Image.new("L", (S * k, S * k), 0)
+    """Coverage (0..1) of an anti-aliased polyline, `width` px wide, drawn
+    4x and reduced. Points are in 0..1 of the width and the height."""
+    pts, k = _px(points)
+    big = Image.new("L", (W * k, H * k), 0)
     d = ImageDraw.Draw(big)
-    pts = [(px * S * k, py * S * k) for px, py in points]
     w = int(round(width * k))
     d.line(pts, fill=255, width=w, joint="curve")
     r = w / 2
     for px, py in (pts[0], pts[-1]):
         d.ellipse((px - r, py - r, px + r, py + r), fill=255)
-    return np.asarray(big.resize((S, S), Image.LANCZOS), np.float64) / 255
+    return _reduce(big)
 
 
-def disc(cx, cy, r, ring=0.0):
-    """Coverage of a filled disc, or of a ring of the given width."""
+def fill(points):
+    """Coverage of a filled polygon."""
+    pts, k = _px(points)
+    big = Image.new("L", (W * k, H * k), 0)
+    ImageDraw.Draw(big).polygon(pts, fill=255)
+    return _reduce(big)
+
+
+def ring(cx, cy, r_px, width_px=0.0):
+    """Coverage of a disc (or a ring `width_px` wide) of radius `r_px`,
+    centered at (cx, cy) in 0..1 coordinates."""
     x, y = grid()
-    d = np.hypot(x - cx, y - cy) * S
-    outer = np.clip(r * S - d + 0.5, 0, 1)
-    if ring <= 0:
+    d = np.hypot((x - cx) * W, (y - cy) * H)
+    outer = np.clip(r_px - d + 0.5, 0, 1)
+    if width_px <= 0:
         return outer
-    inner = np.clip(d - (r * S - ring) + 0.5, 0, 1)
-    return outer * inner
+    return outer * np.clip(d - (r_px - width_px) + 0.5, 0, 1)
 
 
-def over(ink, coverage, alpha):
-    """Print one more pass of black ink at `alpha` where `coverage` is 1.
-    Overprints build up like real ink: a + b - ab."""
-    a = coverage * alpha
-    return ink + a - ink * a
+def ink_pass(ink, coverage, alpha):
+    """Print one more pass at `alpha` where `coverage` is 1. One screen of a
+    single ink: overlaps take the darker value, never the sum."""
+    return np.maximum(ink, coverage * alpha)
 
 
 def save(ink, name):
@@ -101,8 +122,8 @@ def save(ink, name):
 
 
 def encode(ink):
-    a = (np.clip(ink, 0, 1) * 255).round().astype(np.uint8)
-    rgba = np.zeros((S, S, 4), np.uint8)
+    a = (np.clip(ink, 0, HEAVY) * 255).round().astype(np.uint8)
+    rgba = np.zeros((H, W, 4), np.uint8)
     rgba[..., 3] = a  # black ink: RGB stays 0
     buf = io.BytesIO()
     Image.fromarray(rgba, "RGBA").save(buf, "PNG", optimize=True)
@@ -113,16 +134,18 @@ def encode(ink):
 
 
 def hills(x, y):
-    """A smooth landscape: a few round hills and a long ridge."""
+    """A smooth landscape: a few round hills and a long ridge. y is scaled
+    by the sheet's aspect so the hills stay round."""
+    ys = y * H / W
     h = np.zeros_like(x)
     for cx, cy, r, amp in (
-        (0.78, 0.30, 0.20, 1.0),
-        (0.62, 0.78, 0.17, 0.75),
-        (0.95, 0.72, 0.22, 0.85),
-        (0.50, 0.42, 0.14, 0.45),
+        (0.40, 0.30, 0.22, 1.0),
+        (0.78, 0.86, 0.20, 0.8),
+        (0.95, 0.30, 0.18, 0.6),
+        (0.18, 0.95, 0.16, 0.5),
     ):
-        h += amp * np.exp(-((x - cx) ** 2 + (y - cy) ** 2) / (2 * r * r))
-    h += 0.18 * np.sin(x * 7.0 + y * 3.0) * np.cos(y * 5.0 - x * 2.0)
+        h += amp * np.exp(-((x - cx) ** 2 + (ys - cy) ** 2) / (2 * r * r))
+    h += 0.16 * np.sin(x * 6.0 + ys * 3.0) * np.cos(ys * 5.0 - x * 2.0)
     return h
 
 
@@ -137,32 +160,33 @@ def contours(h, step, width_px):
 
 
 def route_points():
-    """A loop that climbs the big hill and comes home along the valley."""
+    """A loop that climbs the big hill and comes home along the valley, in
+    the left 60% of the sheet, which always shows."""
     pts = []
     n = 400
     for i in range(n + 1):
-        t = i / n
-        a = 2 * math.pi * t
-        # A lopsided loop, longer than it is wide, with one switchback.
-        px = 0.79 + 0.15 * math.sin(a) + 0.03 * math.sin(3 * a + 0.6)
-        py = 0.50 - 0.17 * math.cos(a) + 0.035 * math.sin(2 * a)
+        a = 2 * math.pi * i / n
+        px = 0.36 + 0.19 * math.sin(a) + 0.035 * math.sin(3 * a + 0.6)
+        py = 0.50 - 0.27 * math.cos(a) + 0.04 * math.sin(2 * a)
         pts.append((px, py))
     return pts
 
 
 def mile_ticks(pts, every, length):
-    """Short bars across the route every `every` of its length."""
-    seg = [math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+    """Short bars across the route every `every` of its length (in px)."""
+    P = [(x * W, y * H) for x, y in pts]
+    seg = [math.dist(P[i], P[i + 1]) for i in range(len(P) - 1)]
     total = sum(seg)
     marks, walked, target = [], 0.0, every
     for i, s in enumerate(seg):
         while walked + s >= target and target < total - every * 0.5:
             k = (target - walked) / s
-            (x0, y0), (x1, y1) = pts[i], pts[i + 1]
+            (x0, y0), (x1, y1) = P[i], P[i + 1]
             mx, my = x0 + (x1 - x0) * k, y0 + (y1 - y0) * k
             dx, dy = (x1 - x0) / s, (y1 - y0) / s
             nx, ny = -dy * length, dx * length
-            marks.append([(mx - nx, my - ny), (mx + nx, my + ny)])
+            marks.append([((mx - nx) / W, (my - ny) / H),
+                          ((mx + nx) / W, (my + ny) / H)])
             target += every
         walked += s
     return marks
@@ -170,81 +194,113 @@ def mile_ticks(pts, every, length):
 
 def print_live():
     x, y = grid()
-    fade = text_side_fade(x)
-    h = hills(x, y)
-    lines, level = contours(h, 0.085, 2.2)
+    fade = soft_left(x)
+    lines, level = contours(hills(x, y), 0.085, 2.2)
     index = (level.astype(int) % 5 == 0).astype(np.float64)
-    ink = np.zeros((S, S))
-    ink = over(ink, lines * (1 - index) * fade, LIGHT)
-    ink = over(ink, lines * index * fade, MID)
+    ink = np.zeros((H, W))
+    ink = ink_pass(ink, lines * (1 - index) * fade, LIGHT)
+    ink = ink_pass(ink, lines * index * fade, MID)
     pts = route_points()
-    route = stroke(pts, 9)
-    ticks = np.zeros((S, S))
-    for a, b in mile_ticks(pts, 0.085, 0.016):
+    route = stroke(pts, 10)
+    ticks = np.zeros((H, W))
+    for a, b in mile_ticks(pts, 70, 13):
         ticks = np.maximum(ticks, stroke([a, b], 4))
-    start = disc(*pts[0], 0.022, ring=6)
-    ink = over(ink, np.maximum(np.maximum(route, ticks), start) * fade, HEAVY)
+    sx, sy = pts[0]
+    start = ring(sx, sy, 20, 6)
+    ink = ink_pass(ink, np.maximum.reduce([route, ticks, start]), HEAVY)
     save(ink, "print_live.png")
     return ink
 
 
-# --- Studio Session: the treadmill deck --------------------------------------
+# --- Studio Session: the treadmill -------------------------------------------
 
 
 def print_studio():
-    """A treadmill seen from behind, whole, like an object on a poster: the
-    deck in a light tint, slats that crowd together with distance, two side
-    rails, the rear roller, and the console with its handlebar and side
-    handrails at the far end. Sized so all of it shows in the shortest Show
-    poster crop."""
-    from PIL import ImageDraw
-
+    """A treadmill side-on, facing left, the way you'd draw one to name it:
+    the console with its readout on a raked upright, the handrail, the motor
+    hood over the front roller and the belt loop running off the right
+    edge. The console end sits in the left 60% of the sheet, which always
+    shows; the belt bleeds off the poster like a print that runs to the
+    trim."""
     x, _ = grid()
-    fade = text_side_fade(x)
-    # Simple perspective: depth z runs 1 (near) to FAR; a point at (X, z)
-    # lands at x = CX + X / z, y = HORIZON + H / z.
-    CX, HORIZON, H, HALF, FAR = 0.79, 0.10, 0.66, 0.19, 1.75
+    fade = soft_left(x)
+    ink = np.zeros((H, W))
 
-    def at(u, z):
-        return CX + (u * 2 - 1) * HALF / z, HORIZON + H / z
+    # The deck rises slightly toward the front (incline).
+    fx, fy = 0.30, 0.70  # front roller center
+    rx, ry = 1.30, 0.76  # rear roller, past the edge
+    rr = 0.055 * W  # roller radius in px
 
-    def fill(poly):
-        k = 4
-        big = Image.new("L", (S * k, S * k), 0)
-        ImageDraw.Draw(big).polygon([(px * S * k, py * S * k) for px, py in poly], fill=255)
-        return np.asarray(big.resize((S, S), Image.LANCZOS), np.float64) / 255
+    def deck_y(px, offset):
+        t = (px - fx) / (rx - fx)
+        return fy + (ry - fy) * t + offset
 
-    ink = np.zeros((S, S))
-    ink = over(ink, fill([at(0, 1), at(0, FAR), at(1, FAR), at(1, 1)]) * fade, LIGHT)
-    # Slats every equal step of belt, so they crowd with distance.
-    slats = np.zeros((S, S))
-    z = 1.06
-    while z < FAR - 0.03:
-        slats = np.maximum(slats, stroke([at(0.05, z), at(0.95, z)], max(1.6, 5.0 / z)))
-        z += 0.075 * z  # equal steps on the belt look shorter further off
-    ink = over(ink, slats * fade, MID)
-    # The console: a panel in the mid tint above the far end of the deck.
-    (lx, ly), (rx, ry) = at(-0.06, FAR), at(1.06, FAR)
-    up = 0.14
-    ink = over(ink, fill([(lx + 0.01, ly - up - 0.05), (rx - 0.01, ry - up - 0.05),
-                          (rx - 0.01, ry - up), (lx + 0.01, ly - up)]) * fade, MID)
-    def handrail(u, z_end=1.4):
-        (ex, ey), (fx, fy) = at(u, z_end), at(u, FAR)
-        return stroke([(fx, fy - up), (ex, ey - up * FAR / z_end)], 7)
-
-    heavy = np.maximum.reduce([
-        stroke([at(-0.06, 1), at(-0.06, FAR)], 9),  # side rails
-        stroke([at(1.06, 1), at(1.06, FAR)], 9),
-        stroke([at(-0.06, 1), at(1.06, 1)], 14),  # rear roller
-        stroke([(lx, ly), (lx, ly - up)], 6),  # uprights
-        stroke([(rx, ry), (rx, ry - up)], 6),
-        stroke([(lx - 0.02, ly - up), (rx + 0.02, ry - up)], 7),  # handlebar
-        # Side handrails reaching back toward you, at the same height in
-        # perspective, so it reads as a treadmill and not a flask.
-        handrail(-0.06),
-        handrail(1.06),
+    top = rr / H
+    # The belt loop: top and bottom runs around the two rollers.
+    belt = np.maximum.reduce([
+        stroke([(fx, deck_y(fx, -top)), (rx, deck_y(rx, -top))], 9),
+        stroke([(fx, deck_y(fx, top)), (rx, deck_y(rx, top))], 9),
+        ring(fx, fy, rr + 4.5, 9),
     ])
-    ink = over(ink, heavy * fade, HEAVY)
+    # The deck between the runs, in a light tint, with belt slats.
+    deck = fill([(fx, deck_y(fx, -top)), (rx, deck_y(rx, -top)),
+                 (rx, deck_y(rx, top)), (fx, deck_y(fx, top))])
+    ink = ink_pass(ink, (deck + ring(fx, fy, rr)).clip(0, 1) * fade, LIGHT)
+    slats = np.zeros((H, W))
+    sx = fx + 0.06
+    while sx < 1.05:
+        slats = np.maximum(slats, stroke(
+            [(sx, deck_y(sx, -top) + 0.010), (sx - 0.012, deck_y(sx, top) - 0.010)], 3))
+        sx += 0.045
+    ink = ink_pass(ink, slats * fade, MID)
+
+    # Motor hood: a rounded cowl over the front roller.
+    hood = fill([
+        (fx - 0.085, fy + 0.02), (fx - 0.08, fy - 0.045), (fx - 0.04, fy - 0.085),
+        (fx + 0.10, deck_y(fx + 0.10, -top) - 0.025), (fx + 0.13, deck_y(fx + 0.13, -top)),
+        (fx + 0.02, fy + 0.03),
+    ])
+    ink = ink_pass(ink, hood * fade, MID)
+
+    # Feet under the frame.
+    feet = np.maximum(
+        stroke([(fx - 0.05, fy + 0.09), (fx + 0.08, fy + 0.09)], 10),
+        stroke([(fx + 0.01, fy + 0.05), (fx + 0.01, fy + 0.09)], 9),
+    )
+
+    # The upright, raked forward from the hood to the console.
+    base = (fx - 0.03, fy - 0.06)
+    head = (0.17, 0.27)
+    upright = stroke([base, head], 16)
+
+    # The console: a tilted panel facing the runner, with a readout window
+    # left clear of heavy ink and three readout bars in it.
+    def tilt(cx, cy, w, h, a):
+        ca, sa = math.cos(a), math.sin(a)
+        pts = []
+        for ux, uy in ((-w, -h), (w, -h), (w, h), (-w, h)):
+            pts.append((cx + (ux * ca - uy * sa) / W, cy + (ux * sa + uy * ca) / H))
+        return pts
+
+    a = math.radians(-16)
+    cx, cy = 0.20, 0.215
+    panel = fill(tilt(cx, cy, 0.14 * W, 0.055 * H, a))
+    window = fill(tilt(cx + 0.012, cy - 0.004, 0.085 * W, 0.027 * H, a))
+    ink = ink_pass(ink, panel * (1 - window) * fade, HEAVY)
+    ink = ink_pass(ink, window * fade, LIGHT)
+    bars = np.zeros((H, W))
+    for i, wbar in enumerate((0.05, 0.03, 0.04)):
+        bx = cx - 0.045 + i * 0.045
+        by = cy - 0.004 + (bx - cx) * math.tan(a) * W / H
+        bars = np.maximum(bars, fill(tilt(bx, by, 0.016 * W, 0.012 * H, a)))
+    ink = ink_pass(ink, bars * fade, HEAVY)
+
+    # The handrail: level with the runner's waist, from the console back
+    # over the front of the belt, ending in a short drop.
+    rail = stroke([(0.19, 0.325), (0.56, 0.34), (0.585, 0.375)], 11)
+
+    heavy = np.maximum.reduce([belt, feet, upright, rail])
+    ink = ink_pass(ink, heavy * fade, HEAVY)
     save(ink, "print_studio.png")
     return ink
 

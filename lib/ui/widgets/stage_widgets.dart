@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:material_ui/material_ui.dart';
@@ -7,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../logic/spoken.dart';
 import '../../models/enums.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/stage_art.dart';
 
 final _dayFormat = DateFormat('EEE, MMM d');
 final _fullFormat = DateFormat('EEE, MMM d, y · h:mm a');
@@ -73,8 +75,9 @@ class VenueBadge extends StatelessWidget {
 /// corner. The dots are dark ink, so white type on top only gains contrast.
 ///
 /// A Show poster can add its [venuePrint] from [StageArt]: one more pass of
-/// the same dark ink (a route map or a treadmill deck) between the gradient
-/// and the dots, on the right where no type sits.
+/// the same dark ink (a route map or a treadmill) between the gradient and
+/// the dots. The print is set beside the type, never under it: see
+/// [PrintBeside].
 class PosterSurface extends StatelessWidget {
   const PosterSurface({
     super.key,
@@ -99,9 +102,14 @@ class PosterSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final body = CustomPaint(
-      painter: HalftonePainter(ink: ink),
-      child: Padding(padding: padding, child: child),
+    // Full width whatever the child is, so the halftone, which places its
+    // dots by the poster's width, always covers the whole poster.
+    final body = SizedBox(
+      width: double.infinity,
+      child: CustomPaint(
+        painter: HalftonePainter(ink: ink),
+        child: Padding(padding: padding, child: child),
+      ),
     );
     return Container(
       width: double.infinity,
@@ -112,18 +120,206 @@ class PosterSurface extends StatelessWidget {
       ),
       child: venuePrint == null
           ? body
-          : Stack(
-              children: [
-                Positioned.fill(child: _PosterPrint(image: venuePrint!)),
-                body,
-              ],
+          : PrintBeside(
+              aspect: StageArt.printAspect,
+              print: _PosterPrint(image: venuePrint!),
+              body: body,
             ),
     );
   }
 }
 
-/// The venue print, cover-fit and centered, faded in if it was not decoded
-/// in time (the app precaches both, so this is rare).
+/// Lays out [body] at full width, then sets [print] beside its type: as
+/// tall as the poster, [aspect] wide for its height, against the right edge,
+/// or starting [gap] past the widest line of type and running off the edge
+/// when the type is wide. If less than [minShowing] of the print would show
+/// (long lines, large text sizes), the print is left out, so it is never
+/// under the type at any text size.
+///
+/// "Type" is every line of text in [body], icons included. A pill around
+/// type (a Venue Badge) pads it by less than [gap], so it stays clear too.
+class PrintBeside extends MultiChildRenderObjectWidget {
+  PrintBeside({
+    super.key,
+    required Widget print,
+    required Widget body,
+    required this.aspect,
+    this.gap = 20,
+    this.minShowing = 0.6,
+  }) : super(
+         children: [
+           IgnorePointer(child: print),
+           body,
+         ],
+       );
+
+  final double aspect;
+  final double gap;
+  final double minShowing;
+
+  @override
+  RenderPrintBeside createRenderObject(BuildContext context) =>
+      RenderPrintBeside(aspect: aspect, gap: gap, minShowing: minShowing);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderPrintBeside renderObject,
+  ) => renderObject
+    ..aspect = aspect
+    ..gap = gap
+    ..minShowing = minShowing;
+}
+
+class RenderPrintBeside extends RenderBox
+    with
+        ContainerRenderObjectMixin<
+          RenderBox,
+          ContainerBoxParentData<RenderBox>
+        >,
+        RenderBoxContainerDefaultsMixin<
+          RenderBox,
+          ContainerBoxParentData<RenderBox>
+        > {
+  RenderPrintBeside({
+    required this._aspect,
+    required this._gap,
+    required this._minShowing,
+  });
+
+  double _aspect;
+  set aspect(double v) {
+    if (v == _aspect) return;
+    _aspect = v;
+    markNeedsLayout();
+  }
+
+  double _gap;
+  set gap(double v) {
+    if (v == _gap) return;
+    _gap = v;
+    markNeedsLayout();
+  }
+
+  double _minShowing;
+  set minShowing(double v) {
+    if (v == _minShowing) return;
+    _minShowing = v;
+    markNeedsLayout();
+  }
+
+  /// Where the print was set in the last layout, or null if it was left
+  /// out. In this box's coordinates.
+  Rect? get printRect => _printRect;
+  Rect? _printRect;
+
+  RenderBox get _print => firstChild!;
+  RenderBox get _body => lastChild!;
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _PrintParentData) {
+      child.parentData = _PrintParentData();
+    }
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _body.getMinIntrinsicWidth(height);
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _body.getMaxIntrinsicWidth(height);
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _body.getMinIntrinsicHeight(width);
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _body.getMaxIntrinsicHeight(width);
+
+  @override
+  Size computeDryLayout(covariant BoxConstraints constraints) =>
+      _body.getDryLayout(constraints);
+
+  @override
+  void performLayout() {
+    _body.layout(constraints, parentUsesSize: true);
+    (_body.parentData! as ContainerBoxParentData<RenderBox>).offset =
+        Offset.zero;
+    size = constraints.constrain(_body.size);
+
+    final typeRight = _rightmostType(_body);
+    final width = size.height * _aspect;
+    final left = math.max(typeRight + _gap, size.width - width);
+    final showing = size.width - left;
+    final pd = _print.parentData! as ContainerBoxParentData<RenderBox>;
+    if (width <= 0 || showing < width * _minShowing) {
+      _print.layout(BoxConstraints.tight(Size.zero));
+      pd.offset = Offset.zero;
+      _printRect = null;
+    } else {
+      _print.layout(BoxConstraints.tight(Size(width, size.height)));
+      pd.offset = Offset(left, 0);
+      _printRect = Rect.fromLTWH(left, 0, showing, size.height);
+    }
+  }
+
+  /// The right edge of the widest line of type in [root], in [root]'s
+  /// coordinates. Reads only text layout and offsets, which a parent may
+  /// read during its own layout, never a descendant's size.
+  double _rightmostType(RenderBox root) {
+    var right = 0.0;
+    void visit(RenderObject node) {
+      if (node is RenderParagraph && node.hasSize) {
+        final length = node.text.toPlainText().length;
+        final boxes = node.getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: length),
+        );
+        final toRoot = node.getTransformTo(root);
+        for (final b in boxes) {
+          right = math.max(
+            right,
+            MatrixUtils.transformRect(toRoot, b.toRect()).right,
+          );
+        }
+      }
+      node.visitChildren(visit);
+    }
+
+    root.visitChildren(visit);
+    return right;
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (_printRect != null) {
+      context.pushClipRect(
+        needsCompositing,
+        offset,
+        Offset.zero & size,
+        (context, offset) => context.paintChild(
+          _print,
+          offset +
+              (_print.parentData! as ContainerBoxParentData<RenderBox>).offset,
+        ),
+      );
+    }
+    context.paintChild(_body, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      result.addWithPaintOffset(
+        offset: Offset.zero,
+        position: position,
+        hitTest: (result, p) => _body.hitTest(result, position: p),
+      );
+}
+
+class _PrintParentData extends ContainerBoxParentData<RenderBox> {}
+
+/// The venue print, filling the box [PrintBeside] gives it (the box has the
+/// print's own aspect), faded in if it was not decoded in time (the app
+/// precaches both, so this is rare).
 class _PosterPrint extends StatelessWidget {
   const _PosterPrint({required this.image});
   final ImageProvider image;
@@ -133,7 +329,7 @@ class _PosterPrint extends StatelessWidget {
     final still = MediaQuery.disableAnimationsOf(context);
     return Image(
       image: image,
-      fit: BoxFit.cover,
+      fit: BoxFit.fill,
       excludeFromSemantics: true,
       gaplessPlayback: true,
       errorBuilder: (_, _, _) => const SizedBox.shrink(),

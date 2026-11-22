@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -39,32 +40,165 @@ void main() {
       expect(StageArt.livePrint, isNot(StageArt.studioPrint));
     });
 
-    test('every print is bundled, square and only dark ink', () async {
+    test('every print is bundled, 9:10 and only light black ink', () async {
       for (final p in StageArt.prints) {
         final data = await rootBundle.load(p.assetName);
         final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
         final image = (await codec.getNextFrame()).image;
-        expect(image.width, 1080, reason: p.assetName);
-        expect(image.height, 1080, reason: p.assetName);
+        expect(image.width, 810, reason: p.assetName);
+        expect(image.height, 900, reason: p.assetName);
+        expect(image.width / image.height, StageArt.printAspect);
         final rgba = (await image.toByteData())!.buffer.asUint8List();
         var maxAlpha = 0;
+        var edgeInk = 0;
         for (var i = 0; i < rgba.length; i += 4) {
           // Black ink only: the print may darken the gradient, never lighten.
           expect(rgba[i] | rgba[i + 1] | rgba[i + 2], 0, reason: p.assetName);
           if (rgba[i + 3] > maxAlpha) maxAlpha = rgba[i + 3];
+          if ((i ~/ 4) % image.width == 0) edgeInk += rgba[i + 3];
         }
-        // Heaviest overprint stays well short of a black-out (about 60%).
-        expect(maxAlpha, lessThan(160), reason: p.assetName);
-        // The left 45% of the print, where the type sits, is clear.
-        var leftInk = 0;
-        for (var y = 0; y < 1080; y += 7) {
-          for (var x = 0; x < 486; x += 3) {
-            leftInk += rgba[(y * 1080 + x) * 4 + 3];
-          }
-        }
-        expect(leftInk, 0, reason: p.assetName);
+        // One screen of ink at 40% at most, even where strokes cross.
+        expect(maxAlpha, lessThanOrEqualTo(102), reason: p.assetName);
+        // The left edge, where the print meets the type, is soft: no ink.
+        expect(edgeInk, 0, reason: p.assetName);
         image.dispose();
       }
+    });
+
+    // The Show page poster's type, at the longest values it shows.
+    Widget showPoster(Venue venue, double textScale) => MediaQuery(
+      data: MediaQueryData(
+        size: const Size(390, 844),
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: _wrap(
+        // In a scroll view on the Show page: the poster sizes to its type.
+        SingleChildScrollView(
+          child: PosterHeader(
+            title: '26.2 mi',
+            gradient: gradientFor(venue),
+            venuePrint: StageArt.printFor(venue),
+            children: [
+              const Text(
+                '10:42 /mi  ·  4:40:12',
+                style: TextStyle(
+                  fontFamily: StageFonts.display,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Sun, Nov 22, 2026 · 6:30 AM',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [VenueBadge(venue, onPoster: true)]),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Future<void> loadFonts() async {
+      for (final (family, files) in const [
+        ('ArchivoCondensed', ['Archivo-ExtraCondensedBlack.ttf']),
+        (
+          'Archivo',
+          [
+            'Archivo-400.ttf',
+            'Archivo-600.ttf',
+            'Archivo-700.ttf',
+            'Archivo-800.ttf',
+          ],
+        ),
+      ]) {
+        final loader = FontLoader(family);
+        for (final f in files) {
+          loader.addFont(rootBundle.load('assets/fonts/$f'));
+        }
+        await loader.load();
+      }
+    }
+
+    for (final venue in Venue.values) {
+      for (final scale in const [1.0, 1.5, 2.0]) {
+        testWidgets('the ${venue.name} print never sits under type at '
+            '${(scale * 100).round()}% text', (tester) async {
+          await tester.runAsync(loadFonts);
+          await tester.pumpWidget(showPoster(venue, scale));
+          await tester.pump();
+          final beside = tester.renderObject<RenderPrintBeside>(
+            find.byType(PrintBeside),
+          );
+          final printRect = beside.printRect;
+          if (scale == 1.0) {
+            expect(printRect, isNotNull, reason: 'shows at 100% text');
+            expect(printRect!.width, greaterThan(90));
+          }
+          if (printRect == null) return;
+          // Every line of type and every pill, against the print's box.
+          final origin = beside.localToGlobal(Offset.zero);
+          final ink = printRect.shift(origin);
+          for (final e
+              in find
+                  .descendant(
+                    of: find.byType(PrintBeside),
+                    matching: find.byWidgetPredicate(
+                      (w) =>
+                          w is RichText || w is DecoratedBox || w is Container,
+                    ),
+                  )
+                  .evaluate()) {
+            final r = e.renderObject;
+            if (r is RenderParagraph) {
+              final boxes = r.getBoxesForSelection(
+                TextSelection(
+                  baseOffset: 0,
+                  extentOffset: r.text.toPlainText().length,
+                ),
+              );
+              for (final b in boxes) {
+                final rect = MatrixUtils.transformRect(
+                  r.getTransformTo(null),
+                  b.toRect(),
+                );
+                expect(
+                  rect.right,
+                  lessThanOrEqualTo(ink.left),
+                  reason: '"${r.text.toPlainText()}" runs under the print',
+                );
+              }
+            } else if (r is RenderDecoratedBox && r.hasSize) {
+              final rect = MatrixUtils.transformRect(
+                r.getTransformTo(null),
+                Offset.zero & r.size,
+              );
+              // The poster's own gradient box spans everything; skip it.
+              if (rect.width >= 300) continue;
+              expect(rect.right, lessThanOrEqualTo(ink.left));
+            }
+          }
+        });
+      }
+    }
+
+    testWidgets('the halftone covers the poster whatever the child', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          PosterSurface(
+            gradient: StageColors.liveGradient,
+            venuePrint: StageArt.livePrint,
+            child: const Text('5 mi'),
+          ),
+        ),
+      );
+      final paint = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter is HalftonePainter,
+      );
+      expect(tester.getSize(paint).width, 358);
     });
 
     testWidgets('a poster paints a print only when given one', (tester) async {
@@ -142,6 +276,31 @@ void main() {
       expect(grounds.keys, hasLength(4));
     });
 
+    testWidgets('sleeves of one size set their titles at one size', (
+      tester,
+    ) async {
+      double sizeOf(String title) {
+        final text = tester.widget<Text>(find.text(title.toUpperCase()));
+        return text.style!.fontSize!;
+      }
+
+      final sizes = <double>[];
+      for (final (t, a) in _seedSongs) {
+        await tester.pumpWidget(
+          _wrap(
+            Center(
+              child: SizedBox.square(
+                dimension: 115,
+                child: SongSleeve(title: t, artist: a),
+              ),
+            ),
+          ),
+        );
+        sizes.add(sizeOf(t));
+      }
+      expect(sizes.toSet(), {SongSleeve.titleSizeFor(115)});
+    });
+
     testWidgets('sleeve type does not grow with text size', (tester) async {
       await tester.pumpWidget(
         MediaQuery(
@@ -171,7 +330,33 @@ void main() {
       await tester.pumpWidget(
         _wrap(const AlbumArt(url: null, size: 36, title: 'Run', artist: 'X')),
       );
-      expect(find.text('R'), findsOneWidget, reason: 'small: first letter');
+      expect(find.byType(SongSleeve), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SongSleeve),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+        reason: 'small: the print alone, no letter that reads as an avatar',
+      );
+    });
+
+    testWidgets('a slot with the title beside it leaves it off the sleeve', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AlbumArt(
+            url: null,
+            size: 96,
+            title: 'Run',
+            artist: 'X',
+            printTitle: false,
+          ),
+        ),
+      );
+      expect(find.byType(SongSleeve), findsOneWidget);
+      expect(find.text('RUN'), findsNothing);
     });
 
     testWidgets('no song: a quiet tile, never a sleeve', (tester) async {

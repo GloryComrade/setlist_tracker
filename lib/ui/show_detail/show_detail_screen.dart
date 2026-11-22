@@ -221,6 +221,8 @@ class _SongCard extends StatelessWidget {
                 size: 96,
                 title: song.title,
                 artist: song.artist,
+                // Titled beside it; a play button may cover it.
+                printTitle: false,
               ),
               if (song.hasClip) ClipPlayButton(song: song),
             ],
