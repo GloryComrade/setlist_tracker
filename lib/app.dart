@@ -189,17 +189,21 @@ class _TabShell extends StatelessWidget {
     return Scaffold(
       floatingActionButton: fab,
       body: StageGlow(child: shell),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: _go,
-        destinations: [
-          for (final t in _tabs)
-            NavigationDestination(
-              icon: Icon(t.icon),
-              selectedIcon: Icon(t.active),
-              label: t.label,
-            ),
-        ],
+      // Five tabs share a phone's width, so the labels keep their 100% size
+      // at large text sizes (like iOS tab bars) instead of breaking mid-word.
+      bottomNavigationBar: MediaQuery.withNoTextScaling(
+        child: NavigationBar(
+          selectedIndex: shell.currentIndex,
+          onDestinationSelected: _go,
+          destinations: [
+            for (final t in _tabs)
+              NavigationDestination(
+                icon: Icon(t.icon),
+                selectedIcon: Icon(t.active),
+                label: t.label,
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -317,7 +319,7 @@ class _Header extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text(
+                  child: WholeWordsText(
                     tour.name.toUpperCase(),
                     style: theme.textTheme.displayMedium?.copyWith(
                       color: Colors.white,
@@ -354,47 +356,7 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (daysToGo > 0) ...[
-                  Text(
-                    '$daysToGo',
-                    style: theme.textTheme.displayLarge?.copyWith(
-                      color: Colors.white,
-                      fontFeatures: StageFonts.tabular,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      daysToGo == 1 ? 'DAY TO GO' : 'DAYS TO GO',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-                ],
-                const Spacer(),
-                Flexible(
-                  flex: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      _status,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: _Countdown(daysToGo: daysToGo, status: _status),
           ),
           const SizedBox(height: 12),
           Padding(
@@ -410,6 +372,94 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "116 DAYS TO GO" with the Tour status beside it, or under it when the
+/// status would be squeezed (large text sizes, narrow phones).
+class _Countdown extends StatelessWidget {
+  const _Countdown({required this.daysToGo, required this.status});
+  final int daysToGo;
+  final String status;
+
+  static const _labelStyle = TextStyle(
+    color: Colors.white,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 1.2,
+  );
+  static const _statusStyle = TextStyle(
+    color: Colors.white,
+    fontWeight: FontWeight.w600,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final big = Theme.of(context).textTheme.displayLarge
+        ?.copyWith(color: Colors.white, fontFeatures: StageFonts.tabular);
+    final label = daysToGo == 1 ? 'DAY TO GO' : 'DAYS TO GO';
+    final counter = daysToGo > 0
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('$daysToGo', style: big),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(label, style: _labelStyle),
+                ),
+              ),
+            ],
+          )
+        : null;
+    if (status.isEmpty) return counter ?? const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final counterWidth = counter == null
+            ? 0.0
+            : measureTextWidth(context, '$daysToGo', big) +
+                  10 +
+                  measureTextWidth(context, label, _labelStyle);
+        final room = constraints.maxWidth - counterWidth - 16;
+        // Side by side only while the status fits in two lines and no word
+        // of it has to break.
+        final widestWord = status
+            .split(' ')
+            .map((w) => measureTextWidth(context, w, _statusStyle))
+            .fold(0.0, math.max);
+        final sideBySide =
+            counter != null &&
+            widestWord <= room &&
+            measureTextWidth(context, status, _statusStyle) <= room * 2 - 24;
+        if (sideBySide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              counter,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    status,
+                    textAlign: TextAlign.right,
+                    style: _statusStyle,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ?counter,
+            Text(status, style: _statusStyle),
+          ],
+        );
+      },
     );
   }
 }
@@ -446,13 +496,18 @@ class _PacesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
+            // The prediction moves under the title when they don't fit on
+            // one line.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 4,
               children: [
-                Text(
+                WholeWordsText(
                   'PACES PER MILE',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const Spacer(),
                 Text(
                   'Predicts ${formatDuration(p.predictedMarathonSeconds)}',
                   style: const TextStyle(
@@ -509,6 +564,16 @@ class _WeekBlock extends StatelessWidget {
     final actualMiles = weekShows.fold(0.0, (a, s) => a + s.distanceMiles);
     final hasActual = weekShows.isNotEmpty;
     final past = week.endDate.isBefore(today());
+    final numberStyle = theme.textTheme.headlineLarge?.copyWith(
+      color: past && !isCurrent ? StageColors.textMuted : color,
+      fontFeatures: StageFonts.tabular,
+    );
+    // Rounded to the half mile: it's a target, not a measurement.
+    final plannedText = formatMiles((week.plannedMiles * 2).round() / 2);
+    final milesText = hasActual
+        ? '${formatMiles(actualMiles, withUnit: false)} / $plannedText'
+        : plannedText;
+    final loggedText = '$logged of $all logged';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -526,53 +591,42 @@ class _WeekBlock extends StatelessWidget {
             onTap: onToggle,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 44,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // The week number column grows with the text size.
+                  final numberWidth = math.max(
+                    44.0,
+                    measureTextWidth(context, '00', numberStyle) + 10,
+                  );
+                  final milesWidth = math.max(
+                    measureTextWidth(context, milesText, _milesStyle),
+                    measureTextWidth(context, loggedText, _loggedStyle),
+                  );
+                  // At large text sizes the miles move under the dates so the
+                  // phase name keeps its whole words.
+                  final sideBySide =
+                      numberWidth +
+                          measureTextWidth(
+                            context,
+                            week.phase.label,
+                            _phaseStyle,
+                          ) +
+                          8 +
+                          milesWidth +
+                          4 +
+                          24 <=
+                      constraints.maxWidth;
+                  final number = SizedBox(
+                    width: numberWidth,
                     child: Text(
                       week.number.toString().padLeft(2, '0'),
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        color: past && !isCurrent
-                            ? StageColors.textMuted
-                            : color,
-                        fontFeatures: StageFonts.tabular,
-                      ),
+                      style: numberStyle,
                     ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              week.phase.label,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            if (week.isRestStop) const TourTag('Rest Stop'),
-                            if (isCurrent)
-                              const TourTag('This week', color: Colors.white),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          formatWeekRange(week),
-                          style: const TextStyle(
-                            color: StageColors.textMuted,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  );
+                  final miles = Column(
+                    crossAxisAlignment: sideBySide
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
                     children: [
                       Text.rich(
                         TextSpan(
@@ -582,12 +636,8 @@ class _WeekBlock extends StatelessWidget {
                                 text:
                                     '${formatMiles(actualMiles, withUnit: false)} / ',
                               ),
-                            // Rounded to the half mile: it's a target, not a
-                            // measurement.
                             TextSpan(
-                              text: formatMiles(
-                                (week.plannedMiles * 2).round() / 2,
-                              ),
+                              text: plannedText,
                               style: hasActual
                                   ? const TextStyle(
                                       color: StageColors.textMuted,
@@ -600,29 +650,49 @@ class _WeekBlock extends StatelessWidget {
                             ? '${formatMiles(actualMiles)} of '
                                   '${formatMiles(week.plannedMiles)} planned'
                             : '${formatMiles(week.plannedMiles)} planned',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: StageColors.amber,
-                          fontFeatures: StageFonts.tabular,
-                        ),
+                        style: _milesStyle,
                       ),
+                      Text(loggedText, style: _loggedStyle),
+                    ],
+                  );
+                  final info = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(week.phase.label, style: _phaseStyle),
+                          if (week.isRestStop) const TourTag('Rest Stop'),
+                          if (isCurrent)
+                            const TourTag('This week', color: Colors.white),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
                       Text(
-                        '$logged of $all logged',
+                        formatWeekRange(week),
                         style: const TextStyle(
                           color: StageColors.textMuted,
-                          fontSize: 12,
-                          fontFeatures: StageFonts.tabular,
+                          fontSize: 13,
                         ),
                       ),
+                      if (!sideBySide) ...[const SizedBox(height: 4), miles],
                     ],
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    open ? Icons.expand_less : Icons.expand_more,
-                    color: StageColors.textMuted,
-                    semanticLabel: open ? 'Hide days' : 'Show days',
-                  ),
-                ],
+                  );
+                  return Row(
+                    children: [
+                      number,
+                      Expanded(child: info),
+                      if (sideBySide) ...[const SizedBox(width: 8), miles],
+                      const SizedBox(width: 4),
+                      Icon(
+                        open ? Icons.expand_less : Icons.expand_more,
+                        color: StageColors.textMuted,
+                        semanticLabel: open ? 'Hide days' : 'Show days',
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -636,6 +706,18 @@ class _WeekBlock extends StatelessWidget {
     );
   }
 }
+
+const _phaseStyle = TextStyle(fontWeight: FontWeight.w700);
+const _milesStyle = TextStyle(
+  fontWeight: FontWeight.w800,
+  color: StageColors.amber,
+  fontFeatures: StageFonts.tabular,
+);
+const _loggedStyle = TextStyle(
+  color: StageColors.textMuted,
+  fontSize: 12,
+  fontFeatures: StageFonts.tabular,
+);
 
 const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -667,103 +749,125 @@ class _DayRow extends StatelessWidget {
           : '$venue · moved from ${_dayNames[moved.weekday - 1]}';
     }
     const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    final weekdayStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 1,
+      color: isToday ? StageColors.magenta : StageColors.textMuted,
+    );
+    final dayStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
+      color: isToday ? StageColors.magenta : muted,
+      fontFeatures: StageFonts.tabular,
+    );
+    final dayWidth = math.max(
+      44.0,
+      math.max(
+            measureTextWidth(context, 'WED', weekdayStyle),
+            measureTextWidth(context, '00', dayStyle),
+          ) +
+          6,
+    );
+    final titleStyle = TextStyle(
+      fontWeight: FontWeight.w700,
+      color: muted,
+      decoration: skipped ? TextDecoration.lineThrough : null,
+      decorationColor: StageColors.textMuted,
+    );
+    final milesStyle = TextStyle(
+      fontWeight: FontWeight.w700,
+      color: muted,
+      fontFeatures: StageFonts.tabular,
+    );
 
     return InkWell(
       onTap: () => context.push('/tour/show/${show.id}'),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 44,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    weekdays[show.date.weekday - 1],
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                      color: isToday
-                          ? StageColors.magenta
-                          : StageColors.textMuted,
-                    ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // At large text sizes the miles move under the title so its words
+            // stay whole.
+            final milesText = formatMiles(show.distanceMiles);
+            final room =
+                constraints.maxWidth -
+                dayWidth -
+                20 -
+                12 -
+                measureTextWidth(context, milesText, milesStyle) -
+                12 -
+                24;
+            final sideBySide = show.title
+                .split(' ')
+                .every((w) => measureTextWidth(context, w, titleStyle) <= room);
+            final miles = Text(milesText, style: milesStyle);
+            return Row(
+              children: [
+                SizedBox(
+                  // Grows with the text size so "WED" never breaks.
+                  width: dayWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        weekdays[show.date.weekday - 1],
+                        style: weekdayStyle,
+                      ),
+                      Text('${show.date.day}', style: dayStyle),
+                    ],
                   ),
-                  Text(
-                    '${show.date.day}',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: isToday ? StageColors.magenta : muted,
-                      fontFeatures: StageFonts.tabular,
-                    ),
+                ),
+                Icon(
+                  workoutIcon(show.workoutType),
+                  size: 20,
+                  color: show.workoutType == WorkoutType.long || show.isRace
+                      ? StageColors.amber
+                      : muted,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(show.title, style: titleStyle),
+                      Text(
+                        subline,
+                        style: TextStyle(
+                          color: ran != null
+                              ? StageColors.amber
+                              : StageColors.textMuted,
+                          fontSize: 12.5,
+                          fontFeatures: StageFonts.tabular,
+                        ),
+                      ),
+                      if (!sideBySide) miles,
+                    ],
                   ),
-                ],
-              ),
-            ),
-            Icon(
-              workoutIcon(show.workoutType),
-              size: 20,
-              color: show.workoutType == WorkoutType.long || show.isRace
-                  ? StageColors.amber
-                  : muted,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    show.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: muted,
-                      decoration: skipped ? TextDecoration.lineThrough : null,
-                      decorationColor: StageColors.textMuted,
-                    ),
-                  ),
-                  Text(
-                    subline,
-                    style: TextStyle(
-                      color: ran != null
-                          ? StageColors.amber
-                          : StageColors.textMuted,
-                      fontSize: 12.5,
-                      fontFeatures: StageFonts.tabular,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              formatMiles(show.distanceMiles),
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: muted,
-                fontFeatures: StageFonts.tabular,
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 24,
-              child: logged != null
-                  ? const Icon(
-                      Icons.check_circle,
-                      color: StageColors.amber,
-                      size: 22,
-                      semanticLabel: 'Logged',
-                    )
-                  : Icon(
-                      Icons.radio_button_unchecked,
-                      color: StageColors.outline,
-                      size: 22,
-                      semanticLabel: skipped
-                          ? 'Skipped'
-                          : missed
-                          ? 'Not logged'
-                          : 'Planned',
-                    ),
-            ),
-          ],
+                ),
+                if (sideBySide) miles,
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 24,
+                  child: logged != null
+                      ? const Icon(
+                          Icons.check_circle,
+                          color: StageColors.amber,
+                          size: 22,
+                          semanticLabel: 'Logged',
+                        )
+                      : Icon(
+                          Icons.radio_button_unchecked,
+                          color: StageColors.outline,
+                          size: 22,
+                          semanticLabel: skipped
+                              ? 'Skipped'
+                              : missed
+                              ? 'Not logged'
+                              : 'Planned',
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
