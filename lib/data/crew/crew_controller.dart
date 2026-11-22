@@ -329,6 +329,16 @@ class CrewController extends Notifier<CrewState> {
     state = state.copyWith(profile: await _s.setShareViews(p, on));
   }
 
+  /// The iPhone notification switches in Settings → The Crew. Null leaves
+  /// that one as it is.
+  Future<void> setPushPrefs({bool? shows, bool? shoutouts}) async {
+    final p = state.profile;
+    if (p == null) return;
+    state = state.copyWith(
+      profile: await _s.setPushPrefs(p, shows: shows, shoutouts: shoutouts),
+    );
+  }
+
   Future<CrewAudience> audience(CrewPost post) => _s.audience(post.id);
 
   Future<List<CrewShoutout>> shoutouts(CrewPost post) async {

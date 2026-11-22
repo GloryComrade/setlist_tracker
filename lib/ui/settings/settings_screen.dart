@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../app_version.dart';
 import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
+import '../../data/push/push_controller.dart';
+import '../../data/push/push_service.dart';
 import '../../data/remote/backend_config.dart';
 import '../../data/settings/app_settings.dart';
 import '../../models/crew.dart';
@@ -235,6 +237,8 @@ class _CrewSection extends ConsumerWidget {
               }
             },
           ),
+          if (ref.watch(pushControllerProvider.select((s) => s.available)))
+            _PushSwitches(crew: crew),
           const Divider(height: 24),
           _SubHead('Blocked runners'),
           const SizedBox(height: 4),
@@ -272,6 +276,67 @@ class _CrewSection extends ConsumerWidget {
     } catch (_) {
       if (context.mounted) crewSnack(context, 'Couldn’t reach the Crew.');
     }
+  }
+}
+
+/// iPhone only: the two notification switches, and a way to iOS Settings
+/// when notifications are off there. They follow the Seen by switch.
+class _PushSwitches extends ConsumerWidget {
+  const _PushSwitches({required this.crew});
+  final CrewState crew;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = crew.profile;
+    final denied =
+        ref.watch(pushControllerProvider.select((s) => s.permission)) ==
+        PushPermission.denied;
+    final push = ref.read(pushControllerProvider.notifier);
+    final c = ref.read(crewControllerProvider.notifier);
+
+    Future<void> set({bool? shows, bool? shoutouts}) async {
+      try {
+        await c.setPushPrefs(shows: shows, shoutouts: shoutouts);
+        // Turned on before iOS was ever asked: ask now.
+        if (shows == true || shoutouts == true) await push.askOnce();
+      } catch (_) {
+        if (context.mounted) crewSnack(context, 'Couldn’t reach the Crew.');
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 24),
+        _Switch(
+          value: p?.pushShows ?? true,
+          title: 'When my Crew logs a Show',
+          onChanged: (v) => set(shows: v),
+        ),
+        _Switch(
+          value: p?.pushShoutouts ?? true,
+          title: 'Shout-outs on my Shows',
+          onChanged: (v) => set(shoutouts: v),
+        ),
+        if (denied) ...[
+          const SizedBox(height: 4),
+          const _Muted(
+            'Notifications are off for Setlist Tracker in iOS Settings.',
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 48),
+                padding: EdgeInsets.zero,
+              ),
+              onPressed: push.openSettings,
+              child: const Text('Open iOS Settings'),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
@@ -512,13 +577,13 @@ class _Switch extends StatelessWidget {
   const _Switch({
     required this.value,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.onChanged,
   });
 
   final bool value;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final ValueChanged<bool> onChanged;
 
   @override
@@ -535,6 +600,6 @@ class _Switch extends StatelessWidget {
           states.contains(WidgetState.selected) ? null : StageColors.textMuted,
     ),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-    subtitle: Text(subtitle),
+    subtitle: subtitle == null ? null : Text(subtitle!),
   );
 }

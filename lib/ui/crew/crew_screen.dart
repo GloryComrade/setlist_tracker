@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../data/crew/crew_controller.dart';
 import '../../data/crew/tour_invites_controller.dart';
+import '../../data/push/push_controller.dart';
 import '../../models/crew.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
@@ -22,6 +23,7 @@ class CrewScreen extends ConsumerStatefulWidget {
 
 class _CrewScreenState extends ConsumerState<CrewScreen> {
   bool _checkedPending = false;
+  bool _checkedPush = false;
 
   /// An invite link opened before sign-in waits on the device; pick it up
   /// once there's a stage name.
@@ -38,6 +40,14 @@ class _CrewScreenState extends ConsumerState<CrewScreen> {
     final state = ref.watch(crewControllerProvider);
     if (!_checkedPending && state.profile != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingInvite());
+    }
+    if (!_checkedPush && state.profile != null) {
+      // The first visit with a stage name: iOS's own notification prompt,
+      // once per device (nothing on web).
+      _checkedPush = true;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref.read(pushControllerProvider.notifier).askOnce(),
+      );
     }
 
     final Widget body;

@@ -105,6 +105,15 @@ abstract interface class CrewShowAudience {
   /// forgets the views already recorded.
   Future<CrewProfile> setShareViews(CrewProfile profile, bool on);
 
+  /// Turns the iPhone push notification switches on or off: "When my Crew
+  /// logs a Show" ([shows]) and "Shout-outs on my Shows" ([shoutouts]).
+  /// Null leaves that one as it is.
+  Future<CrewProfile> setPushPrefs(
+    CrewProfile profile, {
+    bool? shows,
+    bool? shoutouts,
+  });
+
   /// You saw a Crew mate's Show. Does nothing on your own Shows or with the
   /// switch off.
   Future<void> markSeen(String postId);

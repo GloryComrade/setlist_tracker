@@ -9,11 +9,13 @@ import 'data/local/open_database.dart';
 import 'data/music/music_search.dart';
 import 'data/music/spotify_music_search.dart';
 import 'data/providers.dart';
+import 'data/push/push_controller.dart';
 import 'data/remote/api_client.dart';
 import 'data/remote/backend_config.dart';
 import 'data/remote/cloudflare_auth_service.dart';
 import 'data/remote/cloudflare_crew_service.dart';
 import 'data/remote/cloudflare_remote_store.dart';
+import 'data/remote/push_api.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +36,7 @@ Future<void> main() async {
       authServiceProvider.overrideWithValue(auth),
       remoteStoreProvider.overrideWithValue(CloudflareRemoteStore(api)),
       crewServiceProvider.overrideWithValue(CloudflareCrewService(api)),
+      pushDevicesProvider.overrideWithValue(CloudflarePushDevices(api)),
       // Guests get Spotify too: the search needs no sign-in.
       musicSearchProvider.overrideWith(
         (ref) => FallbackMusicSearch(

@@ -55,6 +55,32 @@ class SyncState {
   );
 }
 
+/// Work that must happen just before signing out, while the session still
+/// works (the push controller takes this phone's token back). Kept as a
+/// list the others add to, so the sync needn't know about them.
+class SignOutHooks {
+  final _hooks = <Future<void> Function({required bool deleting})>[];
+
+  void add(Future<void> Function({required bool deleting}) hook) =>
+      _hooks.add(hook);
+
+  void remove(Future<void> Function({required bool deleting}) hook) =>
+      _hooks.remove(hook);
+
+  /// [deleting]: the account is going, and the server removes its data.
+  Future<void> run({required bool deleting}) async {
+    for (final h in [..._hooks]) {
+      try {
+        await h(deleting: deleting);
+      } catch (e) {
+        debugPrint('Sign-out hook failed: $e');
+      }
+    }
+  }
+}
+
+final signOutHooksProvider = Provider<SignOutHooks>((ref) => SignOutHooks());
+
 final syncControllerProvider = NotifierProvider<SyncController, SyncState>(
   SyncController.new,
 );
@@ -162,6 +188,8 @@ class SyncController extends Notifier<SyncState> {
     if (!force && state.pending > 0) return false;
     _leaving = true;
     try {
+      // While still signed in (this phone stops getting Crew notifications).
+      await ref.read(signOutHooksProvider).run(deleting: false);
       await _auth.signOut();
       await _engine?.clearLocal();
       state = const SyncState();
@@ -175,6 +203,7 @@ class SyncController extends Notifier<SyncState> {
     _leaving = true;
     try {
       await _auth.deleteAccount();
+      await ref.read(signOutHooksProvider).run(deleting: true);
       await _engine?.clearLocal();
       state = const SyncState();
     } finally {
