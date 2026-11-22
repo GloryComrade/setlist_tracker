@@ -22,6 +22,7 @@ class CrewProfile {
     this.allActivityPending = false,
     this.avatarBadge,
     this.avatarUrl,
+    this.shareViews = true,
   });
 
   final String userId;
@@ -41,11 +42,16 @@ class CrewProfile {
   /// photo gets a new address.
   final String? avatarUrl;
 
+  /// "Let my Crew know when I've seen their Shows". Off, your views of
+  /// their Shows aren't recorded (and the old ones are forgotten).
+  final bool shareViews;
+
   /// Pass null as [avatarBadge] or [avatarUrl] to clear it.
   CrewProfile copyWith({
     String? stageName,
     int? color,
     bool? allActivityPending,
+    bool? shareViews,
     Object? avatarBadge = _keep,
     Object? avatarUrl = _keep,
   }) => CrewProfile(
@@ -59,9 +65,11 @@ class CrewProfile {
     avatarUrl: identical(avatarUrl, _keep)
         ? this.avatarUrl
         : avatarUrl as String?,
+    shareViews: shareViews ?? this.shareViews,
   );
 
-  /// `{userId, stageName, color, allActivityPending, avatarBadge, avatarUrl}`.
+  /// `{userId, stageName, color, allActivityPending, avatarBadge, avatarUrl,
+  /// shareViews}`.
   factory CrewProfile.fromJson(Map<String, Object?> r) => CrewProfile(
     userId: '${r['userId']}',
     stageName: '${r['stageName']}',
@@ -69,6 +77,7 @@ class CrewProfile {
     allActivityPending: r['allActivityPending'] == true,
     avatarBadge: asStringOrNull(r['avatarBadge']),
     avatarUrl: asStringOrNull(r['avatarUrl']),
+    shareViews: r['shareViews'] != false,
   );
 }
 
@@ -196,6 +205,8 @@ class CrewPost {
     this.mine = false,
     this.avatarBadge,
     this.avatarUrl,
+    this.shoutouts = 0,
+    this.seenBy,
   });
 
   /// The owner's picture: see [CrewProfile.avatarBadge].
@@ -218,12 +229,23 @@ class CrewPost {
   final bool encoredByMe;
   final bool mine;
 
+  /// How many Shout-outs you can read on it.
+  final int shoutouts;
+
+  /// Who saw it: only on your own Shows, null on everyone else's.
+  final CrewSeenSummary? seenBy;
+
   String get showId => show.id;
 
   static String idFor(String ownerId, String showId) => '$ownerId:$showId';
 
-  /// The same post with the owner's new picture.
-  CrewPost withPicture(String? badge, String? url) => CrewPost(
+  CrewPost _copy({
+    int? encores,
+    bool? encoredByMe,
+    Object? avatarBadge = _keep,
+    Object? avatarUrl = _keep,
+    int? shoutouts,
+  }) => CrewPost(
     id: id,
     ownerId: ownerId,
     stageName: stageName,
@@ -231,30 +253,32 @@ class CrewPost {
     show: show,
     gearName: gearName,
     sharedAt: sharedAt,
-    encores: encores,
-    encoredByMe: encoredByMe,
+    encores: encores ?? this.encores,
+    encoredByMe: encoredByMe ?? this.encoredByMe,
     mine: mine,
-    avatarBadge: badge,
-    avatarUrl: url,
+    avatarBadge: identical(avatarBadge, _keep)
+        ? this.avatarBadge
+        : avatarBadge as String?,
+    avatarUrl: identical(avatarUrl, _keep)
+        ? this.avatarUrl
+        : avatarUrl as String?,
+    shoutouts: shoutouts ?? this.shoutouts,
+    seenBy: seenBy,
   );
 
-  CrewPost withEncore(bool on) => CrewPost(
-    id: id,
-    ownerId: ownerId,
-    stageName: stageName,
-    color: color,
-    show: show,
-    gearName: gearName,
-    sharedAt: sharedAt,
+  /// The same post with the owner's new picture.
+  CrewPost withPicture(String? badge, String? url) =>
+      _copy(avatarBadge: badge, avatarUrl: url);
+
+  CrewPost withEncore(bool on) => _copy(
     encores: encores - (encoredByMe ? 1 : 0) + (on ? 1 : 0),
     encoredByMe: on,
-    mine: mine,
-    avatarBadge: avatarBadge,
-    avatarUrl: avatarUrl,
   );
 
+  CrewPost withShoutouts(int n) => _copy(shoutouts: n);
+
   /// `{id, ownerId, stageName, color, showId, show, gearName, sharedAt,
-  /// encores, encoredByMe, mine}`.
+  /// encores, encoredByMe, mine, shoutouts, seenBy}`.
   factory CrewPost.fromJson(Map<String, Object?> p) {
     final ownerId = '${p['ownerId']}';
     final showJson = {...?asMap(p['show'])};
@@ -274,8 +298,136 @@ class CrewPost {
       mine: p['mine'] == true,
       avatarBadge: asStringOrNull(p['avatarBadge']),
       avatarUrl: asStringOrNull(p['avatarUrl']),
+      shoutouts: asInt(p['shoutouts']),
+      seenBy: switch (asMap(p['seenBy'])) {
+        final m? => CrewSeenSummary.fromJson(m),
+        null => null,
+      },
     );
   }
+}
+
+/// "Seen by Maya, Sam +2": who saw one of your Shows.
+class CrewSeenSummary {
+  const CrewSeenSummary({this.count = 0, this.names = const []});
+
+  final int count;
+
+  /// The latest few stage names, newest first.
+  final List<String> names;
+
+  /// `{count, names}`.
+  factory CrewSeenSummary.fromJson(Map<String, Object?> m) => CrewSeenSummary(
+    count: asInt(m['count']),
+    names: [for (final n in (m['names'] as List?) ?? const []) '$n'],
+  );
+}
+
+/// Someone on a Show's Encore or Seen by list.
+class CrewPerson {
+  const CrewPerson({
+    required this.userId,
+    required this.stageName,
+    this.color = 0,
+    this.avatarBadge,
+    this.avatarUrl,
+    required this.at,
+  });
+
+  final String userId;
+  final String stageName;
+  final int color;
+  final String? avatarBadge;
+  final String? avatarUrl;
+
+  /// When they gave the Encore, or first saw the Show.
+  final DateTime at;
+
+  /// `{userId, stageName, color, avatarBadge, avatarUrl, at}`.
+  factory CrewPerson.fromJson(Map<String, Object?> m) => CrewPerson(
+    userId: '${m['userId']}',
+    stageName: asStringOrNull(m['stageName']) ?? 'Runner',
+    color: asInt(m['color']),
+    avatarBadge: asStringOrNull(m['avatarBadge']),
+    avatarUrl: asStringOrNull(m['avatarUrl']),
+    at: parseDate(m['at'])?.toLocal() ?? DateTime.now(),
+  );
+}
+
+/// Who gave a Show an Encore and, on your own Shows, who saw it.
+class CrewAudience {
+  const CrewAudience({
+    this.encores = const [],
+    this.otherEncores = 0,
+    this.seenBy,
+  });
+
+  /// Encores from you and your Crew, newest first.
+  final List<CrewPerson> encores;
+
+  /// Encores from runners outside your Crew, counted but not named.
+  final int otherEncores;
+
+  /// Null unless the Show is yours.
+  final List<CrewPerson>? seenBy;
+
+  /// `{encores, otherEncores, seenBy}`.
+  factory CrewAudience.fromJson(Map<String, Object?> m) => CrewAudience(
+    encores: asMapList(m['encores']).map(CrewPerson.fromJson).toList(),
+    otherEncores: asInt(m['otherEncores']),
+    seenBy: m['seenBy'] == null
+        ? null
+        : asMapList(m['seenBy']).map(CrewPerson.fromJson).toList(),
+  );
+}
+
+/// The longest Shout-out, in characters.
+const kMaxShoutoutChars = 280;
+
+/// A Shout-out: a short comment on a Show from its owner or their Crew.
+class CrewShoutout {
+  const CrewShoutout({
+    required this.id,
+    required this.userId,
+    required this.stageName,
+    this.color = 0,
+    this.avatarBadge,
+    this.avatarUrl,
+    required this.body,
+    required this.createdAt,
+    this.mine = false,
+    this.canDelete = false,
+  });
+
+  final String id;
+  final String userId;
+  final String stageName;
+  final int color;
+  final String? avatarBadge;
+  final String? avatarUrl;
+  final String body;
+  final DateTime createdAt;
+
+  /// You wrote it.
+  final bool mine;
+
+  /// You wrote it, or it's on your Show.
+  final bool canDelete;
+
+  /// `{id, userId, stageName, color, avatarBadge, avatarUrl, body,
+  /// createdAt, mine, canDelete}`.
+  factory CrewShoutout.fromJson(Map<String, Object?> m) => CrewShoutout(
+    id: '${m['id']}',
+    userId: '${m['userId']}',
+    stageName: asStringOrNull(m['stageName']) ?? 'Runner',
+    color: asInt(m['color']),
+    avatarBadge: asStringOrNull(m['avatarBadge']),
+    avatarUrl: asStringOrNull(m['avatarUrl']),
+    body: asStringOrNull(m['body']) ?? '',
+    createdAt: parseDate(m['createdAt'])?.toLocal() ?? DateTime.now(),
+    mine: m['mine'] == true,
+    canDelete: m['canDelete'] == true,
+  );
 }
 
 /// Everything on a Crew mate's page: who they are, their active Tour and

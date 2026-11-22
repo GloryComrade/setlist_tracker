@@ -23,6 +23,8 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
     one("DELETE FROM crew_encores WHERE user_id = ?1 OR post_id IN (SELECT id FROM crew_posts WHERE owner = ?1)"),
     one("DELETE FROM crew_posts WHERE owner = ?1"),
     one("DELETE FROM crew_encores_v2 WHERE user_id = ?1 OR owner = ?1"),
+    one("DELETE FROM crew_show_views WHERE user_id = ?1 OR owner = ?1"),
+    one("DELETE FROM crew_shoutouts WHERE user_id = ?1 OR owner = ?1"),
     one("DELETE FROM crew_reports WHERE reporter = ?1 OR reported_user = ?1"),
     one("DELETE FROM crew_invites WHERE owner = ?1"),
     one("DELETE FROM crew_invite_misses WHERE user_id = ?1"),

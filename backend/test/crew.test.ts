@@ -124,6 +124,7 @@ describe("profile", () => {
       stageName: "Maya Runs",
       color: 7,
       allActivityPending: false,
+      shareViews: true,
       avatarBadge: null,
       avatarUrl: null,
     });
@@ -143,6 +144,7 @@ describe("profile", () => {
       stageName: "Maya",
       color: 1,
       allActivityPending: false,
+      shareViews: true,
       avatarBadge: null,
       avatarUrl: null,
     });
@@ -418,7 +420,7 @@ describe("the feed", () => {
     expect(mine).toMatchObject({ mine: true, gearName: null });
     expect(ryans.sharedAt).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
     expect(Object.keys(ryans).sort()).toEqual(
-      ["avatarBadge", "avatarUrl", "color", "encoredByMe", "encores", "gearName", "id", "mine", "ownerId", "sharedAt", "show", "showId", "stageName"],
+      ["avatarBadge", "avatarUrl", "color", "encoredByMe", "encores", "gearName", "id", "mine", "ownerId", "seenBy", "sharedAt", "shoutouts", "show", "showId", "stageName"],
     );
 
     expect((await feed(stranger)).map((p) => p.showId)).toEqual([strangerShow]);

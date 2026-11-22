@@ -305,6 +305,75 @@ class CrewController extends Notifier<CrewState> {
     );
   }
 
+  // ---- Seen by, Encores and Shout-outs ----
+
+  /// Posts already marked seen this session, so each is sent once.
+  final _seen = <String>{};
+
+  /// You saw [post] (opened it, or its card stayed on screen). Sent once per
+  /// post; your own Shows and the switch being off send nothing.
+  Future<void> markSeen(CrewPost post) async {
+    if (post.mine || !(state.profile?.shareViews ?? true)) return;
+    if (!_seen.add(post.id)) return;
+    try {
+      await _s.markSeen(post.id);
+    } catch (_) {
+      _seen.remove(post.id); // Try again next time it's seen.
+    }
+  }
+
+  /// "Let my Crew know when I've seen their Shows".
+  Future<void> setShareViews(bool on) async {
+    final p = state.profile;
+    if (p == null) return;
+    state = state.copyWith(profile: await _s.setShareViews(p, on));
+  }
+
+  Future<CrewAudience> audience(CrewPost post) => _s.audience(post.id);
+
+  Future<List<CrewShoutout>> shoutouts(CrewPost post) async {
+    final list = await _s.shoutouts(post.id);
+    _setShoutoutCount(post.id, list.length);
+    return list;
+  }
+
+  Future<CrewShoutout> addShoutout(CrewPost post, String body) async {
+    final added = await _s.addShoutout(post.id, body);
+    _bumpShoutouts(post.id, 1);
+    return added;
+  }
+
+  Future<void> deleteShoutout(CrewPost post, CrewShoutout shoutout) async {
+    await _s.deleteShoutout(shoutout.id);
+    _bumpShoutouts(post.id, -1);
+  }
+
+  /// Reports a Shout-out, and blocks its writer too when asked.
+  Future<void> reportShoutout(
+    CrewPost post,
+    CrewShoutout shoutout,
+    String reason, {
+    bool block = false,
+  }) async {
+    await _s.reportShoutout(shoutout.id, reason);
+    _bumpShoutouts(post.id, -1);
+    if (block) await this.block(shoutout.userId);
+  }
+
+  void _bumpShoutouts(String postId, int by) {
+    for (final p in state.posts) {
+      if (p.id == postId) {
+        _replacePost(p.withShoutouts((p.shoutouts + by).clamp(0, 1 << 30)));
+      }
+    }
+  }
+
+  void _setShoutoutCount(String postId, int n) {
+    for (final p in state.posts) {
+      if (p.id == postId && p.shoutouts != n) _replacePost(p.withShoutouts(n));
+    }
+  }
+
   Future<void> _reloadFeed() async {
     try {
       state = state.copyWith(posts: await _s.feed());

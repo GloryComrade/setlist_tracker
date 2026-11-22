@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../src/env";
-import { notifyReport } from "../src/reports";
+import { notifyReport, reportText } from "../src/reports";
 
 const base = env as unknown as Env;
 
@@ -54,5 +54,11 @@ describe("notifyReport", () => {
       f as unknown as typeof fetch,
     );
     expect(ok).toBe(false);
+  });
+});
+
+describe("reportText", () => {
+  it("names a Shout-out", () => {
+    expect(reportText("shoutout", "mean")).toContain("a Shout-out");
   });
 });

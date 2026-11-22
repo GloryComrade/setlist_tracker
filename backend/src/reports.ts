@@ -12,13 +12,14 @@
 
 import type { Env } from "./env";
 
-/** What was reported: a Show on the Crew feed, or a profile photo. */
-export type ReportKind = "show" | "photo";
+/** What was reported: a Show on the Crew feed, a profile photo, or a Shout-out. */
+export type ReportKind = "show" | "photo" | "shoutout";
 
 /** The one-line note about a report. */
 export function reportText(kind: ReportKind, reason: unknown): string {
   const why = typeof reason === "string" ? reason.trim().slice(0, 300) : "";
-  const what = kind === "photo" ? "a profile photo" : "a Show";
+  const what =
+    kind === "photo" ? "a profile photo" : kind === "shoutout" ? "a Shout-out" : "a Show";
   return (
     `Setlist Tracker: someone reported ${what} on The Crew. ` +
     `Reason: "${why}". Review it within 24 hours (docs/crew-reports.md).`

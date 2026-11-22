@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sembast/sembast_memory.dart';
 import 'package:setlist_tracker/app_version.dart';
 import 'package:setlist_tracker/data/crew/crew_controller.dart';
+import 'package:setlist_tracker/data/crew/crew_service.dart';
 import 'package:setlist_tracker/data/crew/memory_crew_service.dart';
 import 'package:setlist_tracker/data/providers.dart';
 import 'package:setlist_tracker/data/settings/app_settings.dart';
@@ -347,6 +348,48 @@ void main() {
       expect(find.textContaining('Nobody.'), findsOneWidget);
     });
 
+    testWidgets('The Crew: Seen by switch, on by default, forgets views', (
+      tester,
+    ) async {
+      crew.profiles['me'] = const CrewProfile(userId: 'me', stageName: 'Ryan');
+      crew.views['post-1'] = {'me': DateTime.utc(2026, 11, 1)};
+      await pump(tester);
+      const title = 'Let my Crew know when I’ve seen their Shows';
+      expect(find.text(title), findsOneWidget);
+      expect(find.textContaining('Off: your views aren’t recorded'), findsOne);
+      tile() => find.widgetWithText(SwitchListTile, title);
+      expect(tester.widget<SwitchListTile>(tile()).value, isTrue);
+
+      await tester.ensureVisible(tile());
+      await tester.tap(tile());
+      await settle(tester);
+      expect(crew.profiles['me']!.shareViews, isFalse);
+      expect(crew.views['post-1'], isEmpty);
+      expect(tester.widget<SwitchListTile>(tile()).value, isFalse);
+
+      await tester.tap(tile());
+      await settle(tester);
+      expect(crew.profiles['me']!.shareViews, isTrue);
+      expect(tester.widget<SwitchListTile>(tile()).value, isTrue);
+    });
+
+    testWidgets('The Crew: Seen by switch says so when it can’t save', (
+      tester,
+    ) async {
+      crew = _OfflineViews();
+      crew.profiles['me'] = const CrewProfile(userId: 'me', stageName: 'Ryan');
+      await pump(tester);
+      final tile = find.widgetWithText(
+        SwitchListTile,
+        'Let my Crew know when I’ve seen their Shows',
+      );
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
+      await settle(tester);
+      expect(find.text('Couldn’t reach the Crew.'), findsOneWidget);
+      expect(tester.widget<SwitchListTile>(tile).value, isTrue);
+    });
+
     testWidgets('Tour defaults and the music app are saved', (tester) async {
       await pump(tester, signedIn: false);
       await tester.tap(find.text('Sunday'));
@@ -366,4 +409,13 @@ void main() {
       expect(store.saved.musicApp, MusicApp.appleMusic);
     });
   });
+}
+
+/// A Crew service whose Seen by switch can't reach the server.
+class _OfflineViews extends MemoryCrewService {
+  _OfflineViews() : super(me: 'me');
+
+  @override
+  Future<CrewProfile> setShareViews(CrewProfile profile, bool on) async =>
+      throw const CrewException('offline');
 }

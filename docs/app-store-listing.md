@@ -7,6 +7,9 @@ Tracker**. Character limits are in brackets. The site is
 **Status (Nov 21, 2026):** App Information, Pricing, Age Rating and the App
 Privacy answers are filled in. Still to do: **Publish** on App Privacy, the
 version page below, screenshots, review notes, and a TestFlight build.
+Shout-outs and Seen by changed two answers since then: add **Usage Data →
+Product Interaction** on App Privacy, and switch **Messaging and chat** to
+Yes on Age Rating.
 
 ## App Information
 
@@ -73,7 +76,9 @@ Free, in all countries.
 > • Invite running friends with a link or code. Nobody can find you unless
 >   you invite them.
 > • Your Crew sees the Shows you log and your Tour. Cheer theirs with an
->   Encore, and keep any Show to yourself with "Keep off the Crew"
+>   Encore or a Shout-out, and keep any Show to yourself with "Keep off
+>   the Crew"
+> • See who gave your Shows an Encore, and which Crew mates saw them
 > • Training for the same race? Book a Tour featuring a friend
 > • Block and report are always one tap away
 >
@@ -119,8 +124,11 @@ content, gambling, alcohol, medical treatment and so on), except these:
   names and profile photos with each other, invite-only, with block and
   report. Joining a Crew means agreeing to the Crew rules
   (`https://setlisttracker.com/terms.html`).
-- **Messaging and chat**: No. There's no free-text chat; shared notes
-  appear only on a friend's own Show.
+- **Messaging and chat**: Yes. Shout-outs are short free-text comments
+  (up to 280 characters) on a Show, seen only by the Show's owner and their
+  Crew. There's no private messaging. Every Shout-out can be reported, the
+  writer and the Show's owner can delete it, and blocking someone hides
+  their Shout-outs both ways.
 - **Health or wellness topics**: Yes (fitness training), with no medical
   treatment advice.
 - **Unrestricted web access**: No.
@@ -144,12 +152,13 @@ For every type below:
 | Health & Fitness | Fitness | Shows, Tours and Gear you log and sync |
 | Health & Fitness | Health | runs imported from Apple Health, stored as Shows (heart rate is read on the phone only and not collected) |
 | Location | Precise Location | the GPS route of a Show recorded with Go Live, synced with the Show |
-| User Content | Other User Content | stage name, Shows and Tour your Crew sees, reports |
+| User Content | Other User Content | stage name, Shows and Tour your Crew sees, Shout-outs (comments on a Show, seen by its owner's Crew), reports |
 | User Content | Photos or Videos | profile photo, if you upload one (only your Crew sees it) |
+| Usage Data | Product Interaction | Seen by: which Crew mates' Shows you've seen, shown only to each Show's owner (Settings → The Crew turns it off and forgets past views) |
 | Identifiers | User ID | account id |
 
 Not collected: coarse location, location outside a Go Live run, contacts, browsing or search history (song
-searches aren't stored), usage data, diagnostics, purchases.
+searches aren't stored), other usage data (no analytics), diagnostics, purchases.
 
 ## App Review notes
 
@@ -174,6 +183,17 @@ account.
 > Crew rules (https://setlisttracker.com/terms.html), which have zero
 > tolerance for objectionable content. Each report alerts the developer,
 > who reviews it within 24 hours and removes the content and the account.
+>
+> Shout-outs are short comments (up to 280 characters) on a Show, seen
+> only by the Show's owner and their Crew. Tap Shout-out under a Show to
+> open them, and long-press one for Report or Delete. Each report alerts
+> the developer, who reviews it within 24 hours, and the reported
+> Shout-out leaves the reporter's view right away. The writer or the
+> Show's owner can delete a Shout-out, and blocking someone (offered in
+> the report sheet, or from their Crew card) hides their Shout-outs both
+> ways. "Seen by" on your own Shows lists Crew mates who saw them; only
+> the Show's owner sees it, and Settings → The Crew → "Let my Crew know
+> when I've seen their Shows" turns it off.
 >
 > Apple Health: Backstage → Apple Health → Import runs reads running
 > workouts on request. Shows you book are saved to Health as running

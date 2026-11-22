@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,7 +16,9 @@ import '../live_show/route_poster.dart';
 import '../widgets/album_art.dart';
 import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
+import 'audience_sheet.dart';
 import 'crew_widgets.dart';
+import 'shoutouts_sheet.dart';
 
 /// A Show on the Crew feed: the Setlist's ticket stub, signed by the runner
 /// who logged it, with everything about the run and an Encore to cheer it.
@@ -45,7 +49,7 @@ class CrewPostCard extends ConsumerWidget {
     final notes = s.notes;
     final facts = crewShowFacts(s, gearName: post.gearName);
 
-    return Card(
+    final Widget card = Card(
       shape: const TicketBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -203,7 +207,12 @@ class CrewPostCard extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: 2),
-                    _EncoreButton(post: post),
+                    ShowReactionsRow(
+                      encore: _EncoreButton(post: post),
+                      post: post,
+                    ),
+                    // Who saw it: only on your own Shows.
+                    if (post.mine) SeenByLine(post: post),
                   ],
                 ),
               ),
@@ -212,6 +221,8 @@ class CrewPostCard extends ConsumerWidget {
         ),
       ),
     );
+    // A Crew mate's Show counts as seen once it has been on screen a beat.
+    return post.mine ? card : CrewSeenWatch(post: post, child: card);
   }
 }
 
@@ -685,67 +696,213 @@ class _EncoreButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final n = post.encores;
-    final count = n == 0 ? '' : ' · $n';
+    final counted = '$n ${n == 1 ? 'Encore' : 'Encores'}';
+    void openList() => showAudienceSheet(context, post);
     if (post.mine) {
-      // You can't cheer your own Show; just see who did.
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.celebration_outlined,
-              size: 18,
-              color: StageColors.textMuted,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              n == 0 ? 'No Encores yet' : '$n ${n == 1 ? 'Encore' : 'Encores'}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: StageColors.textMuted,
+      // You can't cheer your own Show; just see who did, and who saw it.
+      const style = TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: StageColors.textMuted,
+      );
+      final row = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.celebration_outlined,
+            size: 18,
+            color: StageColors.textMuted,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(n == 0 ? 'No Encores yet' : counted, style: style),
+          ),
+        ],
+      );
+      if (n == 0) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: row,
+        );
+      }
+      return Semantics(
+        container: true,
+        button: true,
+        label: '$counted. See who.',
+        excludeSemantics: true,
+        onTap: openList,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: openList,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: 1,
+                child: row,
               ),
             ),
-          ],
+          ),
         ),
       );
     }
-    final on = post.encoredByMe;
-    Future<void> toggle() async {
-      try {
-        await ref.read(crewControllerProvider.notifier).toggleEncore(post);
-      } catch (_) {
-        if (context.mounted) {
-          crewSnack(context, 'Couldn’t send the Encore. Try again.');
-        }
-      }
-    }
-
     return Align(
       alignment: Alignment.centerLeft,
-      child: Semantics(
-        container: true,
-        button: true,
-        toggled: on,
-        label: 'Encore',
-        value: n == 0 ? 'none yet' : '$n ${n == 1 ? 'Encore' : 'Encores'}',
-        excludeSemantics: true,
-        onTap: toggle,
-        child: TextButton.icon(
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            foregroundColor: on ? StageColors.amber : StageColors.text,
-          ),
-          onPressed: toggle,
-          icon: Icon(on ? Icons.celebration : Icons.celebration_outlined),
-          label: Text(
-            'Encore$count',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _EncoreToggle(post: post),
+          if (n > 0)
+            Semantics(
+              container: true,
+              button: true,
+              label: '$counted. See who.',
+              excludeSemantics: true,
+              onTap: openList,
+              child: TextButton(
+                key: ValueKey('encore-count-${post.id}'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(44, 44),
+                  foregroundColor: StageColors.textMuted,
+                ),
+                onPressed: openList,
+                child: Text(
+                  '$n',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: StageFonts.tabular,
+                    decoration: TextDecoration.underline,
+                    decorationColor: StageColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The Encore toggle. Turning it on pops a little stage light (not with
+/// Reduce Motion).
+class _EncoreToggle extends ConsumerStatefulWidget {
+  const _EncoreToggle({required this.post});
+  final CrewPost post;
+
+  @override
+  ConsumerState<_EncoreToggle> createState() => _EncoreToggleState();
+}
+
+class _EncoreToggleState extends ConsumerState<_EncoreToggle>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+  late final Animation<double> _scale = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.0,
+        end: 1.35,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 35,
+    ),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.35,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeInOutBack)),
+      weight: 65,
+    ),
+  ]).animate(_pop);
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    final post = widget.post;
+    if (!post.encoredByMe && !MediaQuery.disableAnimationsOf(context)) {
+      _pop.forward(from: 0);
+    }
+    try {
+      await ref.read(crewControllerProvider.notifier).toggleEncore(post);
+    } catch (_) {
+      _pop.reset();
+      if (mounted) crewSnack(context, 'Couldn’t send the Encore. Try again.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final post = widget.post;
+    final n = post.encores;
+    final on = post.encoredByMe;
+    final icon = AnimatedBuilder(
+      animation: _pop,
+      builder: (context, child) => CustomPaint(
+        foregroundPainter: _pop.isAnimating
+            ? _StageLightPainter(_pop.value)
+            : null,
+        child: Transform.scale(scale: _scale.value, child: child),
+      ),
+      child: Icon(on ? Icons.celebration : Icons.celebration_outlined),
+    );
+    return Semantics(
+      container: true,
+      button: true,
+      toggled: on,
+      label: 'Encore',
+      value: n == 0 ? 'none yet' : '$n ${n == 1 ? 'Encore' : 'Encores'}',
+      excludeSemantics: true,
+      onTap: _toggle,
+      child: TextButton.icon(
+        key: ValueKey('encore-${post.id}'),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          minimumSize: const Size(44, 44),
+          foregroundColor: on ? StageColors.amber : StageColors.text,
+        ),
+        onPressed: _toggle,
+        icon: icon,
+        label: const Text(
+          'Encore',
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
     );
   }
+}
+
+/// Eight short amber rays thrown out from the Encore icon: flat strokes,
+/// no glow.
+class _StageLightPainter extends CustomPainter {
+  _StageLightPainter(this.t);
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final paint = Paint()
+      ..color = StageColors.amber.withValues(alpha: 1 - t)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    final inner = size.shortestSide * (0.55 + 0.35 * t);
+    final length = size.shortestSide * 0.3 * (1 - t);
+    for (var i = 0; i < 8; i++) {
+      final a = i * math.pi / 4;
+      final d = Offset(math.cos(a), math.sin(a));
+      canvas.drawLine(c + d * inner, c + d * (inner + length), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StageLightPainter old) => old.t != t;
 }
 
 class _PostMenu extends ConsumerWidget {
@@ -880,6 +1037,37 @@ Future<void> showReportPhotoSheet(BuildContext context, CrewMate mate) {
           .reportAvatar(mate, reason, block: block),
     ),
   );
+}
+
+/// Report a Shout-out: pick a reason, optionally block its writer too.
+/// True once the report is sent.
+Future<bool> showReportShoutoutSheet(
+  BuildContext context,
+  CrewPost post,
+  CrewShoutout shoutout,
+) async {
+  var sent = false;
+  await showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _ReportSheet(
+      title: 'REPORT THIS SHOUT-OUT',
+      body:
+          'The app’s owner reads every report. The Shout-out disappears for '
+          'you right away.',
+      name: shoutout.stageName,
+      done: 'Thanks. The Shout-out is hidden.',
+      send: (ref, reason, block) async {
+        await ref
+            .read(crewControllerProvider.notifier)
+            .reportShoutout(post, shoutout, reason, block: block);
+        sent = true;
+      },
+    ),
+  );
+  return sent;
 }
 
 class _ReportSheet extends ConsumerStatefulWidget {
