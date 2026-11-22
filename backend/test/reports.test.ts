@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../src/env";
 import { notifyReport, reportText } from "../src/reports";
 
-const base = env as unknown as Env;
+// wrangler.toml binds the real REPORT_EMAIL; each test picks its own channels.
+const base = {
+  ...(env as unknown as Env),
+  REPORT_EMAIL: undefined,
+  REPORT_EMAIL_TO: undefined,
+} as Env;
 
 describe("notifyReport", () => {
   it("sends nothing without REPORT_WEBHOOK_URL", async () => {
