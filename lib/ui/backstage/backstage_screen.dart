@@ -7,10 +7,11 @@ import '../../logic/show_math.dart';
 import '../../models/gear.dart';
 import '../../models/saved_mix.dart';
 import '../../theme/app_theme.dart';
+import '../records/records_entry.dart';
 import '../widgets/stage_widgets.dart';
 import 'gear_dialog.dart';
 
-/// Backstage: your Gear and your Saved Mixes.
+/// Backstage: Gold Records, The Record Wall, your Gear and your Saved Mixes.
 class BackstageScreen extends ConsumerWidget {
   const BackstageScreen({super.key});
 
@@ -37,6 +38,8 @@ class BackstageScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const PosterHeader(title: 'BACKSTAGE'),
+                  const SizedBox(height: 16),
+                  const RecordsEntry(),
                   const SizedBox(height: 16),
                   SectionCard(
                     title: 'Gear',
