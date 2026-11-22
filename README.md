@@ -19,6 +19,10 @@ flutter build web              # production web build in build/web
 
 Data is saved in the browser (IndexedDB) on web and in a file on iOS. Clearing site data in the browser erases it.
 
+## On an iPhone
+
+Step-by-step, from `git pull` to the app on your phone (free Apple ID), then Sign in with Apple and TestFlight once you join the Apple Developer Program: [docs/iphone-setup.md](docs/iphone-setup.md). The app icon and web icons are drawn by `tool/app_icon.py` (`python3 tool/app_icon.py`, needs Pillow).
+
 ## Design rules
 
 Every screen follows [DESIGN.md](DESIGN.md): colors, type, shapes, components and the tour vocabulary.

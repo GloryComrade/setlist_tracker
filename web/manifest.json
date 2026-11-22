@@ -1,11 +1,11 @@
 {
-    "name": "setlist_tracker",
-    "short_name": "setlist_tracker",
+    "name": "Setlist Tracker",
+    "short_name": "Setlist",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B0A12",
+    "theme_color": "#0B0A12",
+    "description": "Marathon training tracker dressed as a music tour.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

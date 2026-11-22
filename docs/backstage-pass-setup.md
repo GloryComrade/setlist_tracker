@@ -82,7 +82,7 @@ flutter run -d chrome --web-port 3000 \
 ## Sign in with Apple (later)
 
 Apple sign-in needs the paid Apple Developer Program ($99/yr), even on the
-website. Once joined, the iPhone build guide covers it, and the button is
+website. Once joined, the [iPhone guide](iphone-setup.md) (Part 2) covers it, and the button is
 switched on with `--dart-define=APPLE_SIGN_IN=true` (and an `APPLE_SIGN_IN`
 repository variable set to `true` for the test site).
 
