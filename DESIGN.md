@@ -268,6 +268,9 @@ The first card in Backstage, a Section Card titled "Backstage Pass". Signed out:
 ### Song Picker
 A bottom sheet ("SONG OF THE SHOW") with a search field and a plain list: 52px album art, the title in Inter 700, artist and album in House Lights Grey. Each row ends with where the result came from, "Spotify" or "Apple Music", as plain Inter 600 11px House Lights Grey text in sentence case: no logos, no brand colors, never louder than the song. While a picked Spotify song looks up its Apple preview, the sheet's 2px progress bar runs and further taps wait.
 
+### Apple Health import
+iPhone only; on web the card is not built at all. A Section Card titled "Apple Health" under the Backstage Pass: one sentence ("Bring in runs from your Apple Watch or iPhone as Shows.") and a full-width 48px Magenta Deep "Import runs" button with a `favorite_border` heart, which shows a small spinner and "Checking Apple Health…" while it reads. Results open in a bottom sheet: a Bebas "NEW FROM APPLE HEALTH" headline, one grey line with the count and window, then one row per run (checkbox, the day in Inter 700 with a Venue Badge on the right, miles / pace (amber) / time in Bebas with tabular figures, and "7:00 AM · Apple Watch" in grey), all checked, and one Gradient Button "Add 3 Shows". Nothing new and no access use the Empty State layout inside the sheet with a grey hint naming Settings > Health > Data Access & Devices > Setlist Tracker, and a Done text button. The result is a snack bar ("3 Shows added to the Setlist.").
+
 ### App Bars
 Detail screens name the kind of screen ("THE SHOW", "TOUR DATE · WEEK 3", "BOOK A SHOW", "EDIT SAVED MIX"); the poster below carries the content. Screens whose poster already names them (Gold Records, The Record Wall) leave the app bar title empty.
 

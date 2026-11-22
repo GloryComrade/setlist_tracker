@@ -95,6 +95,30 @@ void main() {
     expect(loaded.live!.weather!.conditions, Conditions.cloudy);
   });
 
+  test('the Apple Health link survives a save and a soft delete', () async {
+    final now = DateTime.now();
+    final show = Show(
+      id: 'h',
+      date: DateTime(2026, 11, 21, 6),
+      venue: Venue.live,
+      workoutType: WorkoutType.easy,
+      distanceMiles: 5,
+      durationSeconds: 2700,
+      effort: 5,
+      feel: Feel.fine,
+      healthWorkoutId: 'HK-123',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await repo.save(show);
+    expect((await repo.getById('h'))!.healthWorkoutId, 'HK-123');
+    expect(show.copyWith(updatedAt: now).healthWorkoutId, 'HK-123');
+    // Older saves have no such field.
+    final old = Map<String, Object?>.from(_studioShow('o', now).toJson())
+      ..remove('healthWorkoutId');
+    expect(Show.fromJson(old).healthWorkoutId, isNull);
+  });
+
   test('watchAll is newest first and hides deleted Shows', () async {
     await repo.save(_studioShow('old', DateTime(2026, 11, 1)));
     await repo.save(_studioShow('new', DateTime(2026, 11, 20)));
