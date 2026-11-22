@@ -25,6 +25,7 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
     one("DELETE FROM crew_blocks WHERE blocker = ?1 OR blocked = ?1"),
     one("DELETE FROM crew_links WHERE user_a = ?1 OR user_b = ?1"),
     one("DELETE FROM crew_profiles WHERE user_id = ?1"),
+    one("DELETE FROM crew_avatars WHERE user_id = ?1"),
     one("DELETE FROM records WHERE user_id = ?1"),
     one("DELETE FROM sessions WHERE user_id = ?1"),
     one("DELETE FROM login_codes WHERE user_id = ?1"),

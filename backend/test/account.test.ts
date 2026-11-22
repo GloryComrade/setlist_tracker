@@ -20,6 +20,7 @@ const TABLES: [string, string][] = [
   ["crew_invite_misses", "user_id = ?1"],
   ["crew_encores_v2", "?1 IN (user_id, owner)"],
   ["crew_reports", "?1 IN (reporter, reported_user)"],
+  ["crew_avatars", "user_id = ?1"],
 ];
 
 async function rowsOf(userId: string): Promise<Record<string, number>> {
@@ -61,6 +62,12 @@ describe("DELETE /api/me", () => {
     await call("PUT", `/api/crew/posts/${mine}/encore`, { token: friend.token });
     await call("POST", `/api/crew/posts/${theirs}/report`, { token: me.token, body: { reason: "a" } });
     await call("POST", `/api/crew/posts/${mine}/report`, { token: friend.token, body: { reason: "b" } });
+    // A profile photo.
+    const photo = new Uint8Array(64).fill(1);
+    photo.set([0xff, 0xd8, 0xff]);
+    await env.DB.prepare(
+      "INSERT INTO crew_avatars (user_id, jpeg, updated_at) VALUES (?, ?, ?)",
+    ).bind(me.user.id, photo, new Date().toISOString()).run();
     // A login code, an Apple token.
     await createLoginCode(env.DB, me.user.id);
     await env.DB.prepare(

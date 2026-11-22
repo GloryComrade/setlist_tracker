@@ -119,7 +119,14 @@ describe("profile", () => {
     const r = await newRunner();
     expect((await callJson("GET", "/api/crew/profile", { token: r.token })).body).toBeNull();
     const p = await profile(r, "  Maya   Runs ", { color: 7 });
-    expect(p).toEqual({ userId: r.user.id, stageName: "Maya Runs", color: 7, allActivityPending: false });
+    expect(p).toEqual({
+      userId: r.user.id,
+      stageName: "Maya Runs",
+      color: 7,
+      allActivityPending: false,
+      avatarBadge: null,
+      avatarUrl: null,
+    });
     expect((await callJson("GET", "/api/crew/profile", { token: r.token })).body).toEqual(p);
   });
 
@@ -131,7 +138,14 @@ describe("profile", () => {
       openingNight: "April 20",
       tourName: 42,
     });
-    expect(p).toEqual({ userId: r.user.id, stageName: "Maya", color: 1, allActivityPending: false });
+    expect(p).toEqual({
+      userId: r.user.id,
+      stageName: "Maya",
+      color: 1,
+      allActivityPending: false,
+      avatarBadge: null,
+      avatarUrl: null,
+    });
   });
 
   it("validates stage name and color", async () => {
@@ -404,7 +418,7 @@ describe("the feed", () => {
     expect(mine).toMatchObject({ mine: true, gearName: null });
     expect(ryans.sharedAt).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
     expect(Object.keys(ryans).sort()).toEqual(
-      ["color", "encoredByMe", "encores", "gearName", "id", "mine", "ownerId", "sharedAt", "show", "showId", "stageName"],
+      ["avatarBadge", "avatarUrl", "color", "encoredByMe", "encores", "gearName", "id", "mine", "ownerId", "sharedAt", "show", "showId", "stageName"],
     );
 
     expect((await feed(stranger)).map((p) => p.showId)).toEqual([strangerShow]);
@@ -564,6 +578,8 @@ describe("mates and their Tours", () => {
           featuring: { userId: maya.user.id, stageName: "Maya" },
         },
         blocked: false,
+        avatarBadge: null,
+        avatarUrl: null,
       },
     ]);
 
@@ -597,6 +613,8 @@ describe("mates and their Tours", () => {
       stageName: "Ryan",
       color: 1,
       since: expect.stringMatching(/Z$/),
+      avatarBadge: null,
+      avatarUrl: null,
     });
     expect(res.body.tour).toEqual(ryanTour);
     const shows = res.body.shows as any[];

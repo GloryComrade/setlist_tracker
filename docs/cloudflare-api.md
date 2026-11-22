@@ -248,6 +248,35 @@ Mate JSON (`GET /api/crew/mates`), with the mate's active Tour summarized
 and up to 500 of their Shows (same shape as feed posts), newest Show `date`
 first. For your own id, `since` is when your account was made.
 
+### Profile pictures
+
+A runner's picture is their photo, else a drawn badge, else their initial
+(the app draws badges and initials). Code: `backend/src/avatars.ts`,
+migration `0004_avatars.sql`.
+
+- The profile, every Mate, `mate` on a mate's page and every Post carry
+  `avatarBadge` (one of `AVATAR_BADGES`: `mic`, `vinyl`, `guitar-pick`,
+  `sneaker`, `headphones`, `drumsticks`, `lightning`, `star`, `ticket`,
+  `amp`, `cassette`, `setlist`, `laurel`, `medal`, `stopwatch`, `mountain`,
+  `flame`, `wave`, `moon`, `sun`, `heart`, `crown`, `music-note`,
+  `spotlight`) and `avatarUrl` (a path such as
+  `/api/crew/avatar/{userId}?v=1795400000000`). Both are `null` when unset,
+  and both are always `null` on runners you blocked.
+- `PUT /api/crew/profile` takes `avatarBadge` too: a badge id, or `null` to
+  clear it. Leaving the field out keeps the saved badge (older app builds).
+  Anything else is `bad_request`.
+
+| Route | Body | Answer |
+|---|---|---|
+| `PUT /api/crew/avatar` | the JPEG itself, `Content-Type: image/jpeg`, at most 64 KB, starting `FF D8 FF` | the profile with its new `avatarUrl`; 415 for another type, 413 when too big, 400 when it isn't a JPEG, `need_stage_name` without a profile |
+| `DELETE /api/crew/avatar` | | the profile (`avatarUrl: null`) |
+| `GET /api/crew/avatar/{userId}?v=…` | | the JPEG (`Cache-Control: private`), for yourself and your Crew only; anyone else, blocked either way included, gets 404 `not_found` |
+| `POST /api/crew/report-avatar` | `{userId, reason}` (1 to 500 characters) | 204. Only for a Crew mate's photo; the server copies the photo (base64) into `crew_reports.post_data` with `post_id` `avatar` |
+
+The `?v=` is the photo's save time in milliseconds, so a new photo has a new
+address. The app makes the photo on the device: square, 256 px, JPEG.
+Deleting the account deletes the photo.
+
 ## Spotify search
 
 `GET /api/spotify/search?q=<text>&limit=<1..25>` returns
