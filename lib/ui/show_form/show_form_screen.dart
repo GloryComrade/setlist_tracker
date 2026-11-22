@@ -350,6 +350,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             )
           : null,
       plannedShowId: _plannedShowId ?? _existing?.plannedShowId,
+      healthWorkoutId: _existing?.healthWorkoutId,
       createdAt: _existing?.createdAt ?? now,
       updatedAt: now,
     );

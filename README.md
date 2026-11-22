@@ -37,10 +37,12 @@ lib/
   logic/tour_builder.dart       The Tour's plan rules: phases, 10% rule, Rest Stops,
                                 Headliner peak, Riegel paces, treadmill Tracks
   logic/tour_logging.dart       "Done as planned": a Planned Show into a logged Show
+  logic/health_import.dart      Apple Health runs into Shows, skipping repeats
   data/
     repositories/               abstract storage contracts (no storage code)
     local/                      Sembast versions (IndexedDB on web, file on iOS)
     auth/                       sign-in contract (no Supabase code)
+    health/                     Apple Health reader (iPhone only; web gets a stub)
     sync/                       outbox, sync engine, sync controller
     remote/                     Supabase: settings, sign-in, cloud tables
     providers.dart              wires storage, sign-in and sync together
@@ -49,7 +51,7 @@ lib/
     show_form/                  Book a Show (new + edit)
     show_detail/                one Show: poster, numbers, Tracks or venue, song
     tour/                       The Tour: setup quiz, Tour Schedule, Planned Show page
-    backstage/                  Backstage Pass, Gear, Saved Mixes, dialogs
+    backstage/                  Backstage Pass, Apple Health import, Gear, Saved Mixes, dialogs
     widgets/                    shared pieces, including the Track editor
 test/
 ```
@@ -59,6 +61,10 @@ test/
 Signing in is optional. With Supabase settings passed at build time (`--dart-define=SUPABASE_URL=… --dart-define=SUPABASE_KEY=…`), Backstage offers Google sign-in (and Apple, once switched on) and syncs Shows, Gear, Saved Mixes and Tours. The screens still read the on-device copy, so the app works offline; `lib/data/sync/` copies changes to and from the cloud underneath. Without the settings the app is local-only, as before.
 
 Setup steps: [docs/backstage-pass-setup.md](docs/backstage-pass-setup.md). Database tables and security rules: `supabase/migrations/`.
+
+## Apple Health (iPhone only)
+
+Backstage can bring in runs from Apple Health (Apple Watch or iPhone) as Shows. Read only, never writes to Health, and hidden on web. Details: [docs/apple-health.md](docs/apple-health.md).
 
 ## Notes
 

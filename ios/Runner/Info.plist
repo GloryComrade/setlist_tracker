@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Setlist Tracker reads your running workouts so you can add them to your Setlist as Shows.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Setlist Tracker never writes to Apple Health. It only reads your running workouts.</string>
 </dict>
 </plist>

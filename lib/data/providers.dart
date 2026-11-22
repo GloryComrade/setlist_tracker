@@ -14,6 +14,7 @@ import '../models/saved_mix.dart';
 import '../models/show.dart';
 import '../models/tour.dart';
 import 'auth/auth_service.dart';
+import 'health/health_source.dart';
 import 'local/sembast_repositories.dart';
 import 'repositories/repositories.dart';
 import 'sync/remote_store.dart';
@@ -27,6 +28,12 @@ final databaseProvider = Provider<Database>(
 /// Signing in. Local-only builds keep the default, which hides sign-in.
 final authServiceProvider = Provider<AuthService>(
   (ref) => const NoAuthService(),
+);
+
+/// Apple Health, read only. Unavailable on web and anywhere but iPhone, which
+/// hides the import.
+final healthSourceProvider = Provider<HealthSource>(
+  (ref) => createHealthSource(),
 );
 
 /// The cloud copy. Null in local-only builds.
