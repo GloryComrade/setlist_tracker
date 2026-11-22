@@ -52,7 +52,8 @@ void main() {
         var maxAlpha = 0;
         var edgeInk = 0;
         for (var i = 0; i < rgba.length; i += 4) {
-          // Black ink only: the print may darken the gradient, never lighten.
+          // Black ink only: the alpha is the screen, and the poster prints
+          // it in its venue mark.
           expect(rgba[i] | rgba[i + 1] | rgba[i + 2], 0, reason: p.assetName);
           if (rgba[i + 3] > maxAlpha) maxAlpha = rgba[i + 3];
           if ((i ~/ 4) % image.width == 0) edgeInk += rgba[i + 3];
@@ -76,7 +77,7 @@ void main() {
         SingleChildScrollView(
           child: PosterHeader(
             title: '26.2 mi',
-            gradient: gradientFor(venue),
+            mark: markFor(venue),
             venuePrint: StageArt.printFor(venue),
             children: [
               const Text(
@@ -93,7 +94,7 @@ void main() {
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
-              Row(children: [VenueBadge(venue, onPoster: true)]),
+              Row(children: [VenueBadge(venue)]),
             ],
           ),
         ),
@@ -174,7 +175,7 @@ void main() {
                 r.getTransformTo(null),
                 Offset.zero & r.size,
               );
-              // The poster's own gradient box spans everything; skip it.
+              // The poster's own box spans everything; skip it.
               if (rect.width >= 300) continue;
               expect(rect.right, lessThanOrEqualTo(ink.left));
             }
@@ -183,47 +184,79 @@ void main() {
       }
     }
 
-    testWidgets('the halftone covers the poster whatever the child', (
+    testWidgets('the grain covers the poster whatever the child', (
       tester,
     ) async {
       await tester.pumpWidget(
         _wrap(
           PosterSurface(
-            gradient: StageColors.liveGradient,
+            mark: StageColors.liveMark,
             venuePrint: StageArt.livePrint,
             child: const Text('5 mi'),
           ),
         ),
       );
       final paint = find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter is HalftonePainter,
+        (w) => w is CustomPaint && w.painter is GrainPainter,
       );
       expect(tester.getSize(paint).width, 358);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is HalftonePainter,
+        ),
+        findsNothing,
+      );
     });
 
-    testWidgets('a poster paints a print only when given one', (tester) async {
+    testWidgets('a poster paints a print only when given one, in its mark', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          const PosterSurface(
-            gradient: StageColors.headlineGradient,
-            child: Text('THE SETLIST'),
-          ),
-        ),
+        _wrap(const PosterSurface(child: Text('THE SETLIST'))),
       );
       expect(find.byType(Image), findsNothing);
 
-      await tester.pumpWidget(
-        _wrap(
-          PosterHeader(
-            title: '15 mi',
-            gradient: StageColors.liveGradient,
-            venuePrint: StageArt.printFor(Venue.live),
+      for (final venue in Venue.values) {
+        await tester.pumpWidget(
+          _wrap(
+            PosterHeader(
+              title: '15 mi',
+              mark: markFor(venue),
+              venuePrint: StageArt.printFor(venue),
+            ),
           ),
+        );
+        final image = tester.widget<Image>(find.byType(Image));
+        expect(image.image, StageArt.printFor(venue));
+        expect(image.excludeFromSemantics, isTrue);
+        // Recolored to the venue mark, never the black ink on the dark stage.
+        expect(image.colorBlendMode, BlendMode.srcIn);
+        expect(
+          image.color,
+          markFor(venue).withValues(alpha: PosterSurface.printStrength),
+        );
+      }
+    });
+
+    testWidgets('only the Gold Records foil keeps a halftone', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const PosterSurface.foil(child: Text('GOLD RECORDS'))),
+      );
+      final halftone = tester.widget<CustomPaint>(
+        find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is HalftonePainter,
         ),
       );
-      final image = tester.widget<Image>(find.byType(Image));
-      expect(image.image, StageArt.livePrint);
-      expect(image.excludeFromSemantics, isTrue);
+      expect((halftone.painter! as HalftonePainter).ink, StageColors.goldDeep);
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(PosterSurface),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect((box.decoration! as BoxDecoration).color, StageColors.goldMid);
     });
   });
 

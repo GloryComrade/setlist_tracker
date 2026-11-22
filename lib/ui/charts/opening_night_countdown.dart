@@ -5,8 +5,9 @@ import '../../models/tour.dart';
 import '../../theme/app_theme.dart';
 import '../tour/tour_widgets.dart';
 
-/// A one-line version of the Tour header's countdown, for use on a poster
-/// gradient: the days to go, then the date and where the Tour stands.
+/// A one-line version of the Tour header's countdown, for use on a poster:
+/// the days to go (the hero figure, in amber), then the date and where the
+/// Tour stands.
 ///
 /// Same wording as the Tour tab, so both screens tell the same story.
 class OpeningNightCountdown extends StatelessWidget {
@@ -56,7 +57,7 @@ class OpeningNightCountdown extends StatelessWidget {
                   Text(
                     '$days',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: Colors.white,
+                      color: StageColors.amber,
                       fontFeatures: StageFonts.tabular,
                     ),
                   ),

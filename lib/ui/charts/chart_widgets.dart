@@ -8,11 +8,11 @@ import '../../logic/show_math.dart';
 import '../../logic/tour_stats.dart';
 import '../../theme/app_theme.dart';
 
-/// Chart marks use the bright twin of each venue light (DESIGN.md: bright
-/// shades are for marks on the dark stage): cool cyan for Studio Sessions,
-/// warm magenta for Live Shows.
-const studioMark = StageColors.cyan;
-const liveMark = StageColors.magenta;
+/// Chart marks use the venue marks (DESIGN.md: bright shades are for marks
+/// on the dark stage): cyan for Studio Sessions, magenta for Live Shows, and
+/// amber, the one accent, for the Headliner highlight.
+const studioMark = StageColors.studioMark;
+const liveMark = StageColors.liveMark;
 const headlinerMark = StageColors.amber;
 const ghostMark = StageColors.textMuted;
 
@@ -503,16 +503,10 @@ class HeadlinerChart extends StatelessWidget {
                     spots: loggedSpots,
                     color: headlinerMark,
                     barWidth: 3,
+                    // A flat wash under the line, no fade.
                     belowBarData: BarAreaData(
                       show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          headlinerMark.withValues(alpha: 0.22),
-                          headlinerMark.withValues(alpha: 0),
-                        ],
-                      ),
+                      color: headlinerMark.withValues(alpha: 0.12),
                     ),
                     dotData: FlDotData(
                       getDotPainter: (_, _, _, _) => FlDotCirclePainter(

@@ -176,7 +176,7 @@ class _HowItWorks extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, color: StageColors.magenta, size: 22),
+                  Icon(icon, color: StageColors.amber, size: 22),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -230,7 +230,6 @@ class _CrewHome extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 PosterSurface(
-                  gradient: StageColors.headlineGradient,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -423,7 +422,7 @@ class _CrewCard extends StatelessWidget {
             ),
           const SizedBox(height: 16),
           Center(
-            child: GradientButton(
+            child: StageButton(
               label: 'Invite a friend',
               icon: Icons.person_add_alt_1,
               onPressed: () => showInviteSheet(context),

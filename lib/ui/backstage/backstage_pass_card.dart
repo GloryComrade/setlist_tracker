@@ -252,13 +252,13 @@ class _AllAccessBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      gradient: StageColors.headlineGradient,
+      border: Border.all(color: StageColors.amber, width: 1.5),
       borderRadius: BorderRadius.circular(20),
     ),
     child: const Text(
       'ALL ACCESS',
       style: TextStyle(
-        color: Colors.white,
+        color: StageColors.amber,
         fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: 0.8,

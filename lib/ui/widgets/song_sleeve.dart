@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../../theme/app_theme.dart';
+import 'stage_widgets.dart';
 
 /// The printed design of one song's stand-in sleeve, worked out from its
 /// title and artist alone, so the same song gets the same sleeve on every
@@ -53,7 +54,7 @@ class SleeveDesign {
   /// 0–1: the layout's angle or position.
   final double turn;
 
-  /// Which corner the halftone screen grows toward (0 top-left, clockwise).
+  /// Where the grain starts (0–3), so neighbouring sleeves differ.
   final int screenCorner;
 
   /// FNV-1a, 32 bit: stable across platforms, unlike `String.hashCode`.
@@ -202,8 +203,8 @@ class SongSleeve extends StatelessWidget {
   }
 }
 
-/// Paints a [SleeveDesign]: the ground, the second ink, then the same black
-/// 20% halftone screen the posters use, growing toward one corner.
+/// Paints a [SleeveDesign]: the ground, the second ink, then a black film
+/// grain (the stage's texture; only the Gold Records foil keeps a halftone).
 class SleevePainter extends CustomPainter {
   const SleevePainter(this.design);
   final SleeveDesign design;
@@ -269,33 +270,21 @@ class SleevePainter extends CustomPainter {
           canvas.drawCircle(c, s * r, ring);
         }
     }
-    _halftone(canvas, size, s);
+    _grain(canvas, size);
     canvas.restore();
   }
 
-  void _halftone(Canvas canvas, Size size, double s) {
-    final dot = Paint()
-      ..color = Colors.black.withValues(alpha: 0.2)
-      ..isAntiAlias = true;
-    final cell = math.max(3.0, s / 16);
-    final maxR = cell * 0.36;
-    final corner = design.screenCorner;
-    final fx = corner == 1 || corner == 2;
-    final fy = corner >= 2;
-    var row = 0;
-    for (var y = cell / 2; y < size.height + cell; y += cell * 0.866) {
-      final off = row.isOdd ? cell / 2 : 0.0;
-      for (var x = off; x < size.width + cell; x += cell) {
-        final ax = fx ? x / size.width : 1 - x / size.width;
-        final ay = fy ? y / size.height : 1 - y / size.height;
-        final k = ((ax + ay) / 2 - 0.35) / 0.65;
-        if (k <= 0) continue;
-        final r = maxR * math.min(1.0, k);
-        if (r < 0.35) continue;
-        canvas.drawCircle(Offset(x, y), r, dot);
-      }
-      row++;
-    }
+  /// The black film grain over the print, shifted by [SleeveDesign
+  /// .screenCorner] so two sleeves side by side don't share one grain.
+  void _grain(Canvas canvas, Size size) {
+    final shift = design.screenCorner * 32.0;
+    canvas.save();
+    canvas.translate(-shift, -shift);
+    const GrainPainter(
+      color: Colors.black,
+      opacity: 0.22,
+    ).paint(canvas, Size(size.width + shift, size.height + shift));
+    canvas.restore();
   }
 
   @override

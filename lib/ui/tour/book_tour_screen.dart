@@ -345,7 +345,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
                   ? 1
                   : (_step - _firstStep + 1) / (_questionCount + 1),
               minHeight: 4,
-              color: StageColors.magenta,
+              color: StageColors.amber,
               backgroundColor: StageColors.surfaceHigh,
             ),
           ),
@@ -468,7 +468,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
               if (_step > 0)
                 TextButton(onPressed: _back, child: const Text('Back')),
               const Spacer(),
-              GradientButton(
+              StageButton(
                 label: _step == _questions - 1 ? 'See the Tour' : 'Next',
                 icon: _step == _questions - 1 ? Icons.auto_awesome : null,
                 onPressed: _stepValid ? _next : null,
@@ -750,12 +750,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
             children: [
               if (tour != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: StageColors.headlineGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                PosterSurface(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -870,7 +865,7 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
             children: [
               TextButton(onPressed: _back, child: const Text('Back')),
               const Spacer(),
-              GradientButton(
+              StageButton(
                 label: _saving ? 'Booking…' : 'Book The Tour',
                 icon: Icons.confirmation_number_outlined,
                 onPressed: tour == null || _saving ? null : () => _book(tour),
@@ -1000,13 +995,11 @@ class _ChoiceTile extends StatelessWidget {
       selected: selected,
       button: true,
       child: Material(
-        color: selected
-            ? StageColors.magentaDeep.withValues(alpha: 0.18)
-            : StageColors.surface,
+        color: selected ? StageColors.surfaceHigh : StageColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(
-            color: selected ? StageColors.magenta : StageColors.outline,
+            color: selected ? StageColors.amber : StageColors.outline,
             width: selected ? 2 : 1,
           ),
         ),
@@ -1021,7 +1014,7 @@ class _ChoiceTile extends StatelessWidget {
                     Icon(
                       icon,
                       color: selected
-                          ? StageColors.magenta
+                          ? StageColors.amber
                           : StageColors.textMuted,
                     ),
                 const SizedBox(width: 14),
@@ -1045,7 +1038,7 @@ class _ChoiceTile extends StatelessWidget {
                   ),
                 ),
                 if (selected)
-                  const Icon(Icons.check_circle, color: StageColors.magenta),
+                  const Icon(Icons.check_circle, color: StageColors.amber),
               ],
             ),
           ),
@@ -1075,11 +1068,11 @@ class _BigChoice extends StatelessWidget {
     button: true,
     label: '$label $caption',
     child: Material(
-      color: selected ? StageColors.magentaDeep : StageColors.surface,
+      color: selected ? StageColors.amber : StageColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: selected ? StageColors.magentaDeep : StageColors.outline,
+          color: selected ? StageColors.amber : StageColors.outline,
         ),
       ),
       child: InkWell(
@@ -1094,13 +1087,16 @@ class _BigChoice extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.displaySmall
-                      ?.copyWith(color: Colors.white),
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    color: selected ? StageColors.goldInk : StageColors.text,
+                  ),
                 ),
                 Text(
                   caption,
                   style: TextStyle(
-                    color: selected ? Colors.white : StageColors.textMuted,
+                    color: selected
+                        ? StageColors.goldInk
+                        : StageColors.textMuted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1139,7 +1135,7 @@ class _DistanceNumber extends StatelessWidget {
                   fontSize: 26,
                   height: 1.05,
                   fontFeatures: StageFonts.tabular,
-                  color: selected ? StageColors.magenta : StageColors.text,
+                  color: selected ? StageColors.amber : StageColors.text,
                 ),
               ),
               const Text(
@@ -1178,7 +1174,7 @@ class _FeaturingSummary extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.groups, color: StageColors.magenta),
+          const Icon(Icons.groups, color: StageColors.amber),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -1241,7 +1237,7 @@ class _FeaturingNoteState extends State<_FeaturingNote> {
           children: [
             Icon(
               matches ? Icons.groups : Icons.info_outline,
-              color: matches ? StageColors.magenta : StageColors.textMuted,
+              color: matches ? StageColors.amber : StageColors.textMuted,
             ),
             const SizedBox(width: 12),
             Expanded(

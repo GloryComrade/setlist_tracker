@@ -71,8 +71,7 @@ void main() {
   }
 
   bool nextEnabled(WidgetTester tester) =>
-      tester.widget<GradientButton>(find.byType(GradientButton)).onPressed !=
-      null;
+      tester.widget<StageButton>(find.byType(StageButton)).onPressed != null;
 
   Future<void> tap(WidgetTester tester, String text) async {
     final f = find.text(text);
@@ -82,7 +81,7 @@ void main() {
   }
 
   Future<void> next(WidgetTester tester) async {
-    await tester.tap(find.byType(GradientButton));
+    await tester.tap(find.byType(StageButton));
     await tester.pumpAndSettle();
   }
 

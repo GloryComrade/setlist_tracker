@@ -600,7 +600,7 @@ void main() {
       expect(find.text('MAYA INVITES YOU TO THE CREW'), findsOneWidget);
       await tester.tap(
         find.descendant(
-          of: find.byType(GradientButton),
+          of: find.byType(StageButton),
           matching: find.text('JOIN THE CREW'),
         ),
       );

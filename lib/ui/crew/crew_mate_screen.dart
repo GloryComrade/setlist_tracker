@@ -207,7 +207,6 @@ class _Poster extends StatelessWidget {
       letterSpacing: 1.2,
     );
     return PosterSurface(
-      gradient: StageColors.headlineGradient,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
