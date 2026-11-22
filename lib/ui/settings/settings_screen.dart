@@ -219,6 +219,23 @@ class _CrewSection extends ConsumerWidget {
             ),
           ],
           const Divider(height: 24),
+          _Switch(
+            value: crew.profile?.shareViews ?? true,
+            title: 'Let my Crew know when I’ve seen their Shows',
+            subtitle:
+                'Off: your views aren’t recorded, and the ones already kept '
+                'are forgotten.',
+            onChanged: (v) async {
+              try {
+                await c.setShareViews(v);
+              } catch (_) {
+                if (context.mounted) {
+                  crewSnack(context, 'Couldn’t reach the Crew.');
+                }
+              }
+            },
+          ),
+          const Divider(height: 24),
           _SubHead('Blocked runners'),
           const SizedBox(height: 4),
           if (crew.blocked.isEmpty)
@@ -405,6 +422,7 @@ class _AboutSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final privacy = sitePage('privacy.html');
     final support = sitePage('support.html');
+    final terms = sitePage('terms.html');
     return SectionCard(
       title: 'About',
       child: Column(
@@ -421,6 +439,12 @@ class _AboutSection extends StatelessWidget {
               icon: Icons.help_outline,
               label: 'Support',
               onTap: () => openLink(context, support),
+            ),
+          if (terms != null)
+            _LinkRow(
+              icon: Icons.gavel_outlined,
+              label: 'Terms and Crew rules',
+              onTap: () => openLink(context, terms),
             ),
           if (privacy != null || support != null) const SizedBox(height: 12),
           const TourDisclaimer(),

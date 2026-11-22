@@ -28,6 +28,7 @@ import {
 } from "./avatars";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
+import { notifyReport } from "./reports";
 import { forgetMyViews, seenSummaries, showViewsRoute } from "./show_views";
 import { postShoutoutsRoute, shoutoutRoute, VISIBLE_SHOUTOUT } from "./shoutouts";
 import { tourInvitesRoute } from "./tour_invites";
@@ -787,7 +788,9 @@ export async function crewRoute(
   const [a, b, c] = parts;
   const n = parts.length;
 
-  const avatar = await avatarRoute(request, db, me, parts);
+  const avatar = await avatarRoute(request, db, me, parts, (reason) =>
+    notifyReport(env, "photo", reason),
+  );
   if (avatar) return avatar;
   if (a === "profile" && n === 1) {
     if (m === "GET") return json(await getProfile(db, me));
@@ -853,11 +856,15 @@ export async function crewRoute(
     if (res) return res;
   }
   if (a === "shoutouts" && n >= 2) {
-    const res = await shoutoutRoute(request, db, me, parts.slice(1));
+    const res = await shoutoutRoute(request, db, me, parts.slice(1), (reason) =>
+      notifyReport(env, "shoutout", reason),
+    );
     if (res) return res;
   }
   if (a === "posts" && n === 3 && c === "report" && m === "POST") {
-    await report(db, me, b, (await readJson(request)).reason);
+    const reason = (await readJson(request)).reason;
+    await report(db, me, b, reason);
+    await notifyReport(env, "show", reason);
     return noContent();
   }
   return null;

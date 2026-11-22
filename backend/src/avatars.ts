@@ -239,6 +239,7 @@ export async function avatarRoute(
   db: D1Database,
   me: string,
   parts: string[],
+  onReport?: (reason: unknown) => Promise<unknown>,
 ): Promise<Response | null> {
   const m = request.method;
   const [a, b] = parts;
@@ -253,7 +254,9 @@ export async function avatarRoute(
     return getAvatar(db, me, b);
   }
   if (a === "report-avatar" && n === 1 && m === "POST") {
-    await reportAvatar(db, me, await readJson(request));
+    const body = await readJson(request);
+    await reportAvatar(db, me, body);
+    await onReport?.(body.reason);
     return noContent();
   }
   return null;

@@ -30,9 +30,13 @@ final String? apiBaseUrl = resolveApiBaseUrl(
 /// True when this build can sign in and sync.
 bool get backendConfigured => apiBaseUrl != null;
 
-/// Sign in with Apple needs a paid Apple Developer account, so it stays off
-/// until that is set up: add --dart-define=APPLE_SIGN_IN=true.
-const appleSignInEnabled = bool.fromEnvironment('APPLE_SIGN_IN');
+/// Sign in with Apple. On by default in iPhone builds, because App Review
+/// (Guideline 4.8) rejects an iPhone app that offers Google sign-in without
+/// it; the website follows the APPLE_SIGN_IN repository variable. Pass
+/// --dart-define=APPLE_SIGN_IN=false to turn it off.
+const appleSignInEnabled = bool.hasEnvironment('APPLE_SIGN_IN')
+    ? bool.fromEnvironment('APPLE_SIGN_IN')
+    : !kIsWeb;
 
 /// Where the sign-in page sends the iPhone app back to. The Worker allows
 /// exactly this address (its NATIVE_REDIRECT setting), and
