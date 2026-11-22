@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/health/health_source.dart';
 import '../models/enums.dart';
+import 'gps_math.dart';
 import '../models/show.dart';
 import '../models/venue_details.dart';
 
@@ -72,6 +73,7 @@ Venue venueForHealthRun(HealthRun run) =>
 Show showFromHealthRun(HealthRun run, {required DateTime now, String? id}) {
   final venue = venueForHealthRun(run);
   final temp = run.tempF;
+  final gps = venue == Venue.live ? trackFromFixes(run.route) : null;
   return Show(
     id: id ?? const Uuid().v4(),
     date: run.start,
@@ -86,10 +88,45 @@ Show showFromHealthRun(HealthRun run, {required DateTime now, String? id}) {
         ? LiveDetails(
             elevationGainFt: run.elevationGainFt?.roundToDouble(),
             weather: temp == null ? null : Weather(tempF: temp.roundToDouble()),
+            gps: gps,
           )
         : null,
     healthWorkoutId: run.uuid,
     createdAt: now,
     updatedAt: now,
   );
+}
+
+/// Live Shows already on the Setlist from Health (imported before routes
+/// came along) whose run in [runs] now has a route: each comes back with the
+/// route added, ready to save. Shows that have a route are left alone.
+List<Show> showsWithNewRoutes(
+  List<HealthRun> runs,
+  List<Show> shows, {
+  required DateTime now,
+}) {
+  final byId = {for (final r in runs) r.uuid: r};
+  final out = <Show>[];
+  for (final s in shows) {
+    final run = byId[s.healthWorkoutId];
+    final live = s.live;
+    if (run == null || s.isDeleted || s.venue != Venue.live) continue;
+    if (live == null || live.gps != null) continue;
+    final gps = trackFromFixes(run.route);
+    if (gps == null) continue;
+    out.add(
+      s.copyWith(
+        live: LiveDetails(
+          routeName: live.routeName,
+          surface: live.surface,
+          elevationGainFt: live.elevationGainFt,
+          weather: live.weather,
+          gpxFileId: live.gpxFileId,
+          gps: gps,
+        ),
+        updatedAt: now,
+      ),
+    );
+  }
+  return out;
 }

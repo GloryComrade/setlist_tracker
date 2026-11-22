@@ -23,6 +23,7 @@ class HealthRun {
     this.elevationGainFt,
     this.tempF,
     this.sourceName,
+    this.route = const [],
   });
 
   /// HealthKit's id for the workout. Saved on the Show to stop repeats.
@@ -43,6 +44,50 @@ class HealthRun {
 
   /// The app or device that recorded it, e.g. "Apple Watch".
   final String? sourceName;
+
+  /// The GPS route Health keeps with an outdoor run, oldest fix first.
+  /// Empty for treadmill runs and workouts recorded without GPS.
+  final List<GpsPoint> route;
+
+  HealthRun withRoute(List<GpsPoint> fixes) => HealthRun(
+    uuid: uuid,
+    start: start,
+    end: end,
+    distanceMiles: distanceMiles,
+    durationSeconds: durationSeconds,
+    indoor: indoor,
+    elevationGainFt: elevationGainFt,
+    tempF: tempF,
+    sourceName: sourceName,
+    route: fixes,
+  );
+}
+
+/// The route that belongs to a run from [start] to [end]: the one whose time
+/// overlaps the run most, if it covers at least half of the shorter of the
+/// two. Null when none does.
+List<GpsPoint>? matchRoute(
+  DateTime start,
+  DateTime end,
+  Iterable<({DateTime start, DateTime end, List<GpsPoint> fixes})> routes,
+) {
+  List<GpsPoint>? best;
+  var bestOverlap = Duration.zero;
+  for (final r in routes) {
+    final from = r.start.isAfter(start) ? r.start : start;
+    final to = r.end.isBefore(end) ? r.end : end;
+    final overlap = to.difference(from);
+    if (overlap <= Duration.zero) continue;
+    final runLen = end.difference(start);
+    final routeLen = r.end.difference(r.start);
+    final shorter = runLen < routeLen ? runLen : routeLen;
+    if (overlap * 2 < shorter) continue;
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      best = r.fixes;
+    }
+  }
+  return best;
 }
 
 /// A Show to save to Health as a running workout.
@@ -93,7 +138,8 @@ abstract class HealthSource {
   /// just looks like no workouts.
   Future<bool> requestAccess();
 
-  /// Running workouts that started between [from] and [to].
+  /// Running workouts that started between [from] and [to], each with its
+  /// GPS route when Health has one.
   /// Throws [HealthAccessDenied] when Health refuses the read.
   Future<List<HealthRun>> fetchRuns(DateTime from, DateTime to);
 

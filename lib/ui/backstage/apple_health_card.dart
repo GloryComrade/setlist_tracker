@@ -78,8 +78,13 @@ class _AppleHealthCardState extends ConsumerState<AppleHealthCard> {
         last = await readLastHealthImport(db);
         final now = DateTime.now();
         final found = await source.fetchRuns(healthImportStart(last, now), now);
-        final shows = await ref.read(showRepositoryProvider).watchAll().first;
+        final repo = ref.read(showRepositoryProvider);
+        final shows = await repo.watchAll().first;
         runs = newHealthRuns(found, shows);
+        // Runs imported before routes came along get their map now.
+        for (final s in showsWithNewRoutes(found, shows, now: now)) {
+          await repo.save(s);
+        }
       }
     } on HealthAccessDenied {
       runs = null;
