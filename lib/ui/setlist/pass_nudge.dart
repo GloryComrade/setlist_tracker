@@ -38,7 +38,7 @@ class PassNudge extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
           child: Row(
             children: [
-              const Icon(Icons.badge_outlined, color: StageColors.magenta),
+              const Icon(Icons.badge_outlined, color: StageColors.amber),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(

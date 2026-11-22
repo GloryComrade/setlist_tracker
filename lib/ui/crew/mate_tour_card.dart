@@ -69,7 +69,6 @@ class MateTourCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PosterSurface(
-          gradient: StageColors.headlineGradient,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,7 +119,7 @@ class MateTourCard extends ConsumerWidget {
             container: true,
             child: Row(
               children: [
-                const Icon(Icons.groups, size: 18, color: StageColors.magenta),
+                const Icon(Icons.groups, size: 18, color: StageColors.amber),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

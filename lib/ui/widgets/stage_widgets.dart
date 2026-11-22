@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' show PointMode;
 
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
@@ -16,9 +18,11 @@ final _fullFormat = DateFormat('EEE, MMM d, y · h:mm a');
 String formatShowDay(DateTime d) => _dayFormat.format(d);
 String formatShowDateTime(DateTime d) => _fullFormat.format(d);
 
-LinearGradient gradientFor(Venue venue) => venue == Venue.studio
-    ? StageColors.studioGradient
-    : StageColors.liveGradient;
+/// The venue's one mark color: Live Show magenta, Studio Session cyan. Used
+/// only as a mark (an edge, an outline, a dot or a label), never to fill a
+/// large area.
+Color markFor(Venue venue) =>
+    venue == Venue.studio ? StageColors.studioMark : StageColors.liveMark;
 
 IconData iconFor(Venue venue) =>
     venue == Venue.studio ? Icons.graphic_eq : Icons.landscape;
@@ -32,33 +36,31 @@ IconData iconForConditions(Conditions c) => switch (c) {
   Conditions.windy => Icons.air,
 };
 
-/// Small pill that says "STUDIO SESSION" or "LIVE SHOW".
-///
-/// On a poster that is already lit in the venue's gradient, set [onPoster] so
-/// the pill turns into a dark cut-out instead of vanishing into its own color.
+/// Small pill that says "STUDIO SESSION" or "LIVE SHOW": an outline in the
+/// venue mark with the icon and label in the same mark. Reads the same on the
+/// stage, on a card and on a poster.
 class VenueBadge extends StatelessWidget {
-  const VenueBadge(this.venue, {super.key, this.onPoster = false});
+  const VenueBadge(this.venue, {super.key});
   final Venue venue;
-  final bool onPoster;
 
   @override
   Widget build(BuildContext context) {
+    final mark = markFor(venue);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        gradient: onPoster ? null : gradientFor(venue),
-        color: onPoster ? Colors.black26 : null,
+        border: Border.all(color: mark, width: 1.5),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(iconFor(venue), size: 14, color: Colors.white),
+          Icon(iconFor(venue), size: 14, color: mark),
           const SizedBox(width: 4),
           Text(
             venue.label.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: mark,
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
@@ -70,63 +72,249 @@ class VenueBadge extends StatelessWidget {
   }
 }
 
-/// A gradient block printed like a screen-printed gig poster: the stage-light
-/// gradient with a halftone dot screen that fades in toward the bottom-right
-/// corner. The dots are dark ink, so white type on top only gains contrast.
+/// The texture printed over a [PosterSurface].
+enum PosterTexture {
+  /// Film grain, the stage's own texture.
+  grain,
+
+  /// Printed halftone dots: the Gold Records foil only.
+  halftone,
+}
+
+/// A flat poster block: Stage Surface with a 1px Stage Outline and a film
+/// grain, white type on top. Posters never fill with color.
 ///
-/// A Show poster can add its [venuePrint] from [StageArt]: one more pass of
-/// the same dark ink (a route map or a treadmill) between the gradient and
-/// the dots. The print is set beside the type, never under it: see
-/// [PrintBeside].
+/// A Show poster sets [mark] to its venue mark (`markFor(venue)`), drawn as
+/// a 5pt edge down the left side, and can add its [venuePrint] from
+/// [StageArt], printed in the same mark at about 20% beside the type, never
+/// under it: see [PrintBeside].
+///
+/// [PosterSurface.foil] is the Gold Records foil: flat Gold Mid with Gold
+/// Deep halftone dots, the one halftone left in the app.
 class PosterSurface extends StatelessWidget {
   const PosterSurface({
     super.key,
-    required this.gradient,
     required this.child,
     this.padding = const EdgeInsets.all(20),
     this.radius = 20,
-    this.ink = Colors.black,
+    this.mark,
     this.venuePrint,
-  });
+  }) : fill = StageColors.surface,
+       outline = StageColors.outline,
+       texture = PosterTexture.grain;
 
-  final Gradient gradient;
+  /// The Gold Records foil: Gold Mid, no outline, Gold Deep dots. Type on
+  /// it is Gold Ink.
+  const PosterSurface.foil({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(20),
+    this.radius = 20,
+  }) : fill = StageColors.goldMid,
+       outline = null,
+       texture = PosterTexture.halftone,
+       mark = null,
+       venuePrint = null;
+
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double radius;
 
-  /// The halftone dot color, drawn at low opacity.
-  final Color ink;
+  /// The flat fill: Stage Surface, or Gold Mid on the foil.
+  final Color fill;
 
-  /// A venue print (`StageArt.printFor(venue)`), Show posters only.
+  /// The 1px border, or null for none.
+  final Color? outline;
+
+  final PosterTexture texture;
+
+  /// A venue mark for the left edge, Show posters only.
+  final Color? mark;
+
+  /// A venue print (`StageArt.printFor(venue)`), Show posters only. It is
+  /// printed in [mark] (Live magenta when there is none).
   final ImageProvider? venuePrint;
+
+  /// How wide the venue mark runs down the left edge.
+  static const markWidth = 5.0;
+
+  /// The print's ink: the mark at 60% over the print's own 16–40% screen, so
+  /// 10–24% on the poster.
+  static const printStrength = 0.6;
 
   @override
   Widget build(BuildContext context) {
-    // Full width whatever the child is, so the halftone, which places its
-    // dots by the poster's width, always covers the whole poster.
+    // Full width whatever the child is, so the texture, which is laid out
+    // by the poster's size, always covers the whole poster.
     final body = SizedBox(
       width: double.infinity,
       child: CustomPaint(
-        painter: HalftonePainter(ink: ink),
+        painter: texture == PosterTexture.halftone
+            ? const HalftonePainter(ink: StageColors.goldDeep)
+            : const GrainPainter(),
+        foregroundPainter: mark == null ? null : EdgeMarkPainter(mark!),
         child: Padding(padding: padding, child: child),
       ),
     );
+    final shape = BorderRadius.circular(radius);
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(radius),
-      ),
+      decoration: BoxDecoration(color: fill, borderRadius: shape),
+      foregroundDecoration: outline == null
+          ? null
+          : BoxDecoration(
+              border: Border.all(color: outline!),
+              borderRadius: shape,
+            ),
       child: venuePrint == null
           ? body
           : PrintBeside(
               aspect: StageArt.printAspect,
-              print: _PosterPrint(image: venuePrint!),
+              print: _PosterPrint(
+                image: venuePrint!,
+                ink: (mark ?? StageColors.liveMark).withValues(
+                  alpha: printStrength,
+                ),
+              ),
               body: body,
             ),
     );
   }
+}
+
+/// A venue mark as a solid edge down the left side of its box. The box's
+/// own rounded clip shapes its ends.
+class EdgeMarkPainter extends CustomPainter {
+  const EdgeMarkPainter(this.color, {this.width = PosterSurface.markWidth});
+
+  final Color color;
+  final double width;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width, size.height),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(EdgeMarkPainter old) =>
+      old.color != color || old.width != width;
+}
+
+/// A ticket stub or calendar tile: Stage Surface High with the venue mark as
+/// a [PosterSurface.markWidth] edge on its left.
+class VenueStub extends StatelessWidget {
+  const VenueStub({
+    super.key,
+    required this.venue,
+    required this.child,
+    this.width,
+    this.height,
+    this.padding,
+    this.borderRadius,
+    this.markWidth = PosterSurface.markWidth,
+  });
+
+  final Venue venue;
+  final Widget child;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
+  final double markWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget stub = CustomPaint(
+      foregroundPainter: EdgeMarkPainter(markFor(venue), width: markWidth),
+      child: Container(
+        width: width,
+        height: height,
+        color: StageColors.surfaceHigh,
+        padding: padding,
+        alignment: width != null && height != null ? Alignment.center : null,
+        child: child,
+      ),
+    );
+    if (borderRadius != null) {
+      stub = ClipRRect(borderRadius: borderRadius!, child: stub);
+    }
+    return stub;
+  }
+}
+
+/// Film grain: fine specks of [color] at [opacity] scattered over the box.
+///
+/// The specks come from one fixed 128pt tile built once from a fixed seed,
+/// repeated across the box, so the grain is the same on every frame and
+/// every run and never shimmers. Put it under a [RepaintBoundary] when the
+/// content over it scrolls, so it is painted once.
+class GrainPainter extends CustomPainter {
+  const GrainPainter({
+    this.color = Colors.white,
+    this.opacity = StageColors.grainOpacity,
+  });
+
+  final Color color;
+  final double opacity;
+
+  static const tile = 128.0;
+
+  /// Two speck sets: fine ones at [opacity] and fewer, brighter ones at
+  /// 1.6×, which is what makes it read as grain rather than a screen.
+  static final List<Float32List> _specks = _makeSpecks();
+
+  static List<Float32List> _makeSpecks() {
+    // A fixed linear congruential generator: the same tile everywhere.
+    var seed = 0x2545F491;
+    double next() {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    }
+
+    Float32List set(int n) {
+      final list = Float32List(n * 2);
+      for (var i = 0; i < n; i++) {
+        list[i * 2] = next() * tile;
+        list[i * 2 + 1] = next() * tile;
+      }
+      return list;
+    }
+
+    return [set(1600), set(380)];
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final fine = Paint()
+      ..color = color.withValues(alpha: opacity)
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.square;
+    final bright = Paint()
+      ..color = color.withValues(alpha: math.min(1, opacity * 1.6))
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.square;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    for (var y = 0.0; y < size.height; y += tile) {
+      for (var x = 0.0; x < size.width; x += tile) {
+        canvas.save();
+        canvas.translate(x, y);
+        canvas.drawRawPoints(PointMode.points, _specks[0], fine);
+        canvas.drawRawPoints(PointMode.points, _specks[1], bright);
+        canvas.restore();
+      }
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(GrainPainter old) =>
+      old.color != color || old.opacity != opacity;
 }
 
 /// Lays out [body] at full width, then sets [print] beside its type: as
@@ -318,11 +506,13 @@ class RenderPrintBeside extends RenderBox
 class _PrintParentData extends ContainerBoxParentData<RenderBox> {}
 
 /// The venue print, filling the box [PrintBeside] gives it (the box has the
-/// print's own aspect), faded in if it was not decoded in time (the app
+/// print's own aspect), printed in [ink]: the print's own alpha is the
+/// screen, [ink] the color. Faded in if it was not decoded in time (the app
 /// precaches both, so this is rare).
 class _PosterPrint extends StatelessWidget {
-  const _PosterPrint({required this.image});
+  const _PosterPrint({required this.image, required this.ink});
   final ImageProvider image;
+  final Color ink;
 
   @override
   Widget build(BuildContext context) {
@@ -330,6 +520,8 @@ class _PosterPrint extends StatelessWidget {
     return Image(
       image: image,
       fit: BoxFit.fill,
+      color: ink,
+      colorBlendMode: BlendMode.srcIn,
       excludeFromSemantics: true,
       gaplessPlayback: true,
       errorBuilder: (_, _, _) => const SizedBox.shrink(),
@@ -348,7 +540,8 @@ class _PosterPrint extends StatelessWidget {
 }
 
 /// Halftone dots on a 45° screen, growing from nothing on the left to about
-/// a third of the cell at the bottom-right.
+/// a third of the cell at the bottom-right. The Gold Records foil only
+/// ([PosterSurface.foil]); everywhere else the texture is [GrainPainter].
 class HalftonePainter extends CustomPainter {
   const HalftonePainter({this.ink = Colors.black, this.opacity = 0.2});
 
@@ -385,15 +578,17 @@ class HalftonePainter extends CustomPainter {
       old.ink != ink || old.opacity != opacity;
 }
 
-/// Big gradient banner used at the top of screens.
+/// The flat poster at the top of screens: a [PosterSurface] with the title
+/// in Display.
 class PosterHeader extends StatelessWidget {
   const PosterHeader({
     super.key,
     required this.title,
-    this.gradient = StageColors.headlineGradient,
     this.children = const [],
     this.semanticsTitle,
     this.venuePrint,
+    this.mark,
+    this.titleColor = Colors.white,
   });
 
   final String title;
@@ -401,17 +596,22 @@ class PosterHeader extends StatelessWidget {
   /// See [PosterSurface.venuePrint].
   final ImageProvider? venuePrint;
 
+  /// See [PosterSurface.mark].
+  final Color? mark;
+
+  /// White, or amber for a hero figure (the miles on a Show poster).
+  final Color titleColor;
+
   /// What a screen reader says for [title] when it differs, e.g. "15 miles"
   /// for "15 mi".
   final String? semanticsTitle;
-  final Gradient gradient;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return PosterSurface(
-      gradient: gradient,
+      mark: mark,
       venuePrint: venuePrint,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,9 +620,7 @@ class PosterHeader extends StatelessWidget {
             title: WholeWordsText(
               title,
               semanticsLabel: semanticsTitle,
-              style: theme.textTheme.displayMedium?.copyWith(
-                color: Colors.white,
-              ),
+              style: theme.textTheme.displayMedium?.copyWith(color: titleColor),
             ),
           ),
           ...children,
@@ -474,52 +672,20 @@ class PosterTitleRow extends StatelessWidget {
   }
 }
 
-/// House lights for the main tabs: two soft stage lights spilling down from
-/// above, magenta on one side and violet on the other. Sits behind the tab's
-/// content; the tab screens leave their own background transparent.
-class StageGlow extends StatelessWidget {
-  const StageGlow({super.key, required this.child});
+/// House lights down for the main tabs: a fine film grain over the stage,
+/// painted once behind the tab's content (the tab screens leave their own
+/// background transparent).
+class StageGrain extends StatelessWidget {
+  const StageGrain({super.key, required this.child});
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 440,
+        const Positioned.fill(
           child: IgnorePointer(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment(-0.85, -1.15),
-                      radius: 1.1,
-                      colors: [
-                        StageColors.glowMagenta,
-                        StageColors.magentaDeep.withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment(0.9, -1.2),
-                      radius: 1.0,
-                      colors: [
-                        StageColors.glowViolet,
-                        StageColors.violetDeep.withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: RepaintBoundary(child: CustomPaint(painter: GrainPainter())),
           ),
         ),
         Positioned.fill(child: child),
@@ -639,7 +805,7 @@ class EmptyStage extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 24),
-            GradientButton(
+            StageButton(
               label: actionLabel!,
               icon: actionIcon,
               onPressed: onAction,
@@ -651,9 +817,10 @@ class EmptyStage extends StatelessWidget {
   }
 }
 
-/// How a Show felt, as a white face on a stage light: cool light for a rough
-/// night, warming up to the full headline gradient for an Encore. Drawn from
-/// Material icons so it looks the same on web and iPhone (emoji don't).
+/// How a Show felt, as a face on one flat stage color: cool teal for a rough
+/// night, warming to the amber Encore. Drawn from Material icons so it looks
+/// the same on web and iPhone (emoji don't). The face keeps 4.6:1 or better
+/// on its fill.
 class FeelFace extends StatelessWidget {
   const FeelFace(this.feel, {super.key, this.size = 22, this.dim = false});
   final Feel feel;
@@ -662,25 +829,17 @@ class FeelFace extends StatelessWidget {
   /// Unpicked choices in the feel picker sit back at half strength.
   final bool dim;
 
-  static const _gradients = {
-    Feel.rough: LinearGradient(
-      colors: [StageColors.violetDeep, StageColors.tealDeep],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-    Feel.offKey: LinearGradient(
-      colors: [StageColors.violetDeep, StageColors.magentaDeep],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-    Feel.fine: LinearGradient(
-      colors: [StageColors.magentaDeep, StageColors.violetDeep],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-    Feel.good: StageColors.liveGradient,
-    Feel.encore: StageColors.headlineGradient,
+  /// One flat fill per feel, and the face's color on it.
+  static const fills = {
+    Feel.rough: StageColors.tealDeep,
+    Feel.offKey: StageColors.violetDeep,
+    Feel.fine: StageColors.feelFine,
+    Feel.good: StageColors.magentaDeep,
+    Feel.encore: StageColors.amber,
   };
+
+  static Color faceOn(Feel feel) =>
+      feel == Feel.encore ? StageColors.goldInk : Colors.white;
 
   static const _icons = {
     Feel.rough: Icons.sentiment_very_dissatisfied_rounded,
@@ -696,15 +855,12 @@ class FeelFace extends StatelessWidget {
     child: Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: _gradients[feel],
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: fills[feel]),
       alignment: Alignment.center,
       child: Icon(
         _icons[feel],
         size: size * 0.74,
-        color: Colors.white,
+        color: faceOn(feel),
         semanticLabel: feel.label,
       ),
     ),
@@ -813,9 +969,10 @@ class SectionCard extends StatelessWidget {
   }
 }
 
-/// Primary call-to-action with the stage-light gradient.
-class GradientButton extends StatelessWidget {
-  const GradientButton({
+/// The screen's one main action: a flat amber pill with Gold Ink type
+/// (10.1:1). At most one per screen.
+class StageButton extends StatelessWidget {
+  const StageButton({
     super.key,
     required this.label,
     required this.onPressed,
@@ -831,50 +988,47 @@ class GradientButton extends StatelessWidget {
     final enabled = onPressed != null;
     return Opacity(
       opacity: enabled ? 1 : 0.5,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: StageColors.headlineGradient,
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Semantics(
-          container: true,
-          button: true,
-          enabled: enabled,
-          // Said in its own case; the caps are only for the eye.
-          label: label,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: onPressed,
-              child: ExcludeSemantics(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(icon, color: Colors.white),
-                        const SizedBox(width: 8),
-                      ],
-                      // Wraps rather than overflowing on a narrow phone.
-                      Flexible(
-                        child: Text(
-                          label.toUpperCase(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                          ),
+      child: Semantics(
+        container: true,
+        button: true,
+        enabled: enabled,
+        // Said in its own case; the caps are only for the eye.
+        label: label,
+        child: Material(
+          color: StageColors.amber,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            splashColor: StageColors.goldInk.withValues(alpha: 0.12),
+            highlightColor: StageColors.goldInk.withValues(alpha: 0.08),
+            child: ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: StageColors.goldInk),
+                      const SizedBox(width: 8),
+                    ],
+                    // Wraps rather than overflowing on a narrow phone.
+                    Flexible(
+                      child: Text(
+                        label.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: StageColors.goldInk,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

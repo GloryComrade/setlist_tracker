@@ -12,12 +12,11 @@ class GoldColors {
   static const mid = StageColors.goldMid;
   static const deep = StageColors.goldDeep;
   static const ink = StageColors.goldInk;
-
-  static const foil = StageColors.goldFoil;
 }
 
-/// A record disc: gold with grooves and a label once it's pressed, a faint
-/// outline while the slot is still empty.
+/// A record disc in flat rings: Gold Mid with Gold Deep grooves and rim and a
+/// Gold Ink label once it's pressed, a faint outline while the slot is still
+/// empty.
 class GoldDisc extends StatelessWidget {
   const GoldDisc({super.key, this.size = 48, this.pressed = true});
 
@@ -41,7 +40,6 @@ class _DiscPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2;
-    final rect = Rect.fromCircle(center: c, radius: r);
 
     if (!pressed) {
       final line = Paint()
@@ -54,47 +52,30 @@ class _DiscPainter extends CustomPainter {
       return;
     }
 
-    // The foil, lit from the top left.
+    // The foil: one flat gold, with a Gold Deep rim so it holds its edge
+    // on the gold poster too.
+    canvas.drawCircle(c, r, Paint()..color = GoldColors.mid);
     canvas.drawCircle(
       c,
-      r,
+      r - math.max(0.6, r / 40),
       Paint()
-        ..shader = const SweepGradient(
-          colors: [
-            GoldColors.mid,
-            GoldColors.light,
-            GoldColors.mid,
-            GoldColors.deep,
-            GoldColors.mid,
-            GoldColors.light,
-            GoldColors.mid,
-            GoldColors.deep,
-            GoldColors.mid,
-          ],
-          transform: GradientRotation(-math.pi / 5),
-        ).createShader(rect),
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.2, r / 20)
+        ..color = GoldColors.deep,
     );
 
     // Grooves.
     final groove = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = math.max(0.6, r / 48)
-      ..color = GoldColors.deep.withValues(alpha: 0.45);
-    for (var f = 0.92; f > 0.42; f -= 0.075) {
+      ..color = GoldColors.deep.withValues(alpha: 0.6);
+    for (var f = 0.84; f > 0.42; f -= 0.075) {
       canvas.drawCircle(c, r * f, groove);
     }
 
     // The center label and spindle hole.
-    canvas.drawCircle(c, r * 0.34, Paint()..color = StageColors.magentaDeep);
-    canvas.drawCircle(
-      c,
-      r * 0.34,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(0.8, r / 32)
-        ..color = GoldColors.light.withValues(alpha: 0.7),
-    );
-    canvas.drawCircle(c, r * 0.07, Paint()..color = StageColors.background);
+    canvas.drawCircle(c, r * 0.34, Paint()..color = GoldColors.ink);
+    canvas.drawCircle(c, r * 0.07, Paint()..color = GoldColors.mid);
   }
 
   @override

@@ -62,7 +62,7 @@ class _NoTour extends StatelessWidget {
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerLeft,
-                child: _WhiteButton(
+                child: StageButton(
                   label: 'Book The Tour',
                   icon: Icons.confirmation_number_outlined,
                   onPressed: () => context.push('/tour/book'),
@@ -111,29 +111,6 @@ class _NoTour extends StatelessWidget {
       ),
     );
   }
-}
-
-/// White pill for use on top of a gradient.
-class _WhiteButton extends StatelessWidget {
-  const _WhiteButton({required this.label, required this.onPressed, this.icon});
-  final String label;
-  final IconData? icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => FilledButton.icon(
-    style: FilledButton.styleFrom(
-      backgroundColor: Colors.white,
-      foregroundColor: StageColors.background,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-    ),
-    onPressed: onPressed,
-    icon: Icon(icon),
-    label: Text(
-      label.toUpperCase(),
-      style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1.1),
-    ),
-  );
 }
 
 class _Schedule extends ConsumerStatefulWidget {
@@ -323,7 +300,6 @@ class _Header extends StatelessWidget {
       TourGoal.bq => 'Goal: BQ in ${_hm(tour.setup.goalTimeSeconds)}',
     };
     return PosterSurface(
-      gradient: StageColors.headlineGradient,
       padding: const EdgeInsets.fromLTRB(20, 16, 8, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,8 +402,9 @@ class _Countdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The days to go are the poster's hero figure, in the one accent.
     final big = Theme.of(context).textTheme.displayLarge
-        ?.copyWith(color: Colors.white, fontFeatures: StageFonts.tabular);
+        ?.copyWith(color: StageColors.amber, fontFeatures: StageFonts.tabular);
     final label = daysToGo == 1 ? 'DAY TO GO' : 'DAYS TO GO';
     final counter = daysToGo > 0
         ? Row(
@@ -784,10 +761,10 @@ class _DayRow extends StatelessWidget {
       fontSize: 11,
       fontWeight: FontWeight.w800,
       letterSpacing: 1,
-      color: isToday ? StageColors.magenta : StageColors.textMuted,
+      color: isToday ? StageColors.amber : StageColors.textMuted,
     );
     final dayStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
-      color: isToday ? StageColors.magenta : muted,
+      color: isToday ? StageColors.amber : muted,
       fontFeatures: StageFonts.tabular,
     );
     final dayWidth = math.max(

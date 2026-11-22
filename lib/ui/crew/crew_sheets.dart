@@ -325,7 +325,7 @@ class _StageNameFormState extends ConsumerState<StageNameForm> {
         ),
         const SizedBox(height: 20),
         Center(
-          child: GradientButton(
+          child: StageButton(
             label: widget.buttonLabel ?? 'Save stage name',
             onPressed: _saving ? null : _save,
           ),

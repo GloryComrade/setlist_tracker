@@ -3,8 +3,10 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../logic/show_math.dart';
 import '../../logic/spoken.dart';
+import '../../models/enums.dart';
 import '../../models/track.dart';
 import '../../theme/app_theme.dart';
+import 'stage_widgets.dart';
 
 /// Edits a list of treadmill Tracks and shows the running totals.
 /// Used by the Studio Session form and the Saved Mix editor.
@@ -200,7 +202,7 @@ class TrackTotalsBar extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white70,
+              color: StageColors.textMuted,
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 1,
@@ -216,12 +218,12 @@ class TrackTotalsBar extends StatelessWidget {
         ],
       ),
     );
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        gradient: StageColors.studioGradient,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    // Flat Stage Surface High with the Studio mark down its edge.
+    return VenueStub(
+      venue: Venue.studio,
+      markWidth: 4,
+      borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       child: Row(
         children: [
           item('TIME', formatDuration(totals.durationSeconds)),

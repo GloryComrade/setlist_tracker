@@ -214,7 +214,6 @@ class _MonthPoster extends StatelessWidget {
       icon: Icon(icon),
     );
     return PosterSurface(
-      gradient: StageColors.headlineGradient,
       padding: const EdgeInsets.fromLTRB(20, 14, 6, 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -599,7 +598,7 @@ class _DayCell extends StatelessWidget {
     final number = Text(
       '${day.date.day}',
       style: _numberStyle.copyWith(
-        color: day.isToday ? Colors.white : StageColors.text,
+        color: day.isToday ? StageColors.goldInk : StageColors.text,
       ),
     );
     final circle = 24 * scale;
@@ -616,7 +615,7 @@ class _DayCell extends StatelessWidget {
                     height: circle,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
-                      color: StageColors.magentaDeep,
+                      color: StageColors.amber,
                       shape: BoxShape.circle,
                     ),
                     child: number,
@@ -676,7 +675,7 @@ class _DayCell extends StatelessWidget {
 
 double _round1(double v) => (v * 10).round() / 10;
 
-/// A logged Show: a dot lit in its venue's gradient.
+/// A logged Show: a dot in its venue's mark.
 class _VenueDot extends StatelessWidget {
   const _VenueDot({required this.venue});
   final Venue venue;
@@ -685,10 +684,7 @@ class _VenueDot extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 9,
     height: 9,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: gradientFor(venue),
-    ),
+    decoration: BoxDecoration(shape: BoxShape.circle, color: markFor(venue)),
   );
 }
 
@@ -1022,14 +1018,13 @@ class _ShowRow extends StatelessWidget {
       if (show.durationSeconds > 0) formatDuration(show.durationSeconds),
     ];
     return _EntryTile(
-      leading: Container(
+      leading: VenueStub(
+        venue: show.venue,
         width: 40,
         height: 40,
-        decoration: BoxDecoration(
-          gradient: gradientFor(show.venue),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(iconFor(show.venue), color: Colors.white, size: 20),
+        markWidth: 4,
+        borderRadius: BorderRadius.circular(10),
+        child: Icon(iconFor(show.venue), color: markFor(show.venue), size: 20),
       ),
       title: '${show.workoutType.label} · ${show.venue.label}',
       subtitle: parts.join(' · '),

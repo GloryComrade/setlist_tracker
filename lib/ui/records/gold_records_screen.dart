@@ -129,9 +129,7 @@ class _FoilHeader extends StatelessWidget {
         : pressed == total
         ? 'All $total records pressed.'
         : '$pressed of $total records pressed.';
-    return PosterSurface(
-      gradient: GoldColors.foil,
-      ink: GoldColors.deep,
+    return PosterSurface.foil(
       padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
       child: Row(
         children: [
@@ -276,13 +274,13 @@ class _NewStamp extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
     decoration: BoxDecoration(
-      color: StageColors.magentaDeep,
+      color: StageColors.amber,
       borderRadius: BorderRadius.circular(6),
     ),
     child: const Text(
       'NEW',
       style: TextStyle(
-        color: Colors.white,
+        color: StageColors.goldInk,
         fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.2,

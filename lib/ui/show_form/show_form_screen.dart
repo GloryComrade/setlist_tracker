@@ -439,7 +439,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
                         ?_crew(),
                         const SizedBox(height: 24),
                         Center(
-                          child: GradientButton(
+                          child: StageButton(
                             label: isEdit ? 'Save changes' : 'Book it',
                             icon: Icons.mic,
                             onPressed: _saving ? null : _save,
@@ -917,7 +917,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     final song = _pickedSong;
     return SectionCard(
       title: 'Song of the Show',
-      trailing: const Icon(Icons.music_note, color: StageColors.magenta),
+      trailing: const Icon(Icons.music_note, color: StageColors.amber),
       child: song == null
           ? Align(
               alignment: Alignment.centerLeft,
@@ -1058,18 +1058,23 @@ class _VenueCard extends StatelessWidget {
     final blurb = venue == Venue.studio
         ? 'Treadmill run. Log your Tracks: speed and incline for each stretch.'
         : 'Outdoor run. Route, surface, elevation and weather.';
+    // A flat poster with the venue mark down its edge and on its icon.
     return Material(
-      borderRadius: BorderRadius.circular(20),
+      color: StageColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: StageColors.outline),
+      ),
       clipBehavior: Clip.antiAlias,
-      child: Ink(
-        decoration: BoxDecoration(gradient: gradientFor(venue)),
+      child: CustomPaint(
+        foregroundPainter: EdgeMarkPainter(markFor(venue)),
         child: InkWell(
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
               children: [
-                Icon(iconFor(venue), size: 56, color: Colors.white),
+                Icon(iconFor(venue), size: 56, color: markFor(venue)),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Column(
@@ -1084,7 +1089,7 @@ class _VenueCard extends StatelessWidget {
                       Text(
                         blurb,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: StageColors.textMuted,
                           fontSize: 15,
                         ),
                       ),

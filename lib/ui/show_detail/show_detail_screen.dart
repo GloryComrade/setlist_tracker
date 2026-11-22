@@ -166,7 +166,8 @@ class _Poster extends StatelessWidget {
     return PosterHeader(
       title: formatMiles(show.distanceMiles),
       semanticsTitle: spokenMiles(show.distanceMiles),
-      gradient: gradientFor(show.venue),
+      mark: markFor(show.venue),
+      titleColor: StageColors.amber,
       venuePrint: StageArt.printFor(show.venue),
       children: [
         Text(
@@ -189,7 +190,7 @@ class _Poster extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Row(children: [VenueBadge(show.venue, onPoster: true)]),
+        Row(children: [VenueBadge(show.venue)]),
       ],
     );
   }

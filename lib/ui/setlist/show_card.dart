@@ -33,12 +33,10 @@ class ShowCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Stub: colored strip with the day.
-                  Container(
+                  // Stub: the day, with the venue mark down its edge.
+                  VenueStub(
+                    venue: show.venue,
                     width: 64,
-                    decoration: BoxDecoration(
-                      gradient: gradientFor(show.venue),
-                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -66,7 +64,7 @@ class ShowCard extends StatelessWidget {
                         ),
                         Icon(
                           iconFor(show.venue),
-                          color: Colors.white,
+                          color: markFor(show.venue),
                           size: 18,
                         ),
                       ],
@@ -157,7 +155,7 @@ class ShowCard extends StatelessWidget {
                                   const Icon(
                                     Icons.music_note,
                                     size: 16,
-                                    color: StageColors.magenta,
+                                    color: StageColors.textMuted,
                                   ),
                                   const SizedBox(width: 4),
                                 ],

@@ -96,8 +96,8 @@ class _ClipPlayButtonState extends State<ClipPlayButton> {
           tooltip: playing ? 'Stop' : 'Play your part of the song',
           iconSize: widget.size * 0.55,
           style: IconButton.styleFrom(
-            backgroundColor: StageColors.magentaDeep,
-            foregroundColor: Colors.white,
+            backgroundColor: StageColors.amber,
+            foregroundColor: StageColors.goldInk,
             fixedSize: Size.square(widget.size),
           ),
           onPressed: _toggle,
