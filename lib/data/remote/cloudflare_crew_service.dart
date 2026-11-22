@@ -157,4 +157,46 @@ class CloudflareCrewService implements CrewService {
       body: {'reason': reason},
     ),
   );
+
+  // ---- Tour invites ----
+
+  @override
+  Future<List<String>> inviteToTour(String tourId, List<String> userIds) =>
+      _guard(() async {
+        final Object? json;
+        try {
+          json = await _api.post(
+            '/api/crew/tour-invites',
+            body: {'tourId': tourId, 'to': userIds},
+          );
+        } on ApiException catch (e) {
+          // Recipients outside the Crew are skipped, so a 404 is the Tour.
+          if (e.status == 404) throw const TourNotSyncedException();
+          rethrow;
+        }
+        final r = _map(json);
+        final invited = r['invited'];
+        return [
+          if (invited is List)
+            for (final id in invited) '$id',
+        ];
+      });
+
+  @override
+  Future<List<CrewTourInvite>> tourInvites() => _guard(() async {
+    final r = _map(await _api.get('/api/crew/tour-invites'));
+    return [
+      for (final m in asMapList(r['invites'])) ?CrewTourInvite.fromJson(m),
+    ];
+  });
+
+  @override
+  Future<void> dismissTourInvite(String id) => _guard(() async {
+    try {
+      await _api.delete('/api/crew/tour-invites/${_seg(id)}');
+    } on ApiException catch (e) {
+      // Already gone: nothing left to dismiss.
+      if (e.status != 404) rethrow;
+    }
+  });
 }

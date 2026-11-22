@@ -60,7 +60,8 @@ Show _show(
   updatedAt: date.toUtc(),
 );
 
-/// Ryan's Crew: Maya (a half marathon Tour you can book featuring her),
+/// Ryan's Crew: Maya (a half marathon Tour you can book featuring her, and
+/// her Tour invite onto it),
 /// Jordan (no Tour) and Priya (racing [coHeadlineRace] when given, so the
 /// Tour tab shows "Featuring Priya").
 MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
@@ -85,7 +86,15 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
     today.add(const Duration(days: 7 * 12 + 6)),
     RaceDistance.half,
   );
-  if (maya != null) crew.addTour('maya', maya);
+  if (maya != null) {
+    crew.addTour('maya', maya);
+    // Maya asks Ryan onto her Tour: a "Tour invites" card on The Crew tab.
+    crew.addTourInvite(
+      'maya',
+      maya,
+      at: now.subtract(const Duration(hours: 5)),
+    );
+  }
   final priya = _tour(
     today,
     coHeadlineRace ?? today.add(const Duration(days: 7 * 18 + 6)),

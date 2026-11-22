@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
 import '../../logic/tour_builder.dart';
@@ -11,6 +12,7 @@ import '../../models/enums.dart';
 import '../../models/show.dart';
 import '../../models/tour.dart';
 import '../../theme/app_theme.dart';
+import '../crew/tour_invite_picker.dart';
 import '../widgets/stage_widgets.dart';
 import 'featuring_strip.dart';
 import 'tour_manager_cards.dart';
@@ -193,6 +195,10 @@ class _ScheduleState extends ConsumerState<_Schedule> {
     final shows = ref.watch(showsProvider).value ?? const <Show>[];
     final current = _currentWeek;
     final daysToGo = daysBetween(today(), tour.raceDate);
+    final canInvite =
+        daysToGo >= 0 &&
+        ref.watch(crewServiceProvider) != null &&
+        ref.watch(crewControllerProvider.select((s) => s.profile != null));
 
     return MaxWidth(
       child: CustomScrollView(
@@ -206,6 +212,9 @@ class _ScheduleState extends ConsumerState<_Schedule> {
                 currentWeek: current,
                 onRebook: () => context.push('/tour/book'),
                 onCancel: _cancel,
+                onInvite: canInvite
+                    ? () => showTourInviteSheet(context, tour)
+                    : null,
               ),
             ),
           ),
@@ -281,6 +290,7 @@ class _Header extends StatelessWidget {
     required this.currentWeek,
     required this.onRebook,
     required this.onCancel,
+    this.onInvite,
   });
 
   final Tour tour;
@@ -288,6 +298,9 @@ class _Header extends StatelessWidget {
   final int? currentWeek;
   final VoidCallback onRebook;
   final VoidCallback onCancel;
+
+  /// "Invite to this Tour". Null hides it (no Crew, or the race is over).
+  final VoidCallback? onInvite;
 
   String get _status {
     if (daysToGo < 0) return 'Opening Night has been played';
@@ -332,13 +345,22 @@ class _Header extends StatelessWidget {
               PopupMenuButton<String>(
                 tooltip: 'Tour options',
                 iconColor: Colors.white,
-                onSelected: (v) => v == 'rebook' ? onRebook() : onCancel(),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
+                onSelected: (v) => switch (v) {
+                  'invite' => onInvite?.call(),
+                  'rebook' => onRebook(),
+                  _ => onCancel(),
+                },
+                itemBuilder: (_) => [
+                  if (onInvite != null)
+                    const PopupMenuItem(
+                      value: 'invite',
+                      child: Text('Invite to this Tour'),
+                    ),
+                  const PopupMenuItem(
                     value: 'rebook',
                     child: Text('Rebook The Tour'),
                   ),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: 'cancel',
                     child: Text('Cancel The Tour'),
                   ),
