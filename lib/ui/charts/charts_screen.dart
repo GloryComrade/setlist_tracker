@@ -255,7 +255,7 @@ class _StatsCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$daily ${daily == 1 ? 'DAY' : 'DAYS'}',
+                      '$daily ${daily == 1 ? 'day' : 'days'}',
                       style: Theme.of(context).textTheme.titleLarge
                           ?.copyWith(fontFeatures: StageFonts.tabular),
                     ),
@@ -325,7 +325,7 @@ class _BigStat extends StatelessWidget {
                   children: [
                     if (unit != null)
                       TextSpan(
-                        text: ' ${unit!.toUpperCase()}',
+                        text: ' $unit',
                         style: big?.copyWith(fontSize: 18),
                       ),
                   ],
@@ -546,7 +546,7 @@ class _GoldRecordsLink extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Gold Records',
+                        'GOLD RECORDS',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 2),

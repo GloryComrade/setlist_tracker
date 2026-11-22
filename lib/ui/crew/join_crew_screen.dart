@@ -226,7 +226,7 @@ class _InvitePoster extends StatelessWidget {
             const SizedBox(height: 14),
           ],
           Text(
-            headline,
+            headline.toUpperCase(),
             style: Theme.of(context).textTheme.displaySmall
                 ?.copyWith(color: Colors.white),
           ),

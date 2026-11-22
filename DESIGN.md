@@ -18,38 +18,38 @@ colors:
   teal-deep: "#0E7490"
 typography:
   display:
-    fontFamily: "BebasNeue"
+    fontFamily: "Anybody"
     fontSize: "48px"
-    fontWeight: 400
-    lineHeight: 1
-    letterSpacing: "0.6px"
+    fontWeight: 800
+    lineHeight: 1.05
+    letterSpacing: "0.2px"
   headline:
-    fontFamily: "BebasNeue"
+    fontFamily: "Anybody"
     fontSize: "30px"
-    fontWeight: 400
-    lineHeight: 1
-    letterSpacing: "0.6px"
+    fontWeight: 800
+    lineHeight: 1.05
+    letterSpacing: "0.2px"
   title:
-    fontFamily: "BebasNeue"
+    fontFamily: "Anybody"
     fontSize: "24px"
-    fontWeight: 400
-    lineHeight: 1
-    letterSpacing: "0.6px"
+    fontWeight: 800
+    lineHeight: 1.05
+    letterSpacing: "0.2px"
   body:
-    fontFamily: "Inter"
+    fontFamily: "AtkinsonHyperlegibleNext"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.43
   label:
-    fontFamily: "Inter"
+    fontFamily: "AtkinsonHyperlegibleNext"
     fontSize: "11px"
     fontWeight: 800
     letterSpacing: "1.2px"
   numeral:
-    fontFamily: "BebasNeue"
+    fontFamily: "Anybody"
     fontSize: "26px"
-    fontWeight: 400
-    lineHeight: 1
+    fontWeight: 800
+    lineHeight: 1.05
     fontFeature: "tnum"
 rounded:
   xs: "4px"
@@ -131,7 +131,7 @@ Every label speaks the tour language. A run is a Show, history is the Setlist, a
 **Key Characteristics:**
 - Dark mode only: near-black stage (#0B0A12) with slightly lifted card surfaces.
 - Color comes from stage-light gradients, not flat brand blocks.
-- Bebas Neue for headlines and big numbers, Inter for everything you read.
+- Anybody (condensed, extra bold) for headlines and big numbers, Atkinson Hyperlegible Next for everything you read.
 - Uppercase, tracked-out micro labels above values ("PACE", "WEEK OF NOV 17").
 - Warm gradient means Live Show, cool gradient means Studio Session, everywhere.
 - Tour vocabulary in every label, title, empty state and button.
@@ -176,22 +176,24 @@ All run top-left to bottom-right, built only from the deep shades:
 
 ## Typography
 
-**Display Font:** Bebas Neue (bundled, `assets/fonts`, SIL OFL)
-**Body Font:** Inter 400 / 600 / 700 / 800 (bundled, SIL OFL)
+**Display Font:** Anybody, a static cut of the variable font at width 60 and weight 800 (bundled as `Anybody-CondensedExtraBold.ttf`, Latin + Latin Extended, SIL OFL)
+**Body Font:** Atkinson Hyperlegible Next 400 / 600 / 700 / 800 (bundled, SIL OFL)
 
-**Character:** a condensed, all-caps tour-poster face for anything shouted, paired with a neutral, highly legible sans for anything read. Both are bundled so type works offline and on iOS with no web font fetch.
+**Character:** a rough, condensed gig-flyer face for anything shouted, paired with a body face designed to be read at a glance (open shapes, a slashed zero, no look-alike letters), which suits a sweaty check right after a run. Both are bundled so type works offline and on iOS with no web font fetch. Anybody is declared at weight 800 only; never ask it for a heavier weight, or Flutter fakes a bold.
 
 ### Hierarchy
-- **Display** (Bebas Neue 400, 64 / 48 / 38px, line-height 1.0, +0.6px): poster headers ("THE SETLIST") at 48px; the day number on ticket stubs at 38px.
-- **Headline** (Bebas Neue 400, 34 / 30 / 26px, 1.0): empty-state titles and hero numbers. Miles on a Show card at 30px, pace and time at 26px, stat values at 26px.
-- **Title** (Bebas Neue 400, 24px, 1.0): app bar titles and Section Card titles.
-- **Body** (Inter 400, Material default 14–16px): notes, descriptions, form text. Song lines use Inter 600.
-- **Label** (Inter 700–800, 11–12px, +0.8–1.2px tracking, UPPERCASE): micro labels above stats, week headers, venue badges, the workout type line on Show cards, Gradient Button text.
+- **Display** (Anybody 800, 64 / 48 / 38px, line-height 1.05, +0.2px): poster headers ("THE SETLIST") at 48px; the day number on ticket stubs at 38px.
+- **Headline** (Anybody 800, 34 / 30 / 26px, 1.05): empty-state titles and hero numbers. Miles on a Show card at 30px, pace and time at 26px, stat values at 26px.
+- **Title** (Anybody 800, 24px, 1.05): app bar titles and Section Card titles.
+- **Body** (Atkinson 400, Material default 14–16px): notes, descriptions, form text. Song lines use Atkinson 600.
+- **Label** (Atkinson 700–800, 11–12px, +0.8–1.2px tracking, UPPERCASE): micro labels above stats, week headers, venue badges, the workout type line on Show cards, Gradient Button text.
 
 ### Named Rules
-**The Poster Numbers Rule.** Distances, paces and durations are shown in the display face with tabular figures (`StageFonts.tabular`) so columns line up. Never set a stat in Inter at body size when it is the point of the card.
+**The Titles Shout, Names Don't Rule.** Anybody has lowercase, so case is set by the words, not the font. Titles of places in the app (poster headers, app bar titles, Section Card titles, empty-state and sheet headlines) are uppercase: `SectionCard` and `EmptyStage` uppercase their titles, other titles are written in caps. Names of things (songs, artists, Gear, routes, stage names in lists) and values (Headliner, Fine, Road) keep their own case, and units stay lowercase ("15 mi", "9:20 /mi", "6 wks", "48°F").
 
-**The Shout Sparingly Rule.** Uppercase is for Bebas headlines and tiny tracked labels only. Body copy, buttons other than the Gradient Button, and helper text stay in sentence case.
+**The Poster Numbers Rule.** Distances, paces and durations are shown in the display face with tabular figures (`StageFonts.tabular`) so columns line up. Never set a stat in Atkinson at body size when it is the point of the card.
+
+**The Shout Sparingly Rule.** Uppercase is for Anybody titles and tiny tracked labels only. Body copy, buttons other than the Gradient Button, and helper text stay in sentence case.
 
 ## Layout
 
@@ -217,13 +219,13 @@ Soft, generous rounding, never sharp corners. Small art and thumbnails 4–8px; 
 
 ### Buttons
 Confident and loud for the one main action, quiet for the rest.
-- **Gradient Button (primary):** headline gradient, pill shape (28px), 14px × 24px padding, white Inter 800 uppercase label tracked +1.2px, optional white leading icon. Disabled is the same button at 50% opacity. One per screen at most.
-- **Filled:** Magenta Deep with white Inter 700 text.
+- **Gradient Button (primary):** headline gradient, pill shape (28px), 14px × 24px padding, white Atkinson 800 uppercase label tracked +1.2px, optional white leading icon. Disabled is the same button at 50% opacity. One per screen at most.
+- **Filled:** Magenta Deep with white Atkinson 700 text.
 - **Text and Outlined:** Neon Magenta text; outlined adds a Stage Outline border.
-- **Floating action:** "Book a Show" extended FAB in Magenta Deep with white Inter 800 text, only on the Setlist tab.
+- **Floating action:** "Book a Show" extended FAB in Magenta Deep with white Atkinson 800 text, only on the Setlist tab.
 
 ### Chips
-- **Style:** Stage Surface High fill, Stage Outline border, 20px radius, Inter 600 label in Spotlight White.
+- **Style:** Stage Surface High fill, Stage Outline border, 20px radius, Atkinson 600 label in Spotlight White.
 - **Selected:** Magenta Deep fill with white label. Used for Setlist filters and single choices in forms.
 - **Segmented buttons:** same color logic (transparent unselected, Magenta Deep selected, outline border).
 
@@ -231,7 +233,7 @@ Confident and loud for the one main action, quiet for the rest.
 - **Corner Style:** 16px.
 - **Background:** Stage Surface with a 1px Stage Outline border, elevation 0.
 - **Internal Padding:** 16px.
-- **Section Card:** a Card with a Bebas title row (and optional trailing action), 12px gap, then content. Groups parts of forms and detail screens.
+- **Section Card:** a Card with a Anybody title row (and optional trailing action), 12px gap, then content. Groups parts of forms and detail screens.
 
 ### Inputs / Fields
 - **Style:** filled with Stage Surface High, 12px radius, no visible border at rest. The label floats inside the fill (an outline border would park it on the field's edge, so don't switch to outlined fields).
@@ -240,45 +242,45 @@ Confident and loud for the one main action, quiet for the rest.
 - **Labels and hints:** House Lights Grey. Units go in the label or suffix: mi, mph, %, °F, ft.
 
 ### Navigation
-- **Bottom bar (narrow) / side rail (800px+):** Stage Surface background; indicator is Magenta Deep at 35% opacity; labels Inter 600 12px. Each tab has an outlined icon and a filled selected icon (for example `queue_music_outlined` → `queue_music` for the Setlist, `leaderboard_outlined` → `leaderboard` for The Charts, `inventory_2_outlined` → `inventory_2` for Backstage). Charts draw bars and lines in the bright shades (cyan Studio, magenta Live, amber Headliners), since they are marks on the dark stage, and planned values as dashed outlines. New tabs follow the same outlined/filled pair.
+- **Bottom bar (narrow) / side rail (800px+):** Stage Surface background; indicator is Magenta Deep at 35% opacity; labels Atkinson 600 12px. Each tab has an outlined icon and a filled selected icon (for example `queue_music_outlined` → `queue_music` for the Setlist, `leaderboard_outlined` → `leaderboard` for The Charts, `inventory_2_outlined` → `inventory_2` for Backstage). Charts draw bars and lines in the bright shades (cyan Studio, magenta Live, amber Headliners), since they are marks on the dark stage, and planned values as dashed outlines. New tabs follow the same outlined/filled pair.
 
 ### Icons
 Material Icons only, no extra icon packs. Venue icons: `graphic_eq` for Studio Session, `landscape` for Live Show (via `iconFor(venue)`). Weather uses outlined icons where they exist (`wb_sunny_outlined`, `cloud_outlined`, `umbrella_outlined`) via `iconForConditions`. Music marks use `music_note` / `album` / `queue_music`. Icons inside gradient fills are white; on the dark stage they use Spotlight White or a bright accent. Badge icons 14px, inline marks 16–18px, nav default 24px.
 
 ### Poster Header (signature)
-The top of main screens: full-width block in the headline gradient (or a venue gradient on a Show), 20px radius, 20px padding, title in Bebas Display 48px white, optional white subline or chips below.
+The top of main screens: full-width block in the headline gradient (or a venue gradient on a Show), 20px radius, 20px padding, title in Anybody Display 48px white, optional white subline or chips below.
 
 Every poster-sized gradient block (Poster Header, the Tour header, the planned Show poster, the Gold Records foil) is a `PosterSurface`: the gradient plus a screen-printed halftone (`HalftonePainter`). Dots sit on a 7px 45° screen in black at 20% (Gold Deep on the gold foil), start at 40% across, and grow toward the bottom-right to about a third of the cell. Text sits on the left where there are no dots, and dark dots only add contrast to white type.
 
 ### Show Card / Ticket Stub (signature)
-A Setlist row styled as a ticket, cut with `TicketBorder`: 7px punched notches top and bottom where the stub meets the ticket, and a perforated tear line of 1.6px Stage Black holes every 7px between them. A 64px-wide venue-gradient stub on the left with the weekday (Inter 800 12px uppercase), the date number (Bebas 38px) and the venue icon, all white. To the right: the workout and venue line as a micro label with the feel emoji, then miles (Bebas 30px, white), pace (Bebas 26px, amber) and time (Bebas 26px, grey) with tabular figures on one line (it scales down rather than wrapping on a long Headliner), effort in grey, and the Song of the Show with 22px album art.
+A Setlist row styled as a ticket, cut with `TicketBorder`: 7px punched notches top and bottom where the stub meets the ticket, and a perforated tear line of 1.6px Stage Black holes every 7px between them. A 64px-wide venue-gradient stub on the left with the weekday (Atkinson 800 12px uppercase), the date number (Anybody 38px) and the venue icon, all white. To the right: the workout and venue line as a micro label with the feel emoji, then miles (Anybody 30px, white), pace (Anybody 26px, amber) and time (Anybody 26px, grey) with tabular figures on one line (it scales down rather than wrapping on a long Headliner), effort in grey, and the Song of the Show with 22px album art.
 
 ### Venue Badge (signature)
-A small pill (20px radius, 4px × 10px) in the venue gradient with a 14px white icon and "STUDIO SESSION" or "LIVE SHOW" in white Inter 800 11px, tracked +0.8px. On a poster already lit in a gradient, use `VenueBadge(venue, onPoster: true)`: a black 26% cut-out instead of the gradient, so it doesn't vanish into its own color.
+A small pill (20px radius, 4px × 10px) in the venue gradient with a 14px white icon and "STUDIO SESSION" or "LIVE SHOW" in white Atkinson 800 11px, tracked +0.8px. On a poster already lit in a gradient, use `VenueBadge(venue, onPoster: true)`: a black 26% cut-out instead of the gradient, so it doesn't vanish into its own color.
 
 ### Stat Tile
-Uppercase micro label in House Lights Grey (11px, 700, +1.2px) over a Bebas 26px value with tabular figures, for example "PACE" over "8:42 /mi".
+Uppercase micro label in House Lights Grey (11px, 700, +1.2px) over a Anybody 26px value with tabular figures, for example "PACE" over "8:42 /mi".
 
 ### Empty States
-One component, `EmptyStage`: a centered 56px House Lights Grey icon, a Bebas headline in caps ("NO SHOWS YET"), then one grey sentence (max 340px wide) that tells you what to do in tour words ("Book your first one and start the Setlist."), then at most one Gradient Button. Leave the button off where the screen already has the action (the Setlist's floating Book a Show). Not in a card. Gold Records is the exception: its empty state is the list of records still to press, which teaches what each one is.
+One component, `EmptyStage`: a centered 56px House Lights Grey icon, a Anybody headline in caps ("NO SHOWS YET"), then one grey sentence (max 340px wide) that tells you what to do in tour words ("Book your first one and start the Setlist."), then at most one Gradient Button. Leave the button off where the screen already has the action (the Setlist's floating Book a Show). Not in a card. Gold Records is the exception: its empty state is the list of records still to press, which teaches what each one is.
 
 ### Backstage Pass (account card)
-The first card in Backstage, a Section Card titled "Backstage Pass". Signed out: one plain sentence on what the Pass does, then full-width 48px sign-in buttons: Sign in with Apple in Apple's own white-with-black style (above), Continue with Google as a Magenta Deep filled button. Signed in: an "ALL ACCESS" badge in the headline gradient (venue-badge shape) as the card's trailing action, a 44px Magenta Deep avatar with the initial in Bebas, name in Inter 700 and email in House Lights Grey, an overflow menu (Sign out, Delete account), then one sync line: an 18px outlined cloud icon in grey (`cloud_done_outlined`) or amber when offline (`cloud_off_outlined`), grey text ("Synced 5 min ago", "Offline. 2 changes wait on this device."), and a Sync now text button. Sign out and Delete account always confirm in a dialog; the destructive action uses the error color. On the Setlist, a guest with 3 or more Shows sees one dismissible card ("Get your Backstage Pass…") with a magenta `badge_outlined` icon; it never returns once closed. Signed in, pulling down on the Setlist syncs.
+The first card in Backstage, a Section Card titled "Backstage Pass". Signed out: one plain sentence on what the Pass does, then full-width 48px sign-in buttons: Sign in with Apple in Apple's own white-with-black style (above), Continue with Google as a Magenta Deep filled button. Signed in: an "ALL ACCESS" badge in the headline gradient (venue-badge shape) as the card's trailing action, a 44px Magenta Deep avatar with the initial in Anybody, name in Atkinson 700 and email in House Lights Grey, an overflow menu (Sign out, Delete account), then one sync line: an 18px outlined cloud icon in grey (`cloud_done_outlined`) or amber when offline (`cloud_off_outlined`), grey text ("Synced 5 min ago", "Offline. 2 changes wait on this device."), and a Sync now text button. Sign out and Delete account always confirm in a dialog; the destructive action uses the error color. On the Setlist, a guest with 3 or more Shows sees one dismissible card ("Get your Backstage Pass…") with a magenta `badge_outlined` icon; it never returns once closed. Signed in, pulling down on the Setlist syncs.
 
 ### Song Picker
-A bottom sheet ("SONG OF THE SHOW") with a search field and a plain list: 52px album art, the title in Inter 700, artist and album in House Lights Grey. Each row ends with where the result came from, "Spotify" or "Apple Music", as plain Inter 600 11px House Lights Grey text in sentence case: no logos, no brand colors, never louder than the song. While a picked Spotify song looks up its Apple preview, the sheet's 2px progress bar runs and further taps wait.
+A bottom sheet ("SONG OF THE SHOW") with a search field and a plain list: 52px album art, the title in Atkinson 700, artist and album in House Lights Grey. Each row ends with where the result came from, "Spotify" or "Apple Music", as plain Atkinson 600 11px House Lights Grey text in sentence case: no logos, no brand colors, never louder than the song. While a picked Spotify song looks up its Apple preview, the sheet's 2px progress bar runs and further taps wait.
 
 ### Apple Health import
-iPhone only; on web the card is not built at all. A Section Card titled "Apple Health" under the Backstage Pass: one sentence ("Bring in runs from your Apple Watch or iPhone as Shows.") and a full-width 48px Magenta Deep "Import runs" button with a `favorite_border` heart, which shows a small spinner and "Checking Apple Health…" while it reads. Results open in a bottom sheet: a Bebas "NEW FROM APPLE HEALTH" headline, one grey line with the count and window, then one row per run (checkbox, the day in Inter 700 with a Venue Badge on the right, miles / pace (amber) / time in Bebas with tabular figures, and "7:00 AM · Apple Watch" in grey), all checked, and one Gradient Button "Add 3 Shows". Nothing new and no access use the Empty State layout inside the sheet with a grey hint naming Settings > Health > Data Access & Devices > Setlist Tracker, and a Done text button. The result is a snack bar ("3 Shows added to the Setlist.").
+iPhone only; on web the card is not built at all. A Section Card titled "Apple Health" under the Backstage Pass: one sentence ("Bring in runs from your Apple Watch or iPhone as Shows.") and a full-width 48px Magenta Deep "Import runs" button with a `favorite_border` heart, which shows a small spinner and "Checking Apple Health…" while it reads. Results open in a bottom sheet: a Anybody "NEW FROM APPLE HEALTH" headline, one grey line with the count and window, then one row per run (checkbox, the day in Atkinson 700 with a Venue Badge on the right, miles / pace (amber) / time in Anybody with tabular figures, and "7:00 AM · Apple Watch" in grey), all checked, and one Gradient Button "Add 3 Shows". Nothing new and no access use the Empty State layout inside the sheet with a grey hint naming Settings > Health > Data Access & Devices > Setlist Tracker, and a Done text button. The result is a snack bar ("3 Shows added to the Setlist.").
 
 ### The Crew (friend sharing)
 The fourth tab, "The Crew" (`groups_outlined` → `groups`), between The Charts and Backstage. Friends are your Crew; a cheer is an Encore.
 - **Guests and local-only builds** get the Empty State: "JOIN THE CREW" with a "Go Backstage" Gradient Button, or "THE CREW IS COMING" with no button.
 - **First visit:** a Poster Header "THE CREW", a Section Card "Pick your stage name" (filled field, four avatar swatches, Gradient Button "Join the Crew"), then three plain rows on how it works with magenta 22px icons.
-- **Crew Avatar:** a circle in one of the four deep shades (`crewColors`) with the initial in Bebas, white. 24px on a post, 40px in lists, 48px in the Crew strip, 56–64px on sheets and the invite poster (with a 3px white ring on a gradient).
-- **Home:** a headline-gradient `PosterSurface` with "THE CREW", one white line ("3 runners in your Crew. Only they see what you share.") and a white `tune` button for Crew settings. Below it the "Your Crew" Section Card: a horizontal strip of 76px-wide avatar chips (name in Inter 600, days to Opening Night in amber tabular figures), "Enter a code" as the text-button action, and the screen's one Gradient Button, "Invite a friend". Then a "LATEST SHOWS" micro label and the feed.
-- **Crew post:** the Show Card ticket (`TicketBorder`, venue-gradient stub), with a signature row on top (24px avatar, stage name in Inter 700 or "You", grey "2 hr ago", an overflow menu), the same workout line and Bebas numbers, the Song of the Show with 36px album art and the song note in grey, Gold Records as small Stage Surface High pills with an amber outline and an amber `album` disc, shared notes in body text, and the Encore text button (`celebration_outlined` → `celebration` in Neon Magenta when you cheered, "Encore · 3"). On your own post the Encore line is a grey count instead.
-- **Invite sheet:** "INVITE TO THE CREW", one grey sentence, the code in Bebas Display with wide tracking on a Stage Surface High block, then a filled "Send invite" (system share sheet, falls back to copy) and an outlined "Copy link". Codes are 8 characters shown as "K7Q9 MX4P".
+- **Crew Avatar:** a circle in one of the four deep shades (`crewColors`) with the initial in Anybody, white. 24px on a post, 40px in lists, 48px in the Crew strip, 56–64px on sheets and the invite poster (with a 3px white ring on a gradient).
+- **Home:** a headline-gradient `PosterSurface` with "THE CREW", one white line ("3 runners in your Crew. Only they see what you share.") and a white `tune` button for Crew settings. Below it the "Your Crew" Section Card: a horizontal strip of 76px-wide avatar chips (name in Atkinson 600, days to Opening Night in amber tabular figures), "Enter a code" as the text-button action, and the screen's one Gradient Button, "Invite a friend". Then a "LATEST SHOWS" micro label and the feed.
+- **Crew post:** the Show Card ticket (`TicketBorder`, venue-gradient stub), with a signature row on top (24px avatar, stage name in Atkinson 700 or "You", grey "2 hr ago", an overflow menu), the same workout line and Anybody numbers, the Song of the Show with 36px album art and the song note in grey, Gold Records as small Stage Surface High pills with an amber outline and an amber `album` disc, shared notes in body text, and the Encore text button (`celebration_outlined` → `celebration` in Neon Magenta when you cheered, "Encore · 3"). On your own post the Encore line is a grey count instead.
+- **Invite sheet:** "INVITE TO THE CREW", one grey sentence, the code in Anybody Display with wide tracking on a Stage Surface High block, then a filled "Send invite" (system share sheet, falls back to copy) and an outlined "Copy link". Codes are 8 characters shown as "K7Q9 MX4P".
 - **Join screen** (`/crew/join/CODE`): a headline-gradient poster with the inviter's avatar and "MAYA INVITES YOU TO THE CREW", what joining means in one white sentence, then the Gradient Button "Join the Crew" and a "Not now" text button. Expired, own and already-joined invites use the Empty State.
 - **On a Show:** a Section Card "The Crew" with a "Share with your Crew" switch, a status line ("Your Crew can see this Show · 2 Encores"), an "Include my notes" checkbox when the Show has notes, and one grey sentence listing what is and isn't shared.
 - Remove, Block and Report always confirm; Block and Report use the error color. Bottom sheets open over the nav bar.
@@ -292,7 +294,7 @@ Detail screens name the kind of screen ("THE SHOW", "TOUR DATE · WEEK 3", "BOOK
 - **Do** take every color from `StageColors` and every font from `StageFonts`; add new tokens there (and here) instead of inline hex values.
 - **Do** use the deep shades (#E0157A, #C2410C, #6D28D9, #0E7490) for any fill with white text, and check new pairings reach 4.5:1.
 - **Do** use `gradientFor(venue)` and `iconFor(venue)` whenever something belongs to a Studio Session or Live Show.
-- **Do** set stats in Bebas with tabular figures, and label them with an uppercase tracked micro label.
+- **Do** set stats in Anybody with tabular figures, and label them with an uppercase tracked micro label.
 - **Do** use the tour words from the Overview in every title, button, empty state and error message.
 - **Do** show miles, mph, min/mi, ft and °F.
 - **Do** theme any new Material widget onto the stage surfaces with surface tint off.

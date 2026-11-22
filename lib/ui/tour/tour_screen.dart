@@ -232,7 +232,7 @@ class _ScheduleState extends ConsumerState<_Schedule> {
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
             sliver: SliverToBoxAdapter(
               child: Text(
-                'Tour dates',
+                'TOUR DATES',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
             ),
@@ -449,7 +449,7 @@ class _PacesCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Paces per mile',
+                  'PACES PER MILE',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),

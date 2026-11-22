@@ -192,13 +192,13 @@ void main() {
 
     testWidgets('first visit: pick a stage name, then invite', (tester) async {
       await pump(tester, const CrewScreen());
-      expect(find.text('Pick your stage name'), findsOneWidget);
+      expect(find.text('PICK YOUR STAGE NAME'), findsOneWidget);
       // Suggested from the sign-in name.
       expect(find.widgetWithText(TextField, 'Ryan'), findsOneWidget);
       await tester.tap(find.text('JOIN THE CREW'));
       await settle(tester);
       expect(crew.profiles['me']?.stageName, 'Ryan');
-      expect(find.text('Your Crew'), findsOneWidget);
+      expect(find.text('YOUR CREW'), findsOneWidget);
       expect(find.text('NO SHOWS YET'), findsOneWidget);
 
       await tester.tap(find.text('INVITE A FRIEND'));
@@ -254,7 +254,7 @@ void main() {
       );
       await settle(tester);
       expect(crew.isCrew('me', 'maya'), isTrue);
-      expect(find.text('Your Crew'), findsOneWidget);
+      expect(find.text('YOUR CREW'), findsOneWidget);
     });
 
     testWidgets('an expired invite says so', (tester) async {

@@ -76,7 +76,7 @@ void main() {
       _run('skip-me', 3, 3.1),
     ]);
     await tester.pumpWidget(_app(db, health));
-    expect(find.text('Apple Health'), findsOneWidget);
+    expect(find.text('APPLE HEALTH'), findsOneWidget);
 
     await tester.tap(find.text('Import runs'));
     await _settle(tester);
@@ -147,7 +147,7 @@ void main() {
   testWidgets('hidden where Apple Health does not exist', (tester) async {
     final db = (await tester.runAsync(_db))!;
     await tester.pumpWidget(_app(db, const UnavailableHealthSource()));
-    expect(find.text('Apple Health'), findsNothing);
+    expect(find.text('APPLE HEALTH'), findsNothing);
     expect(find.text('Import runs'), findsNothing);
   });
 }
