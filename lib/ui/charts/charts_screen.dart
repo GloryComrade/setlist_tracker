@@ -174,6 +174,39 @@ class _StatsCard extends StatelessWidget {
     final streak = weekStreak(shows, now: now, tour: tour, doneIds: doneIds);
     final daily = longestDailyStreak(shows);
     final planned = thisWeek.plannedMiles;
+    final stats = [
+      _BigStat(
+        label: 'This week',
+        value: formatMiles(thisWeek.totalMiles, withUnit: false),
+        unit: 'mi',
+        color: StageColors.amber,
+        caption: planned != null && planned > 0
+            ? 'of ${formatMiles(planned)} planned'
+            : thisWeek.showCount == 1
+            ? '1 Show'
+            : '${thisWeek.showCount} Shows',
+        semantics:
+            'This week: ${formatMiles(thisWeek.totalMiles)}'
+            '${planned != null && planned > 0 ? ' of ${formatMiles(planned)} planned' : ''}',
+      ),
+      _BigStat(
+        label: 'Streak',
+        value: '${streak.current}',
+        unit: streak.current == 1 ? 'wk' : 'wks',
+        caption: 'Longest ${streak.longest}',
+        semantics:
+            'Week streak: ${streak.current} '
+            '${streak.current == 1 ? 'week' : 'weeks'}, '
+            'longest ${streak.longest}. A week counts with '
+            '3 or more Shows or every Tour run done.',
+      ),
+      _BigStat(
+        label: 'Shows',
+        value: NumberFormat.decimalPattern().format(shows.length),
+        caption: 'All time',
+        semantics: '${shows.length} Shows played, all time',
+      ),
+    ];
 
     return Card(
       child: Padding(
@@ -181,51 +214,46 @@ class _StatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _BigStat(
-                      label: 'This week',
-                      value: formatMiles(thisWeek.totalMiles, withUnit: false),
-                      unit: 'mi',
-                      color: StageColors.amber,
-                      caption: planned != null && planned > 0
-                          ? 'of ${formatMiles(planned)} planned'
-                          : thisWeek.showCount == 1
-                          ? '1 Show'
-                          : '${thisWeek.showCount} Shows',
-                      semantics:
-                          'This week: ${formatMiles(thisWeek.totalMiles)}'
-                          '${planned != null && planned > 0 ? ' of ${formatMiles(planned)} planned' : ''}',
-                    ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Three columns while every label keeps whole words; at large
+                // text sizes the stats stack, one per line.
+                final column = (constraints.maxWidth - 48) / 3;
+                final fits = _statLabels.every(
+                  (l) => l
+                      .toUpperCase()
+                      .split(' ')
+                      .every(
+                        (w) =>
+                            measureTextWidth(context, w, _BigStat.labelStyle) <=
+                            column,
+                      ),
+                );
+                if (!fits) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      stats[0],
+                      const Divider(height: 24),
+                      stats[1],
+                      const Divider(height: 24),
+                      stats[2],
+                    ],
+                  );
+                }
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: stats[0]),
+                      const VerticalDivider(width: 24),
+                      Expanded(child: stats[1]),
+                      const VerticalDivider(width: 24),
+                      Expanded(child: stats[2]),
+                    ],
                   ),
-                  const VerticalDivider(width: 24),
-                  Expanded(
-                    child: _BigStat(
-                      label: 'Streak',
-                      value: '${streak.current}',
-                      unit: streak.current == 1 ? 'wk' : 'wks',
-                      caption: 'Longest ${streak.longest}',
-                      semantics:
-                          'Week streak: ${streak.current} '
-                          '${streak.current == 1 ? 'week' : 'weeks'}, '
-                          'longest ${streak.longest}. A week counts with '
-                          '3 or more Shows or every Tour run done.',
-                    ),
-                  ),
-                  const VerticalDivider(width: 24),
-                  Expanded(
-                    child: _BigStat(
-                      label: 'Shows',
-                      value: NumberFormat.decimalPattern().format(shows.length),
-                      caption: 'All time',
-                      semantics: '${shows.length} Shows played, all time',
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             const Divider(height: 1),
@@ -275,6 +303,8 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
+const _statLabels = ['This week', 'Streak', 'Shows'];
+
 class _BigStat extends StatelessWidget {
   const _BigStat({
     required this.label,
@@ -292,6 +322,13 @@ class _BigStat extends StatelessWidget {
   final String semantics;
   final Color color;
 
+  static const labelStyle = TextStyle(
+    fontSize: 11,
+    letterSpacing: 1.2,
+    fontWeight: FontWeight.w700,
+    color: StageColors.textMuted,
+  );
+
   @override
   Widget build(BuildContext context) {
     final big = Theme.of(context).textTheme.headlineLarge
@@ -305,15 +342,9 @@ class _BigStat extends StatelessWidget {
           children: [
             Text(
               label.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.fade,
-              softWrap: false,
-              style: const TextStyle(
-                fontSize: 11,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-                color: StageColors.textMuted,
-              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
             const SizedBox(height: 6),
             FittedBox(
@@ -374,7 +405,7 @@ class _WeeklyCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 4),
-          chart,
+          _ChartText(child: chart),
           const SizedBox(height: 12),
           Wrap(
             spacing: 16,
@@ -437,7 +468,7 @@ class _HeadlinerCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                chart,
+                _ChartText(child: chart),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 16,
@@ -511,6 +542,17 @@ class _SplitCard extends StatelessWidget {
   }
 }
 
+/// Axis labels sit in a fixed-height chart, so they grow only a little with
+/// the text size; past that they would overlap and break mid-number.
+class _ChartText extends StatelessWidget {
+  const _ChartText({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      MediaQuery.withClampedTextScaling(maxScaleFactor: 1.2, child: child);
+}
+
 // ---------------------------------------------------------------------------
 // Gold Records door
 // ---------------------------------------------------------------------------
@@ -545,7 +587,7 @@ class _GoldRecordsLink extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      WholeWordsText(
                         'GOLD RECORDS',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),

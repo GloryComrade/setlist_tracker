@@ -228,7 +228,7 @@ class _CrewHome extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            WholeWordsText(
                               'THE CREW',
                               style: Theme.of(context).textTheme.displayMedium
                                   ?.copyWith(color: Colors.white),
@@ -335,13 +335,17 @@ class _CrewCard extends StatelessWidget {
               style: TextStyle(color: StageColors.textMuted, height: 1.4),
             )
           else
-            SizedBox(
-              height: 92,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: crew.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (context, i) => _MateChip(mate: crew[i]),
+            // Sized by its chips, so the strip grows with the text size.
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < crew.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    _MateChip(mate: crew[i]),
+                  ],
+                ],
               ),
             ),
           const SizedBox(height: 16),
@@ -370,30 +374,45 @@ class _MateChip extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => showMateSheet(context, mate),
-      child: SizedBox(
-        width: 76,
-        child: Column(
-          children: [
-            const SizedBox(height: 4),
-            CrewAvatar(name: mate.stageName, color: mate.color, size: 48),
-            const SizedBox(height: 6),
-            Text(
-              mate.stageName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-            if (days != null && days >= 0)
+      // 76px wide at 100% text, growing with the text size; a long name
+      // ends in an ellipsis instead of running into the next chip.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: 76,
+          maxWidth: MediaQuery.textScalerOf(context).scale(76),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 4),
+              CrewAvatar(name: mate.stageName, color: mate.color, size: 48),
+              const SizedBox(height: 6),
               Text(
-                days == 0 ? 'Race day' : '$days days',
+                mate.stageName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: StageColors.amber,
-                  fontFeatures: StageFonts.tabular,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
-          ],
+              if (days != null && days >= 0)
+                Text(
+                  days == 0 ? 'Race day' : '$days days',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: StageColors.amber,
+                    fontFeatures: StageFonts.tabular,
+                  ),
+                ),
+              const SizedBox(height: 4),
+            ],
+          ),
         ),
       ),
     );

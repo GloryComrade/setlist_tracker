@@ -164,7 +164,7 @@ class PosterHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          WholeWordsText(
             title,
             style: theme.textTheme.displayMedium?.copyWith(color: Colors.white),
           ),
@@ -478,7 +478,7 @@ class SectionCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: WholeWordsText(
                     title.toUpperCase(),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
@@ -590,3 +590,58 @@ Widget? backButtonFor(BuildContext context, {String fallback = '/setlist'}) =>
         icon: const Icon(Icons.arrow_back),
         onPressed: () => context.go(fallback),
       );
+
+/// How wide [text] lays out on one line in [context], with the screen's
+/// text size (Dynamic Type) applied. [style] is merged onto the ambient
+/// [DefaultTextStyle], the same way a [Text] would draw it.
+double measureTextWidth(BuildContext context, String text, TextStyle? style) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: DefaultTextStyle.of(context).style.merge(style),
+    ),
+    textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// Big poster type that wraps only between words. At large text sizes a
+/// word too long for one line (BACKSTAGE at 200%) is set a little smaller
+/// instead of being broken in the middle.
+class WholeWordsText extends StatelessWidget {
+  const WholeWordsText(this.text, {super.key, this.style, this.textAlign});
+
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        var fit = scaler;
+        if (constraints.maxWidth.isFinite) {
+          final widest = text
+              .split(RegExp(r'\s+'))
+              .where((w) => w.isNotEmpty)
+              .map((w) => measureTextWidth(context, w, style))
+              .fold(0.0, math.max);
+          if (widest > constraints.maxWidth) {
+            final size =
+                DefaultTextStyle.of(context).style.merge(style).fontSize ?? 14;
+            final scaled =
+                scaler.scale(size) * 0.99 * constraints.maxWidth / widest;
+            // Never smaller than the type at 100%.
+            fit = TextScaler.linear(math.max(scaled, size) / size);
+          }
+        }
+        return Text(text, style: style, textAlign: textAlign, textScaler: fit);
+      },
+    );
+  }
+}
