@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../logic/tour_logging.dart';
 import '../../models/enums.dart';
 import '../../models/show.dart';
@@ -397,51 +398,61 @@ class _LoggedNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final pace = show.paceSecondsPerMile;
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/show/${show.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.check_circle,
-                color: StageColors.amber,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Played',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
+      child: Semantics(
+        container: true,
+        button: true,
+        label:
+            'Played. ${spokenMiles(show.distanceMiles)}, '
+            '${spokenDuration(show.durationSeconds)}, ${spokenPace(pace)}. '
+            'View Show',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/show/${show.id}'),
+          child: ExcludeSemantics(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: StageColors.amber,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Played',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '${formatMiles(show.distanceMiles)} · '
+                          '${formatDuration(show.durationSeconds)} · '
+                          '${formatPace(pace)}',
+                          style: const TextStyle(
+                            color: StageColors.textMuted,
+                            fontFeatures: StageFonts.tabular,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '${formatMiles(show.distanceMiles)} · '
-                      '${formatDuration(show.durationSeconds)} · '
-                      '${formatPace(pace)}',
-                      style: const TextStyle(
-                        color: StageColors.textMuted,
-                        fontFeatures: StageFonts.tabular,
-                      ),
+                  ),
+                  const Text(
+                    'View Show',
+                    style: TextStyle(
+                      color: StageColors.magenta,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
+                  ),
+                  const Icon(Icons.chevron_right, color: StageColors.magenta),
+                ],
               ),
-              const Text(
-                'View Show',
-                style: TextStyle(
-                  color: StageColors.magenta,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: StageColors.magenta),
-            ],
+            ),
           ),
         ),
       ),

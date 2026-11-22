@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../logic/spotify_links.dart';
 import '../../models/enums.dart';
 import '../../models/gear.dart';
@@ -143,11 +144,15 @@ class _Poster extends StatelessWidget {
     final theme = Theme.of(context);
     return PosterHeader(
       title: formatMiles(show.distanceMiles),
+      semanticsTitle: spokenMiles(show.distanceMiles),
       gradient: gradientFor(show.venue),
       children: [
         Text(
           '${formatPace(show.paceSecondsPerMile)}  ·  '
           '${formatDuration(show.durationSeconds)}',
+          semanticsLabel:
+              '${spokenPace(show.paceSecondsPerMile)}, '
+              '${spokenDuration(show.durationSeconds)}',
           style: theme.textTheme.headlineMedium?.copyWith(
             color: Colors.white,
             fontFeatures: StageFonts.tabular,

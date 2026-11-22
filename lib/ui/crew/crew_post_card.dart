@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../data/crew/crew_controller.dart';
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../models/crew.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/album_art.dart';
@@ -37,7 +38,8 @@ class CrewPostCard extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Stub(post: post),
+              // The stub's day is spoken with the workout line below.
+              ExcludeSemantics(child: _Stub(post: post)),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 10, 4, 4),
@@ -74,53 +76,67 @@ class CrewPostCard extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        '${s.workoutType.label.toUpperCase()} · '
-                        '${s.venue.label.toUpperCase()}',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1,
-                          color: StageColors.textMuted,
+                      // Spoken with the numbers below, as one line.
+                      ExcludeSemantics(
+                        child: Text(
+                          '${s.workoutType.label.toUpperCase()} · '
+                          '${s.venue.label.toUpperCase()}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                            color: StageColors.textMuted,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              formatMiles(s.distanceMiles),
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                fontFeatures: StageFonts.tabular,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Text(
-                              formatPace(
-                                paceSecondsPerMileFor(
-                                  s.distanceMiles,
-                                  s.durationSeconds,
+                      Semantics(
+                        container: true,
+                        label:
+                            '${spokenShowHeading(s.date, s.workoutType, s.venue)} '
+                            '${spokenShowNumbers(s.distanceMiles, s.durationSeconds)}',
+                        child: ExcludeSemantics(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  formatMiles(s.distanceMiles),
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(
+                                        fontFeatures: StageFonts.tabular,
+                                      ),
                                 ),
-                              ),
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: StageColors.amber,
-                                fontFeatures: StageFonts.tabular,
-                              ),
+                                const SizedBox(width: 14),
+                                Text(
+                                  formatPace(
+                                    paceSecondsPerMileFor(
+                                      s.distanceMiles,
+                                      s.durationSeconds,
+                                    ),
+                                  ),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        color: StageColors.amber,
+                                        fontFeatures: StageFonts.tabular,
+                                      ),
+                                ),
+                                const SizedBox(width: 14),
+                                Text(
+                                  formatDuration(s.durationSeconds),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        color: StageColors.textMuted,
+                                        fontFeatures: StageFonts.tabular,
+                                      ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 14),
-                            Text(
-                              formatDuration(s.durationSeconds),
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: StageColors.textMuted,
-                                fontFeatures: StageFonts.tabular,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                       if (song != null) ...[
@@ -233,15 +249,34 @@ class _SongLine extends StatelessWidget {
         ),
       ],
     );
+    final spoken = [spokenSong(song), if (note != null) '“$note”'].join(' ');
     if (link == null) {
-      return Padding(padding: const EdgeInsets.only(right: 10), child: line);
+      return Semantics(
+        container: true,
+        label: spoken,
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: line,
+          ),
+        ),
+      );
     }
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => openLink(context, Uri.parse(link)),
-      child: Padding(
-        padding: const EdgeInsets.only(right: 10, top: 2, bottom: 2),
-        child: line,
+    final where = song.spotifyUrl != null ? 'Spotify' : 'Apple Music';
+    return Semantics(
+      container: true,
+      link: true,
+      label: spoken,
+      hint: 'Opens in $where',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => openLink(context, Uri.parse(link)),
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 10, top: 2, bottom: 2),
+            child: line,
+          ),
+        ),
       ),
     );
   }
@@ -255,27 +290,35 @@ class _GoldBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(6, 3, 10, 3),
-      decoration: BoxDecoration(
-        color: StageColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: StageColors.amber.withValues(alpha: 0.55)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.album, size: 14, color: StageColors.amber),
-          const SizedBox(width: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: StageColors.amber,
+    return Semantics(
+      container: true,
+      label: 'Gold Record: $title',
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 3, 10, 3),
+          decoration: BoxDecoration(
+            color: StageColors.surfaceHigh,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: StageColors.amber.withValues(alpha: 0.55),
             ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.album, size: 14, color: StageColors.amber),
+              const SizedBox(width: 4),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: StageColors.amber,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

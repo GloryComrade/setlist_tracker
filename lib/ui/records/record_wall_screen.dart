@@ -371,8 +371,11 @@ class _PrintedSleeve extends StatelessWidget {
               .split(RegExp(r'\s+'))
               .fold(1, (n, w) => w.length > n ? w.length : n);
           final fit = (c.maxWidth - 20) / (longest * 0.5);
+          // Never below 11, the smallest size anyone reads on a phone; a
+          // word too long for that ellipsizes instead.
           final fontSize =
-              fit.clamp(10.0, 22.0) * (c.maxWidth / 115).clamp(0.6, 1.0);
+              (fit.clamp(11.0, 22.0) * (c.maxWidth / 115).clamp(0.6, 1.0))
+                  .clamp(11.0, 22.0);
           return Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
