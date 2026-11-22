@@ -382,6 +382,28 @@ void main() {
       expect(build.checks.where((c) => c.serious), isEmpty);
     });
 
+    test('a short 5K Tour from a modest base is not a serious warning', () {
+      final b = TourBuilder().build(
+        _setup(
+          distance: RaceDistance.fiveK,
+          race: DateTime(2027, 1, 10), // 7 weeks out
+          weekly: 12,
+          longest: 4,
+          goalTime: null,
+          goal: TourGoal.finish,
+        ),
+        today: _today,
+      );
+      final c = b.checks.firstWhere((c) => c.title == 'Short Tour');
+      expect(c.serious, isFalse);
+      // A marathon from the same base still is.
+      final m = TourBuilder().build(
+        _setup(race: DateTime(2027, 3, 7), weekly: 15),
+        today: _today,
+      );
+      expect(m.checks.firstWhere((c) => c.title == 'Short Tour').serious, true);
+    });
+
     test('help me pick uses the distance', () {
       final d = suggestedRaceDate(_today, RaceDistance.tenK);
       expect(daysBetween(_today, d), inInclusiveRange(84, 90));
