@@ -71,7 +71,7 @@ class ShowDetailScreen extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             leading: backButtonFor(context),
-            title: Text(show.workoutType.label.toUpperCase()),
+            title: const Text('THE SHOW'),
             actions: [
               IconButton(
                 tooltip: 'Edit',
@@ -151,33 +151,7 @@ class _Poster extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(iconFor(show.venue), size: 14, color: Colors.white),
-                  const SizedBox(width: 4),
-                  Text(
-                    show.venue.label.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        Row(children: [VenueBadge(show.venue, onPoster: true)]),
       ],
     );
   }

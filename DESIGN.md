@@ -203,7 +203,9 @@ Every screen has its own URL (go_router), and detail screens provide a back butt
 
 ## Elevation & Depth
 
-Flat. Cards, app bars and dialogs have elevation 0. Depth comes from tonal steps (stage black → surface → surface high) plus a 1px outline border, and from the gradients, which read as light rather than shadow. No drop shadows anywhere in the system.
+Flat. Cards, app bars and dialogs have elevation 0. Depth comes from tonal steps (stage black → surface → surface high) plus a 1px outline border, and from the gradients, which read as light rather than shadow. No drop shadows anywhere in the system, including the Gold Records foil.
+
+**Stage Glow.** The four main tabs sit under two soft house lights (`StageGlow` in the tab shell): a Magenta Deep light at 22% from the top-left and a Violet Deep light at 25% from the top-right, each fading to nothing within about 440px. The tab screens keep their own Scaffold transparent so the glow shows through. Detail screens, forms and dialogs stay on plain Stage Black.
 
 **The Lit, Not Lifted Rule.** To make something stand out, light it (a gradient fill or a bright accent) instead of raising it with a shadow.
 
@@ -246,17 +248,22 @@ Material Icons only, no extra icon packs. Venue icons: `graphic_eq` for Studio S
 ### Poster Header (signature)
 The top of main screens: full-width block in the headline gradient (or a venue gradient on a Show), 20px radius, 20px padding, title in Bebas Display 48px white, optional white subline or chips below.
 
+Every poster-sized gradient block (Poster Header, the Tour header, the planned Show poster, the Gold Records foil) is a `PosterSurface`: the gradient plus a screen-printed halftone (`HalftonePainter`). Dots sit on a 7px 45° screen in black at 20% (Gold Deep on the gold foil), start at 40% across, and grow toward the bottom-right to about a third of the cell. Text sits on the left where there are no dots, and dark dots only add contrast to white type.
+
 ### Show Card / Ticket Stub (signature)
-A Setlist row styled as a ticket: a 64px-wide venue-gradient stub on the left with the weekday (Inter 800 12px uppercase), the date number (Bebas 38px) and the venue icon, all white. To the right: the workout and venue line as a micro label with the feel emoji, then miles (Bebas 30px, white), pace (Bebas 26px, amber) and time (Bebas 26px, grey) with tabular figures, effort in grey, and the Song of the Show with 22px album art.
+A Setlist row styled as a ticket, cut with `TicketBorder`: 7px punched notches top and bottom where the stub meets the ticket, and a perforated tear line of 1.6px Stage Black holes every 7px between them. A 64px-wide venue-gradient stub on the left with the weekday (Inter 800 12px uppercase), the date number (Bebas 38px) and the venue icon, all white. To the right: the workout and venue line as a micro label with the feel emoji, then miles (Bebas 30px, white), pace (Bebas 26px, amber) and time (Bebas 26px, grey) with tabular figures on one line (it scales down rather than wrapping on a long Headliner), effort in grey, and the Song of the Show with 22px album art.
 
 ### Venue Badge (signature)
-A small pill (20px radius, 4px × 10px) in the venue gradient with a 14px white icon and "STUDIO SESSION" or "LIVE SHOW" in white Inter 800 11px, tracked +0.8px.
+A small pill (20px radius, 4px × 10px) in the venue gradient with a 14px white icon and "STUDIO SESSION" or "LIVE SHOW" in white Inter 800 11px, tracked +0.8px. On a poster already lit in a gradient, use `VenueBadge(venue, onPoster: true)`: a black 26% cut-out instead of the gradient, so it doesn't vanish into its own color.
 
 ### Stat Tile
 Uppercase micro label in House Lights Grey (11px, 700, +1.2px) over a Bebas 26px value with tabular figures, for example "PACE" over "8:42 /mi".
 
 ### Empty States
-A centered icon, a Bebas headline in caps ("NO SHOWS YET"), then one grey sentence that tells you what to do in tour words ("Book your first one and start the Setlist.").
+One component, `EmptyStage`: a centered 56px House Lights Grey icon, a Bebas headline in caps ("NO SHOWS YET"), then one grey sentence (max 340px wide) that tells you what to do in tour words ("Book your first one and start the Setlist."), then at most one Gradient Button. Leave the button off where the screen already has the action (the Setlist's floating Book a Show). Not in a card. Gold Records is the exception: its empty state is the list of records still to press, which teaches what each one is.
+
+### App Bars
+Detail screens name the kind of screen ("THE SHOW", "TOUR DATE · WEEK 3", "BOOK A SHOW", "EDIT SAVED MIX"); the poster below carries the content. Screens whose poster already names them (Gold Records, The Record Wall) leave the app bar title empty.
 
 ## Do's and Don'ts
 

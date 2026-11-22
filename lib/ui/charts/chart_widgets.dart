@@ -409,8 +409,10 @@ class HeadlinerChart extends StatelessWidget {
                       dashArray: const [2, 3],
                       label: VerticalLineLabel(
                         show: true,
-                        alignment: Alignment.topRight,
-                        padding: const EdgeInsets.only(left: 4, top: 0),
+                        // Bottom of the line, clear of the peak band label
+                        // at the top.
+                        alignment: Alignment.bottomRight,
+                        padding: const EdgeInsets.only(left: 4, bottom: 2),
                         style: const TextStyle(
                           color: StageColors.textMuted,
                           fontSize: 10,

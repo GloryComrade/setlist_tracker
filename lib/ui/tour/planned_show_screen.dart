@@ -79,7 +79,7 @@ class _PlannedShowScreenState extends ConsumerState<PlannedShowScreen> {
         return Scaffold(
           appBar: AppBar(
             leading: backButtonFor(context, fallback: '/tour'),
-            title: Text('WEEK ${week.number}'),
+            title: Text('TOUR DATE · WEEK ${week.number}'),
           ),
           body: SafeArea(
             child: MaxWidth(
@@ -134,20 +134,16 @@ class _Hero extends StatelessWidget {
         (show.workoutType == WorkoutType.easy ||
             show.workoutType == WorkoutType.recovery ||
             show.workoutType == WorkoutType.long);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: show.isRace
-            ? StageColors.headlineGradient
-            : gradientFor(show.venue),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return PosterSurface(
+      gradient: show.isRace
+          ? StageColors.headlineGradient
+          : gradientFor(show.venue),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              VenueBadge(show.venue),
+              VenueBadge(show.venue, onPoster: true),
               const SizedBox(width: 8),
               if (week.isRestStop)
                 const TourTag('Rest Stop', color: Colors.white),

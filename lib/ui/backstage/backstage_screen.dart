@@ -29,6 +29,8 @@ class BackstageScreen extends ConsumerWidget {
     }
 
     return Scaffold(
+      // The tab shell paints the stage and its glow behind every tab.
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
