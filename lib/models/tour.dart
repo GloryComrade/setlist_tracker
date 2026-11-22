@@ -201,6 +201,8 @@ class PlannedShow {
     this.targetPaceSecondsPerMile,
     this.plannedDurationSeconds,
     this.tracks = const [],
+    this.rescheduledFrom,
+    this.skipped = false,
   });
 
   final String id;
@@ -226,7 +228,41 @@ class PlannedShow {
   /// Ready-made treadmill program for Studio Sessions.
   final List<Track> tracks;
 
+  /// The original date, when the Tour Manager moved a missed run.
+  final DateTime? rescheduledFrom;
+
+  /// Dropped from the week (missed with no room to move it).
+  final bool skipped;
+
   bool get isRace => workoutType == WorkoutType.race;
+
+  PlannedShow copyWith({
+    DateTime? date,
+    WorkoutType? workoutType,
+    double? distanceMiles,
+    String? title,
+    String? detail,
+    double? targetPaceSecondsPerMile,
+    int? plannedDurationSeconds,
+    List<Track>? tracks,
+    DateTime? rescheduledFrom,
+    bool? skipped,
+  }) => PlannedShow(
+    id: id,
+    date: date ?? this.date,
+    workoutType: workoutType ?? this.workoutType,
+    distanceMiles: distanceMiles ?? this.distanceMiles,
+    venue: venue,
+    title: title ?? this.title,
+    detail: detail ?? this.detail,
+    targetPaceSecondsPerMile:
+        targetPaceSecondsPerMile ?? this.targetPaceSecondsPerMile,
+    plannedDurationSeconds:
+        plannedDurationSeconds ?? this.plannedDurationSeconds,
+    tracks: tracks ?? this.tracks,
+    rescheduledFrom: rescheduledFrom ?? this.rescheduledFrom,
+    skipped: skipped ?? this.skipped,
+  );
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -239,6 +275,10 @@ class PlannedShow {
     'targetPaceSecondsPerMile': targetPaceSecondsPerMile,
     'plannedDurationSeconds': plannedDurationSeconds,
     'tracks': tracks.map((t) => t.toJson()).toList(),
+    'rescheduledFrom': rescheduledFrom == null
+        ? null
+        : dateOnlyString(rescheduledFrom!),
+    'skipped': skipped,
   };
 
   factory PlannedShow.fromJson(Map<String, Object?> json) => PlannedShow(
@@ -254,6 +294,8 @@ class PlannedShow {
         ? null
         : asInt(json['plannedDurationSeconds']),
     tracks: asMapList(json['tracks']).map(Track.fromJson).toList(),
+    rescheduledFrom: parseDateOnly(json['rescheduledFrom']),
+    skipped: json['skipped'] == true,
   );
 }
 
