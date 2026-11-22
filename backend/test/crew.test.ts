@@ -125,6 +125,8 @@ describe("profile", () => {
       color: 7,
       allActivityPending: false,
       shareViews: true,
+      pushShows: true,
+      pushShoutouts: true,
       avatarBadge: null,
       avatarUrl: null,
     });
@@ -145,6 +147,8 @@ describe("profile", () => {
       color: 1,
       allActivityPending: false,
       shareViews: true,
+      pushShows: true,
+      pushShoutouts: true,
       avatarBadge: null,
       avatarUrl: null,
     });

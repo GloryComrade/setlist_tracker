@@ -21,6 +21,7 @@ import {
 } from "./http";
 import { appleCallback, appleNative, googleCallback, startSignIn } from "./oauth";
 import { spotifySearchRoute } from "./spotify";
+import { type Background, detached, pushDeviceRoute } from "./push";
 import { pullRoute, pushRoute } from "./sync";
 
 export type { Env };
@@ -38,7 +39,16 @@ async function tokenField(request: Request, name: string): Promise<string> {
 }
 
 /** Routes one /api/* request. */
-export async function handleApi(request: Request, env: Env): Promise<Response> {
+export async function handleApi(
+  request: Request,
+  env: Env,
+  ctx?: ExecutionContext,
+): Promise<Response> {
+  // Work done after the answer is sent (push notifications).
+  const background: Background = ctx
+    ? (p) =>
+        ctx.waitUntil(p.catch((e) => console.error("background task failed", e)))
+    : detached;
   const url = new URL(request.url);
   const m = request.method;
   // "/api/crew/posts/x/encore" -> ["crew", "posts", "x", "encore"]
@@ -100,11 +110,16 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
     const user = await requireUser(request, env);
     return m === "GET"
       ? pullRoute(request, env, user.id, b)
-      : pushRoute(request, env, user.id, b);
+      : pushRoute(request, env, user.id, b, background);
   }
   if (a === "crew" && n >= 1) {
     const user = await requireUser(request, env);
-    const res = await crewRoute(request, env, user.id, parts.slice(1));
+    const res = await crewRoute(request, env, user.id, parts.slice(1), background);
+    if (res) return res;
+  }
+  if (a === "push" && n >= 2) {
+    const user = await requireUser(request, env);
+    const res = await pushDeviceRoute(request, env.DB, user.id, parts.slice(1));
     if (res) return res;
   }
   throw notFound();
@@ -115,7 +130,7 @@ function isLocalHost(host: string): boolean {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     // Someone who types http://setlisttracker.com would otherwise get a
     // "not secure" page, and sign-in would send Google and Apple an http://
@@ -142,7 +157,7 @@ export default {
     }
     let response: Response;
     try {
-      response = await handleApi(request, env);
+      response = await handleApi(request, env, ctx);
     } catch (e) {
       if (e instanceof ApiError) {
         response = errorResponse(e);

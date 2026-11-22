@@ -219,13 +219,17 @@ export async function postShoutoutsRoute(
   db: D1Database,
   me: string,
   postId: string,
+  /** Called with each new Shout-out (push notification, src/push.ts). */
+  added: (postId: string, shoutout: Shoutout) => void = () => {},
 ): Promise<Response | null> {
   if (request.method === "GET") {
     return json({ shoutouts: await listShoutouts(db, me, postId) });
   }
   if (request.method === "POST") {
     const body = await readJson(request);
-    return json(await addShoutout(db, me, postId, body.body), 201);
+    const shoutout = await addShoutout(db, me, postId, body.body);
+    added(postId, shoutout);
+    return json(shoutout, 201);
   }
   return null;
 }

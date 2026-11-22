@@ -28,6 +28,7 @@ import {
 } from "./avatars";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
+import { type Background, detached, notifyShoutout, savePushPrefs } from "./push";
 import { notifyReport } from "./reports";
 import { forgetMyViews, seenSummaries, showViewsRoute } from "./show_views";
 import { postShoutoutsRoute, shoutoutRoute, VISIBLE_SHOUTOUT } from "./shoutouts";
@@ -98,6 +99,10 @@ export interface Profile {
   avatarUrl: string | null;
   /** "Let my Crew know when I've seen their Shows" (migration 0005). */
   shareViews: boolean;
+  /** Push switch "When my Crew logs a Show" (migration 0007). */
+  pushShows: boolean;
+  /** Push switch "Shout-outs on my Shows" (migration 0007). */
+  pushShoutouts: boolean;
 }
 
 interface ProfileRow {
@@ -108,6 +113,8 @@ interface ProfileRow {
   avatar_badge: string | null;
   avatar_at: string | null;
   share_views: number;
+  push_shows: number;
+  push_shoutouts: number;
 }
 
 /**
@@ -125,6 +132,8 @@ function toProfile(r: ProfileRow): Profile {
     allActivityPending: r.all_activity_since === ALL_ACTIVITY_PENDING,
     ...avatarFields(r.user_id, r.avatar_badge, r.avatar_at),
     shareViews: r.share_views !== 0,
+    pushShows: r.push_shows !== 0,
+    pushShoutouts: r.push_shoutouts !== 0,
   };
 }
 
@@ -135,7 +144,8 @@ export async function getProfile(
   const row = await db
     .prepare(
       `SELECT user_id, stage_name, color, all_activity_since, avatar_badge,
-              share_views, ${AVATAR_AT("user_id")} AS avatar_at
+              share_views, push_shows, push_shoutouts,
+              ${AVATAR_AT("user_id")} AS avatar_at
        FROM crew_profiles WHERE user_id = ?`,
     )
     .bind(userId)
@@ -213,6 +223,7 @@ export async function saveProfile(
     )
     .run();
   if (shareViews === false) await forgetMyViews(db, userId);
+  await savePushPrefs(db, userId, body);
   return (await getProfile(db, userId))!;
 }
 
@@ -579,7 +590,7 @@ export async function unblock(db: D1Database, me: string, other: string) {
  * Crew before it showed everything, logged after that change or shared
  * before it (migration 0002).
  */
-const CREW_SHOW = `(s.kind = 'shows' AND s.deleted_at IS NULL
+export const CREW_SHOW = `(s.kind = 'shows' AND s.deleted_at IS NULL
   AND coalesce(json_extract(s.data, '$.crewPrivate'), 0) = 0
   AND NOT EXISTS (
     SELECT 1 FROM crew_profiles op
@@ -782,6 +793,7 @@ export async function crewRoute(
   env: Env,
   me: string,
   parts: string[],
+  background: Background = detached,
 ): Promise<Response | null> {
   const db = env.DB;
   const m = request.method;
@@ -851,7 +863,8 @@ export async function crewRoute(
   }
   if (a === "posts" && n === 3) {
     const res = c === "shoutouts"
-      ? await postShoutoutsRoute(request, db, me, b)
+      ? await postShoutoutsRoute(request, db, me, b, (pid, s) =>
+          background(notifyShoutout(env, me, pid, s.body)))
       : await showViewsRoute(request, db, me, b, c);
     if (res) return res;
   }
