@@ -1,0 +1,29 @@
+<!doctype html>
+<!--
+  GitHub Pages serves this repository's root at
+  https://glorycomrade.github.io/setlist_tracker/. The app moved to
+  https://setlisttracker.com, but iPhone builds up to 1.0.0 (3) still put the
+  old address in Crew invite links (…/setlist_tracker/#/crew/join/CODE).
+  This page forwards those links, keeping the "#/…" part so they open the
+  join screen. The app itself never reads this file.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Setlist Tracker</title>
+  <link rel="canonical" href="https://setlisttracker.com/">
+  <script>
+    location.replace('https://setlisttracker.com/' + (location.hash.indexOf('#/') === 0 ? location.hash : ''));
+  </script>
+  <noscript><meta http-equiv="refresh" content="0; url=https://setlisttracker.com/"></noscript>
+  <style>
+    body { background: #0b0b0b; color: #f2efe8; font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 48px 16px; text-align: center; }
+    a { color: #f2b544; }
+  </style>
+</head>
+<body>
+  <p>Setlist Tracker lives at <a href="https://setlisttracker.com/">setlisttracker.com</a> now.</p>
+</body>
+</html>
