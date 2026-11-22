@@ -27,6 +27,7 @@ import {
   NO_AVATAR,
 } from "./avatars";
 import type { Env } from "./env";
+import { hasBlockedWords } from "./filter";
 import { ApiError, json, noContent, readJson } from "./http";
 import { notifyReport } from "./reports";
 import { forgetMyViews, seenSummaries, showViewsRoute } from "./show_views";
@@ -176,6 +177,9 @@ export async function saveProfile(
   // Count characters, not UTF-16 units, so emoji count once.
   if ([...stageName].length < 1 || [...stageName].length > 30) {
     throw badProfile("Your stage name needs 1 to 30 characters.");
+  }
+  if (hasBlockedWords(stageName)) {
+    throw badProfile("That stage name has words The Crew doesn't allow. Pick another one.");
   }
   const color = body.color ?? 0;
   if (typeof color !== "number" || !Number.isInteger(color) || color < 0 || color > 7) {

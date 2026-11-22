@@ -16,6 +16,7 @@
 // your Crew (GET /api/crew/avatar wouldn't serve it otherwise).
 
 import { avatarFields } from "./avatars";
+import { hasBlockedWords } from "./filter";
 import { IS_CREW, visibleShow } from "./crew";
 import { ApiError, json, noContent, readJson } from "./http";
 import { addMs, HOUR, iso } from "./util";
@@ -133,6 +134,9 @@ export async function addShoutout(
   const chars = [...text].length;
   if (chars < 1 || chars > MAX_SHOUTOUT_CHARS) {
     throw bad(`A Shout-out needs 1 to ${MAX_SHOUTOUT_CHARS} characters.`);
+  }
+  if (hasBlockedWords(text)) {
+    throw bad("That Shout-out has words The Crew doesn't allow. Try saying it another way.");
   }
   const show = await visibleShow(db, me, postId);
   if (!show) throw showNotFound();
