@@ -33,3 +33,15 @@ Map<String, Object?>? asMap(Object? v) =>
 List<Map<String, Object?>> asMapList(Object? v) => v is List
     ? v.map(asMap).whereType<Map<String, Object?>>().toList()
     : const [];
+
+/// "2027-04-18": a calendar day with no time or zone.
+String dateOnlyString(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+/// Reads a calendar day back as local midnight.
+DateTime? parseDateOnly(Object? v) {
+  final d = parseDate(v);
+  return d == null ? null : DateTime(d.year, d.month, d.day);
+}

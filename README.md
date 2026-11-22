@@ -1,6 +1,6 @@
 # Setlist Tracker
 
-Marathon training tracker with a music-tour theme. Phase 1: log Shows (Studio Sessions with Tracks, and Live Shows), Song of the Show, the Setlist, plus Gear and Saved Mixes in Backstage.
+Marathon training tracker with a music-tour theme. Phase 1: log Shows (Studio Sessions with Tracks, and Live Shows), Song of the Show, the Setlist, plus Gear and Saved Mixes in Backstage. Phase 2: The Tour, a rules-based marathon plan from a setup quiz, with a weekly Tour Schedule, treadmill settings for Studio days and one-tap "Done as planned".
 
 ## Try it
 
@@ -28,7 +28,11 @@ lib/
   theme/app_theme.dart          colors, gradients, poster type
   models/                       Show, Track, StudioDetails, LiveDetails, Weather,
                                 SongOfTheShow, Gear, SavedMix, enums
+                                tour.dart: Tour, TourSetup, TourWeek, PlannedShow
   logic/show_math.dart          pace, Track totals, time-weighted incline, time parsing
+  logic/tour_builder.dart       The Tour's plan rules: phases, 10% rule, Rest Stops,
+                                Headliner peak, Riegel paces, treadmill Tracks
+  logic/tour_logging.dart       "Done as planned": a Planned Show into a logged Show
   data/
     repositories/               abstract storage contracts (no storage code)
     local/                      Sembast versions (IndexedDB on web, file on iOS)
@@ -37,6 +41,7 @@ lib/
     setlist/                    home: Setlist grouped by week, filters, ticket cards
     show_form/                  Book a Show (new + edit)
     show_detail/                one Show: poster, numbers, Tracks or venue, song
+    tour/                       The Tour: setup quiz, Tour Schedule, Planned Show page
     backstage/                  Gear, Saved Mixes, dialogs
     widgets/                    shared pieces, including the Track editor
 test/
@@ -44,7 +49,7 @@ test/
 
 ## Swapping storage later
 
-Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved Mix ones), then change the three providers at the top of `lib/data/providers.dart`. Records already carry UUID ids, `updatedAt`, soft-delete `deletedAt` and `schemaVersion` for syncing.
+Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved Mix / Tour ones), then change the providers at the top of `lib/data/providers.dart`. Records already carry UUID ids, `updatedAt`, soft-delete `deletedAt` and `schemaVersion` for syncing.
 
 ## Notes
 
@@ -52,3 +57,15 @@ Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved M
 - Song of the Show is picked from a search list with album art (Apple's free iTunes Search, no key needed), or typed in. The Show page has Open in Spotify and Apple Music buttons. A Spotify-powered search needs a server for its API secret, so it waits for Phase 5.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
 - Fonts (Bebas Neue, Inter) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.
+
+## The Tour's rules
+
+All in `lib/logic/tour_builder.dart`, covered by `test/tour_builder_test.dart`:
+
+- 16 to 20 weeks, ending on Opening Night. More than 20 weeks out, the Tour starts later. Under 16 weeks there's a note; under 12 a warning that suggests a later race or a finish-only goal; under 6 it won't build.
+- Phases: Rehearsals (about 30% of the build), On the Road, Headline Leg, then a 3-week Soundcheck (2 weeks on Tours under 18 weeks).
+- Weekly miles rise by at most 10% over the last full week. Every 4th week is a Rest Stop at about 75%.
+- The Headliner climbs by at most 2 miles a week and peaks at 20 miles (18 for finish goals or bases under 20 mi/week) 3 weeks before race week.
+- No quality runs in Rehearsals or Rest Stops. Then one a week: tempo On the Road, 800 m repeats in the Headline Leg, a short tempo early in Soundcheck.
+- Paces: Riegel (T2 = T1 × (D2/D1)^1.06) from a recent race, or else the goal time. Easy = marathon pace + 60 to 90 s/mi, tempo = predicted 10-mile pace, intervals = predicted 5K pace. With no race or goal, an optional easy pace sets them; otherwise Shows run by feel.
+- Studio Sessions get a Track list at 1% incline, with speeds rounded to 0.1 mph.

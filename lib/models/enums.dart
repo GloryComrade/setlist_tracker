@@ -22,7 +22,10 @@ enum WorkoutType {
   long('Headliner'),
   tempo('Tempo'),
   intervals('Intervals'),
-  recovery('Recovery');
+  recovery('Recovery'),
+
+  /// Race day. Added in Phase 2; older saves never contain it.
+  race('Opening Night');
 
   const WorkoutType(this.label);
   final String label;

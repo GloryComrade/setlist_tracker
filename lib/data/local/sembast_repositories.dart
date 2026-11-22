@@ -5,6 +5,7 @@ import '../../models/gear.dart';
 import '../../models/json_utils.dart';
 import '../../models/saved_mix.dart';
 import '../../models/show.dart';
+import '../../models/tour.dart';
 import '../repositories/repositories.dart';
 
 /// Shared Sembast code: each record is stored as its JSON map, keyed by id.
@@ -104,6 +105,26 @@ class SembastSavedMixRepository implements SavedMixRepository {
   Future<SavedMix?> getById(String id) => _s.getById(id);
   @override
   Future<void> save(SavedMix item) => _s.save(item);
+  @override
+  Future<void> delete(String id) => _s.delete(id);
+}
+
+class SembastTourRepository implements TourRepository {
+  SembastTourRepository(Database db)
+    : _s = _SembastStore<Tour>(
+        db,
+        'tours',
+        Tour.fromJson,
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      );
+  final _SembastStore<Tour> _s;
+
+  @override
+  Stream<List<Tour>> watchAll() => _s.watchAll();
+  @override
+  Future<Tour?> getById(String id) => _s.getById(id);
+  @override
+  Future<void> save(Tour item) => _s.save(item);
   @override
   Future<void> delete(String id) => _s.delete(id);
 }
