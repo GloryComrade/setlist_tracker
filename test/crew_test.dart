@@ -516,10 +516,18 @@ void main() {
       // Kept off the Crew: not on the feed.
       expect(find.text('9.90 mi'), findsNothing);
 
-      expect(find.text('Encore · 2'), findsOneWidget);
-      await tester.tap(find.text('Encore · 2'));
+      // The toggle and the count are separate: the count lists who.
+      const count = ValueKey('encore-count-maya:m1');
+      expect(
+        find.descendant(of: find.byKey(count), matching: find.text('2')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('encore-maya:m1')));
       await settle(tester);
-      expect(find.text('Encore · 3'), findsOneWidget);
+      expect(
+        find.descendant(of: find.byKey(count), matching: find.text('3')),
+        findsOneWidget,
+      );
       expect(crew.encores['maya:m1'], contains('me'));
 
       await tester.tap(find.byTooltip('Show options').last);
