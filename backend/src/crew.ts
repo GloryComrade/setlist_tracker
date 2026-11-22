@@ -495,10 +495,19 @@ export async function unblock(db: D1Database, me: string, other: string) {
 
 /**
  * SQL true when the synced Show `s` can be seen by its owner's Crew: not
- * deleted and not marked "Keep off the Crew".
+ * deleted, not marked "Keep off the Crew", and, for runners who joined The
+ * Crew before it showed everything, logged after that change or shared
+ * before it (migration 0002).
  */
 const CREW_SHOW = `(s.kind = 'shows' AND s.deleted_at IS NULL
-  AND coalesce(json_extract(s.data, '$.crewPrivate'), 0) = 0)`;
+  AND coalesce(json_extract(s.data, '$.crewPrivate'), 0) = 0
+  AND NOT EXISTS (
+    SELECT 1 FROM crew_profiles op
+    WHERE op.user_id = s.user_id
+      AND op.all_activity_since IS NOT NULL
+      AND coalesce(json_extract(s.data, '$.createdAt'), '') < op.all_activity_since
+      AND NOT EXISTS (SELECT 1 FROM crew_posts old
+                      WHERE old.owner = s.user_id AND old.show_id = s.id)))`;
 
 /** The ids of ?1 (me) and everyone in my Crew. */
 const ME_AND_CREW = `(

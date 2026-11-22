@@ -29,5 +29,14 @@ UPDATE crew_reports
 SET post_id = (SELECT p.show_id FROM crew_posts p WHERE p.id = crew_reports.post_id)
 WHERE post_id IN (SELECT id FROM crew_posts);
 
-DROP TABLE crew_encores;
-DROP TABLE crew_posts;
+-- crew_posts and crew_encores stay as they were (nothing writes to them any
+-- more), so this change can be rolled back, and so Shows people shared
+-- before today keep showing.
+
+-- Runners who were in The Crew before today were promised "your Crew sees
+-- only what you share". For them, Shows logged before this moment stay
+-- hidden unless they had shared them. Everything they log from now on is
+-- visible. Runners who pick a stage name later have NULL: all Shows.
+ALTER TABLE crew_profiles ADD COLUMN all_activity_since TEXT;
+UPDATE crew_profiles
+SET all_activity_since = strftime('%Y-%m-%dT%H:%M:%fZ', 'now');

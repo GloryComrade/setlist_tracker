@@ -426,6 +426,34 @@ describe("the feed", () => {
     expect(await feed(maya)).toEqual([]);
   });
 
+  it("for runners from before the change, older Shows show only if they were shared", async () => {
+    const { maya, ryan } = await crewPair();
+    // Ryan joined The Crew before it showed everything (migration 0002).
+    await env.DB.prepare(
+      "UPDATE crew_profiles SET all_activity_since = ? WHERE user_id = ?",
+    )
+      .bind("2026-11-22T16:00:00.000Z", ryan.user.id)
+      .run();
+    const before = { createdAt: "2026-11-20T08:00:00.000Z" };
+    const hidden = await logShow(ryan, "old-unshared", before);
+    const shared = await logShow(ryan, "old-shared", before);
+    await env.DB.prepare(
+      `INSERT INTO crew_posts (id, owner, show_id, data, show_updated_at, created_at, updated_at)
+       VALUES (?1, ?2, ?3, '{}', ?4, ?4, ?4)`,
+    )
+      .bind(crypto.randomUUID(), ryan.user.id, shared, "2026-11-20T09:00:00.000Z")
+      .run();
+    const fresh = await logShow(ryan, "new", {
+      createdAt: "2026-11-23T08:00:00.000Z",
+      date: "2026-11-23T07:30:00.000",
+    });
+
+    const seen = (await feed(maya)).map((p) => p.showId);
+    expect(seen).toContain(shared);
+    expect(seen).toContain(fresh);
+    expect(seen).not.toContain(hidden);
+  });
+
   it("gearName is null when the Gear is deleted or unknown", async () => {
     const { maya, ryan } = await crewPair();
     const shoes = rid("gear");

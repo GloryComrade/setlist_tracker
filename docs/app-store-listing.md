@@ -70,7 +70,9 @@ Free, in all countries.
 > THE CREW
 > • Invite running friends with a link or code. Nobody can find you unless
 >   you invite them.
-> • Share the Shows you choose and cheer theirs with an Encore
+> • Your Crew sees the Shows you log and your Tour. Cheer theirs with an
+>   Encore, and keep any Show to yourself with "Keep off the Crew"
+> • Training for the same race? Book a Tour featuring a friend
 > • Block and report are always one tap away
 >
 > BACKSTAGE PASS
@@ -128,7 +130,7 @@ For every type below:
 | Contact Info | Email Address | Backstage Pass |
 | Health & Fitness | Fitness | Shows, Tours and Gear you log and sync |
 | Health & Fitness | Health | runs imported from Apple Health, stored as Shows |
-| User Content | Other User Content | stage name, Shows you share with your Crew, reports |
+| User Content | Other User Content | stage name, Shows and Tour your Crew sees, reports |
 | Identifiers | User ID | account id |
 
 Not collected: location, contacts, browsing or search history (song
@@ -159,6 +161,6 @@ account.
 > running workouts only, on request, and never writes to Health.
 
 Before submitting, sign in on https://setlisttracker.com with a second account, pick the
-stage name "Review Crew", share a Show or two, make an invite (The Crew →
+stage name "Review Crew", log a Show or two, make an invite (The Crew →
 Invite a friend), and put its code in place of `DEMO-CODE`. Invites last 7
 days, so make a fresh one right before you submit.
