@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/gps/live_recorder.dart';
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
 import '../../models/enums.dart';
@@ -30,18 +31,63 @@ class SetlistFilterNotifier extends Notifier<SetlistFilter> {
 /// The Setlist's main action. It lives on the tab shell's Scaffold (not the
 /// Setlist's own) so snack bars such as "Show booked." lift it instead of
 /// covering it.
-class BookShowButton extends StatelessWidget {
+class BookShowButton extends ConsumerWidget {
   const BookShowButton({super.key});
 
   @override
-  Widget build(BuildContext context) => FloatingActionButton.extended(
-    onPressed: () => context.push('/show/new'),
-    icon: const Icon(Icons.add),
-    label: const Text(
-      'Book a Show',
-      style: TextStyle(fontWeight: FontWeight.w800),
-    ),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final book = FloatingActionButton.extended(
+      heroTag: 'book-a-show',
+      onPressed: () => context.push('/show/new'),
+      icon: const Icon(Icons.add),
+      label: const Text(
+        'Book a Show',
+        style: TextStyle(fontWeight: FontWeight.w800),
+      ),
+    );
+    if (!ref.watch(locationSourceProvider).available) return book;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [const GoLiveButton(), const SizedBox(height: 12), book],
+    );
+  }
+}
+
+/// iPhone only: opens On Stage to record a Live Show with GPS. A quiet
+/// outlined button beside Book a Show, which stays the main action. While a
+/// run is going (or waiting to be booked) it says so and takes you back.
+class GoLiveButton extends ConsumerWidget {
+  const GoLiveButton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final st = ref.watch(liveRecorderProvider);
+    final (String label, IconData icon) = switch (st.phase) {
+      RecorderPhase.recording => ('Live now', Icons.graphic_eq),
+      RecorderPhase.paused => ('Paused: back On Stage', Icons.pause),
+      RecorderPhase.ended => ('Book your Live Show', Icons.flag_outlined),
+      _ => ('Go Live', Icons.my_location),
+    };
+    final live = st.hasRun;
+    return FloatingActionButton.extended(
+      heroTag: 'go-live',
+      onPressed: () => context.push(
+        st.phase == RecorderPhase.ended ? '/show/new?live=1' : '/live',
+      ),
+      backgroundColor: StageColors.surface,
+      foregroundColor: live ? StageColors.magenta : StageColors.text,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: live ? StageColors.magenta : StageColors.outline,
+          width: live ? 2 : 1,
+        ),
+      ),
+      icon: Icon(icon),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    );
+  }
 }
 
 /// Home screen: every Show, newest first, grouped by week.

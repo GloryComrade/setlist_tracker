@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/health/health_save.dart';
 import '../../data/providers.dart';
 import '../../data/settings/app_settings.dart';
 import '../../logic/show_math.dart';
@@ -17,6 +18,7 @@ import '../widgets/album_art.dart';
 import '../widgets/clip_player.dart';
 import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
+import '../live_show/route_poster.dart';
 import '../widgets/track_editor.dart';
 
 /// Everything about one Show.
@@ -111,7 +113,13 @@ class ShowDetailScreen extends ConsumerWidget {
                     if (show.venue == Venue.live && show.live != null) ...[
                       const SizedBox(height: 12),
                       _LiveSection(details: show.live!),
+                      if (show.live!.gps != null &&
+                          !show.live!.gps!.isEmpty) ...[
+                        const SizedBox(height: 12),
+                        RouteSection(track: show.live!.gps!),
+                      ],
                     ],
+                    _HeartRate(show: show),
                     if (show.notes != null) ...[
                       const SizedBox(height: 12),
                       SectionCard(title: 'Notes', child: Text(show.notes!)),
@@ -453,6 +461,65 @@ class _LiveSection extends StatelessWidget {
           if (w?.conditions != null)
             StatTile(label: 'Conditions', value: w!.conditions!.label),
         ],
+      ),
+    );
+  }
+}
+
+/// Heart rate from Apple Health for the time of the Show (iPhone only).
+/// Read when the page opens; never stored, synced or shown to the Crew.
+/// Nothing is drawn when Health has none.
+class _HeartRate extends ConsumerWidget {
+  const _HeartRate({required this.show});
+  final Show show;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gps = show.live?.gps;
+    final seconds = gps != null && gps.seconds.isNotEmpty
+        ? gps.seconds.last
+        : show.durationSeconds;
+    final window = (
+      start: show.date,
+      end: show.date.add(Duration(seconds: seconds > 0 ? seconds : 60)),
+    );
+    final hr = ref.watch(showHeartRateProvider(window)).value;
+    if (hr == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SectionCard(
+        title: 'Heart Rate',
+        trailing: const Icon(
+          Icons.favorite_border,
+          color: StageColors.magenta,
+          semanticLabel: 'From Apple Health',
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: 28,
+              runSpacing: 16,
+              children: [
+                StatTile(
+                  label: 'Average',
+                  value: '${hr.average} bpm',
+                  spokenValue: '${hr.average} beats per minute',
+                ),
+                StatTile(
+                  label: 'Max',
+                  value: '${hr.max} bpm',
+                  spokenValue: '${hr.max} beats per minute',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'From Apple Health. Only on this iPhone; your Crew never sees it.',
+              style: TextStyle(color: StageColors.textMuted),
+            ),
+          ],
+        ),
       ),
     );
   }

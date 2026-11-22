@@ -346,18 +346,43 @@ class _HealthSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final on = ref.watch(appSettingsProvider.select((s) => s.healthImport));
+    final s = ref.watch(appSettingsProvider);
+    final settings = ref.read(appSettingsProvider.notifier);
     return SectionCard(
       title: 'Apple Health',
-      child: _Switch(
-        value: on,
-        title: 'Import runs from Apple Health',
-        subtitle: on
-            ? 'The Import runs button is in Backstage.'
-            : 'Off. Backstage won’t offer the import.',
-        onChanged: (v) => ref
-            .read(appSettingsProvider.notifier)
-            .update((s) => s.copyWith(healthImport: v)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Switch(
+            value: s.healthImport,
+            title: 'Import runs from Apple Health',
+            subtitle: s.healthImport
+                ? 'The Import runs button is in Backstage.'
+                : 'Off. Backstage won’t offer the import.',
+            onChanged: (v) =>
+                settings.update((s) => s.copyWith(healthImport: v)),
+          ),
+          _Switch(
+            value: s.healthSave,
+            title: 'Save Shows to Apple Health',
+            subtitle: s.healthSave
+                ? 'New Shows go to Health as runs, with the route when you '
+                      'went Live. Runs that came from Health aren’t saved twice.'
+                : 'Off. Shows stay in Setlist Tracker only.',
+            onChanged: (v) => settings.update((s) => s.copyWith(healthSave: v)),
+          ),
+          _Switch(
+            value: s.healthHeartRate,
+            title: 'Show heart rate',
+            subtitle: s.healthHeartRate
+                ? 'A Show’s page reads your heart rate from Health, if your '
+                      'Apple Watch caught it. It stays on this iPhone and '
+                      'your Crew never sees it.'
+                : 'Off. Show pages don’t read heart rate.',
+            onChanged: (v) =>
+                settings.update((s) => s.copyWith(healthHeartRate: v)),
+          ),
+        ],
       ),
     );
   }

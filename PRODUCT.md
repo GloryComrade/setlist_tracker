@@ -67,7 +67,7 @@ web app is free to use and the planned App Store price is free.
 - Once per training cycle: answer the 8-question quiz to Book The Tour.
 - With friends: invite them to The Crew with a link or code, share chosen Shows, give
   an Encore.
-- On iPhone only: import runs from Apple Health (read only).
+- On iPhone only: Go Live to record a run with GPS, import runs from Apple Health, save Shows back to it, read heart rate.
 - Works offline; with a Backstage Pass, changes sync when the connection is back.
 - Hosting: one Cloudflare Worker serves the site and the API. Every merge to `main`
   deploys.
@@ -101,7 +101,7 @@ Constraints:
 - miles, mph, °F only (brief). No metric units.
 - Marathon only. No other race distances are planned for.
 - Dark only.
-- It is a log, not a recorder: no GPS, no GPX import, no heart rate.
+- On iPhone it also records: Go Live tracks a Live Show with GPS (route, splits, pace, mph), Shows save to Apple Health, and a Show's page reads heart rate from Health. No GPX import. The website stays a log.
 - Without an account, data lives only in that browser or phone; clearing site data
   erases it.
 - No ads, no analytics or tracking tools (`web/privacy.html`).

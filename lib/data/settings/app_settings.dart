@@ -38,6 +38,8 @@ class AppSettings {
     this.tourVenue,
     this.musicApp = MusicApp.spotify,
     this.healthImport = true,
+    this.healthSave = true,
+    this.healthHeartRate = true,
   });
 
   /// New Shows start "Keep off the Crew".
@@ -55,6 +57,12 @@ class AppSettings {
   /// Shows the Apple Health import (iPhone only).
   final bool healthImport;
 
+  /// New Shows are saved to Apple Health as running workouts (iPhone only).
+  final bool healthSave;
+
+  /// The Show page reads heart rate from Apple Health (iPhone only).
+  final bool healthHeartRate;
+
   AppSettings copyWith({
     bool? newShowsOffCrew,
     int? headlinerWeekday,
@@ -62,12 +70,16 @@ class AppSettings {
     bool clearTourVenue = false,
     MusicApp? musicApp,
     bool? healthImport,
+    bool? healthSave,
+    bool? healthHeartRate,
   }) => AppSettings(
     newShowsOffCrew: newShowsOffCrew ?? this.newShowsOffCrew,
     headlinerWeekday: headlinerWeekday ?? this.headlinerWeekday,
     tourVenue: clearTourVenue ? null : (tourVenue ?? this.tourVenue),
     musicApp: musicApp ?? this.musicApp,
     healthImport: healthImport ?? this.healthImport,
+    healthSave: healthSave ?? this.healthSave,
+    healthHeartRate: healthHeartRate ?? this.healthHeartRate,
   );
 
   Map<String, Object?> toJson() => {
@@ -76,6 +88,8 @@ class AppSettings {
     'tourVenue': tourVenue?.name,
     'musicApp': musicApp.name,
     'healthImport': healthImport,
+    'healthSave': healthSave,
+    'healthHeartRate': healthHeartRate,
   };
 
   /// Anything missing or unknown falls back to the default.
@@ -94,6 +108,8 @@ class AppSettings {
           .firstOrNull,
       musicApp: MusicApp.fromName(asStringOrNull(json['musicApp'])),
       healthImport: json['healthImport'] != false,
+      healthSave: json['healthSave'] != false,
+      healthHeartRate: json['healthHeartRate'] != false,
     );
   }
 
@@ -104,7 +120,9 @@ class AppSettings {
       other.headlinerWeekday == headlinerWeekday &&
       other.tourVenue == tourVenue &&
       other.musicApp == musicApp &&
-      other.healthImport == healthImport;
+      other.healthImport == healthImport &&
+      other.healthSave == healthSave &&
+      other.healthHeartRate == healthHeartRate;
 
   @override
   int get hashCode => Object.hash(
@@ -113,6 +131,8 @@ class AppSettings {
     tourVenue,
     musicApp,
     healthImport,
+    healthSave,
+    healthHeartRate,
   );
 }
 

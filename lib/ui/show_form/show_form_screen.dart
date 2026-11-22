@@ -1,15 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/crew/crew_controller.dart';
+import '../../data/gps/live_recorder.dart';
+import '../../data/health/health_save.dart';
 import '../../data/providers.dart';
 import '../../data/settings/app_settings.dart';
+import '../../logic/gps_math.dart';
 import '../../logic/show_math.dart';
 import '../../logic/tour_logging.dart';
 import '../../models/enums.dart';
 import '../../models/gear.dart';
+import '../../models/gps_track.dart';
 import '../../models/saved_mix.dart';
 import '../../models/show.dart';
 import '../../models/song.dart';
@@ -20,13 +26,19 @@ import '../../theme/app_theme.dart';
 import '../backstage/gear_dialog.dart';
 import '../song_picker/song_picker_sheet.dart';
 import '../widgets/album_art.dart';
+import '../live_show/route_poster.dart';
 import '../widgets/clip_player.dart';
 import '../widgets/stage_widgets.dart';
 import '../widgets/track_editor.dart';
 
 /// "Book a Show": logs a new Show or edits an existing one.
 class ShowFormScreen extends ConsumerStatefulWidget {
-  const ShowFormScreen({super.key, this.showId, this.plannedShowId});
+  const ShowFormScreen({
+    super.key,
+    this.showId,
+    this.plannedShowId,
+    this.fromRecording = false,
+  });
 
   /// Null for a new Show.
   final String? showId;
@@ -34,6 +46,10 @@ class ShowFormScreen extends ConsumerStatefulWidget {
   /// A new Show logged for this Planned Show on The Tour. The form starts
   /// filled in from the plan.
   final String? plannedShowId;
+
+  /// A new Live Show from the run just recorded On Stage. The form starts
+  /// filled in from the GPS.
+  final bool fromRecording;
 
   @override
   ConsumerState<ShowFormScreen> createState() => _ShowFormScreenState();
@@ -65,6 +81,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   final _temp = TextEditingController();
   final _wind = TextEditingController();
   Conditions? _conditions;
+
+  /// The recorded run this Show comes from, and its route.
+  LiveRecording? _recording;
+  GpsTrack? _gps;
 
   // The Numbers
   final _distance = TextEditingController();
@@ -104,6 +124,9 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     if (id != null) {
       final show = await ref.read(showRepositoryProvider).getById(id);
       if (show != null) _fill(show);
+    } else if (widget.fromRecording) {
+      final rec = await _endedRecording();
+      if (rec != null) _fillFromRecording(rec);
     } else if (widget.plannedShowId != null) {
       final tour = await ref.read(activeTourProvider.future);
       final plan = tour?.showById(widget.plannedShowId!);
@@ -142,6 +165,29 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       _temp.text = _numText(lv.weather?.tempF);
       _wind.text = _numText(lv.weather?.windMph);
       _conditions = lv.weather?.conditions;
+      _gps = lv.gps;
+    }
+  }
+
+  Future<LiveRecording?> _endedRecording() async {
+    final live = ref.read(liveRecorderProvider).recording;
+    if (live != null && live.isEnded) return live;
+    final saved = await ref.read(recordingStoreProvider).load();
+    return saved != null && saved.isEnded ? saved : null;
+  }
+
+  /// Starts a new Live Show from the GPS: start time, moving time, miles,
+  /// elevation gain and the route.
+  void _fillFromRecording(LiveRecording rec) {
+    _recording = rec;
+    _gps = rec.toTrack();
+    _venue = Venue.live;
+    _date = rec.startedAt.toLocal();
+    final end = rec.endedAt ?? DateTime.now();
+    _distance.text = formatMiles(rec.distanceMiles, withUnit: false);
+    _duration.text = formatDuration(rec.movingSecondsAt(end).round());
+    if (rec.elevationGainM > 0) {
+      _elevation.text = '${rec.elevationGainFt.round()}';
     }
   }
 
@@ -356,6 +402,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               elevationGainFt: _num(_elevation),
               weather: weather.isEmpty ? null : weather,
               gpxFileId: _existing?.live?.gpxFileId,
+              gps: _gps,
             )
           : null,
       plannedShowId: _plannedShowId ?? _existing?.plannedShowId,
@@ -374,6 +421,16 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
         _snack('Could not save the Show: $e');
       }
       return;
+    }
+    if (_existing == null) {
+      // Off the screen's lifetime: the form closes right away.
+      final route = [
+        for (final p in _recording?.points ?? <RecordedPoint>[]) p.fix,
+      ];
+      unawaited(ref.read(healthSaverProvider).save(show, route: route));
+      if (_recording != null) {
+        unawaited(ref.read(liveRecorderProvider.notifier).clear());
+      }
     }
     if (!mounted) return;
     _snack(_existing == null ? 'Show booked.' : 'Show updated.');
@@ -589,6 +646,10 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_gps != null && !_gps!.isEmpty) ...[
+            RouteView(segments: trackSegments(_gps!), aspect: 16 / 9),
+            const SizedBox(height: 12),
+          ],
           TextFormField(
             controller: _route,
             decoration: const InputDecoration(
