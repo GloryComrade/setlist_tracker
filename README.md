@@ -19,6 +19,10 @@ flutter build web              # production web build in build/web
 
 Data is saved in the browser (IndexedDB) on web and in a file on iOS. Clearing site data in the browser erases it.
 
+## Design rules
+
+Every screen follows [DESIGN.md](DESIGN.md): colors, type, shapes, components and the tour vocabulary.
+
 ## Where things live
 
 ```
