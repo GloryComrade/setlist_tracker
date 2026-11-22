@@ -301,7 +301,9 @@ class CrewController extends Notifier<CrewState> {
               .record(id)
               .get(db);
           if (raw is Map && raw['deletedAt'] != null) await unshare(id);
-        } else if (show.updatedAt.isAfter(entry.value.showUpdatedAt)) {
+        } else if (show.updatedAt.millisecondsSinceEpoch >
+            entry.value.showUpdatedAt.millisecondsSinceEpoch) {
+          // Compared to the millisecond: the server keeps times that way.
           await share(show, includeNotes: entry.value.includesNotes);
         }
       } catch (e) {

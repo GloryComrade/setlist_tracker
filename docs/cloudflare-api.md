@@ -1,0 +1,213 @@
+# The Cloudflare backend: how the app and the Worker talk
+
+Everything runs as **one Cloudflare Worker** (`backend/`):
+
+- It serves the website (the Flutter web build, as static assets) and the
+  API under `/api/*` from the same address, so the website needs no CORS and
+  no separate API URL.
+- Data lives in one **D1** database (SQLite), binding name `DB`.
+- Sign-in (Google, Apple), syncing, The Crew, Spotify search and account
+  deletion are all routes in this Worker. There is no Supabase anymore.
+
+This file is the contract between `backend/` and the app (`lib/`). Change
+both sides together.
+
+## Configuration
+
+`backend/wrangler.toml` (committed, no secrets):
+
+- `name = "setlist-tracker"`, `main = "src/index.ts"`,
+  `compatibility_date = "2026-11-01"`, `compatibility_flags = ["nodejs_compat"]`
+- `[assets] directory = "../build/web"`, `binding = "ASSETS"`,
+  `run_worker_first = ["/api/*"]`, `not_found_handling = "single-page-application"`
+- `[[d1_databases]] binding = "DB"`, `database_name = "setlist-tracker"`,
+  `database_id = "REPLACE_WITH_D1_DATABASE_ID"`, `migrations_dir = "migrations"`
+  (the deploy workflow swaps the placeholder for the `D1_DATABASE_ID`
+  repository variable).
+- `[vars]` `APPLE_BUNDLE_ID = "com.glorycomrade.setlisttracker"`,
+  `APPLE_SERVICES_ID = "com.glorycomrade.setlisttracker.web"`,
+  `NATIVE_REDIRECT = "com.glorycomrade.setlisttracker://login-callback"`
+
+Secrets (`wrangler secret put NAME`, or Cloudflare dashboard → Worker →
+Settings → Variables and Secrets). Each feature turns itself off with a
+clear error when its secrets are missing:
+
+| Secret | Used for |
+| --- | --- |
+| `SESSION_SECRET` | signing access tokens (any long random string) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Continue with Google |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (the .p8 text) | Sign in with Apple, and revoking it on Delete account |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | song search |
+
+## Conventions
+
+- JSON in and out, `Content-Type: application/json`. Times are ISO 8601 UTC
+  strings with milliseconds (`2026-11-22T03:04:05.678Z`).
+- Signed-in calls send `Authorization: Bearer <accessToken>`.
+- Errors: HTTP status plus `{"error": "<code>", "message": "<words for a runner>"}`.
+  Codes: `not_signed_in` (401), `bad_request` (400), `not_found` (404),
+  `need_stage_name` (409), `invite_invalid` (404), `own_invite` (409),
+  `too_many_tries` (429), `cant_block` (400), `not_configured` (503, a
+  secret is missing), `upstream` (502), `server_error` (500, anything
+  unexpected).
+- CORS: the API answers `OPTIONS` and sets `Access-Control-Allow-Origin` only
+  for `http://localhost:*` and `http://127.0.0.1:*` (local Flutter dev
+  against `wrangler dev`). The deployed website is same-origin.
+
+## Sign-in
+
+Access tokens are HS256 JWTs signed with `SESSION_SECRET`:
+`{"sub": userId, "iat", "exp": iat + 3600}`. Refresh tokens are 32 random
+bytes (base64url). Only their SHA-256 is stored. They last 60 days, and each
+refresh swaps the old token for a new one.
+
+Every successful sign-in ends with this **session** object:
+
+```json
+{"accessToken": "...", "refreshToken": "...", "expiresAt": "2026-...Z",
+ "user": {"id": "uuid", "name": "Ryan Cheng" | null, "email": "..." | null}}
+```
+
+### Browser flow (Google on web and iPhone, Apple on web)
+
+1. The app opens `GET /api/auth/{google|apple}/start?return=<url>`.
+   `return` must be one of:
+   - the Worker's own origin (any path),
+   - `http://localhost:<port>/...` or `http://127.0.0.1:<port>/...`,
+   - exactly `NATIVE_REDIRECT`.
+
+   Anything else gets a 400. The Worker stores
+   `{state, PKCE verifier, return, provider}` for 10 minutes and redirects to
+   Google (`openid email profile`, with PKCE) or to Apple
+   (`response_mode=form_post`, `scope=name email`).
+2. Google comes back to `GET /api/auth/google/callback`, and Apple to
+   `POST /api/auth/apple/callback` (form). The Worker exchanges the code,
+   verifies the ID token (issuer, audience, expiry, signature against the
+   provider's JWKS), finds or creates the user, then makes a **one-time login
+   code** (random, 60 seconds, single use).
+3. It redirects to `return` with `login_code=<code>` added to the query
+   (before any `#`). On error it adds `login_error=<code>` instead.
+4. The app calls `POST /api/auth/exchange {"code"}` and gets the **session**.
+   On the web, the app then strips `login_code` from the address bar.
+
+The iPhone opens step 1 in `ASWebAuthenticationSession` (Flutter package
+`flutter_web_auth_2`) with callback scheme `com.glorycomrade.setlisttracker`,
+then reads `login_code` from the URL it returns.
+
+### Native Sign in with Apple (iPhone)
+
+`POST /api/auth/apple/native`, with this body:
+
+```json
+{"identityToken": "...", "authorizationCode": "...", "rawNonce": "...",
+ "givenName": "Ryan" | null, "familyName": "Cheng" | null}
+```
+
+The Worker verifies the token against Apple's JWKS (issuer
+`https://appleid.apple.com`, audience `APPLE_BUNDLE_ID`, and
+`nonce == sha256hex(rawNonce)`). It then exchanges `authorizationCode` with
+Apple for a refresh token and stores it, so Delete account can revoke it.
+The answer is the **session**.
+
+Apple's client secret is an ES256 JWT that the Worker signs on demand from
+`APPLE_PRIVATE_KEY`: `iss` = team ID, `sub` = the bundle ID or the Services
+ID, `aud` = `https://appleid.apple.com`, and a lifetime of at most 5 minutes.
+Nothing expires every 6 months.
+
+### Session upkeep
+
+- `POST /api/auth/refresh {"refreshToken"}` returns a new **session**, or a
+  401 if the token is unknown or expired.
+- `POST /api/auth/signout {"refreshToken"}` returns 204.
+- `GET /api/me` returns `{"id", "name", "email"}`.
+- `DELETE /api/me` returns 204. It revokes the stored Apple tokens (best
+  effort) and deletes the user and every row of theirs: synced records,
+  sessions, Crew profile, links, blocks, invites, posts, Encores given and
+  received, and reports they made or that name them.
+
+Users are matched on `(provider, provider subject)`. A Google account and an
+Apple account are separate users, even with the same email.
+
+## Syncing (Backstage Pass)
+
+Tables: `shows`, `gear`, `saved_mixes`, `tours`. Anything else gets a 404.
+
+- `POST /api/sync/{table}` with
+  `{"rows": [{"id", "data": {...}, "updatedAt", "deletedAt": null|"..."}]}`
+  (at most 500 rows) returns `{"ok": true}`. For each row, the Worker keeps
+  the stored copy if it has a later `updatedAt`. Otherwise it writes the row
+  and sets `syncedAt` to the server's clock. Rows from one request share one
+  `syncedAt`.
+- `GET /api/sync/{table}?since=<iso>&offset=<n>&limit=<n>` (limit at most
+  500, default 500) returns `{"rows": [{"id", "data", "updatedAt",
+  "deletedAt", "syncedAt"}]}`. It lists the rows with `syncedAt > since`
+  (all of them when `since` is missing), ordered by `syncedAt` and then `id`.
+
+Every row belongs to the signed-in user. Another user's rows are never
+visible. A row id that already belongs to another user can't be written:
+the rest of the request is still saved, and the answer is a 409 that lists
+the refused ids under `rejected`. The app treats that as done, since a retry
+can't succeed.
+
+## The Crew
+
+The rules are the same as the old Supabase version:
+
+- You see your own posts and profile, plus your Crew's. Anyone you blocked,
+  or who blocked you, is never in your Crew.
+- Joining needs an unexpired 8-character code from the alphabet
+  `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, made with crypto randomness. Codes last
+  7 days, and the same code is reused while it has more than a day left.
+- Ten wrong codes in an hour gets `too_many_tries`. Wrong codes include
+  codes from a blocked runner.
+- Each block is its own row. Unblocking removes only your own block.
+- Encores: only on a post you can see, and never on your own. The feed
+  returns how many Encores a post has and whether one is yours, never who
+  gave them.
+- The server sets the time a post was shared (`sharedAt`).
+- A report copies the post's data on the server.
+
+All Crew routes need sign-in.
+
+| Route | Body | Answer |
+| --- | --- | --- |
+| `GET /api/crew/profile` | | profile or `null` |
+| `PUT /api/crew/profile` | `{stageName, color, alwaysShare, showOpeningNight, openingNight: "YYYY-MM-DD"\|null, tourName}` | profile |
+| `POST /api/crew/invite` | | `{"code"}` (`need_stage_name` without a profile) |
+| `GET /api/crew/invite/{code}` | | `{stageName, color, alreadyCrew, ownInvite}`, or 404 `invite_invalid` (counts a miss) |
+| `POST /api/crew/join` | `{code}` | `{"userId"}`, or `invite_invalid` / `own_invite` / `need_stage_name` / `too_many_tries` |
+| `GET /api/crew/mates` | | `{"mates": [{userId, stageName, color, since, openingNight, tourName, blocked}]}`: your Crew first, then the runners you blocked |
+| `DELETE /api/crew/mates/{userId}` | | 204 (leave each other's Crew) |
+| `POST /api/crew/blocks` | `{userId}` | 204 (also ends the Crew link; `cant_block` for yourself or an unknown id) |
+| `DELETE /api/crew/blocks/{userId}` | | 204 |
+| `GET /api/crew/feed` | | `{"posts": [{id, ownerId, stageName, color, showId, show: {...SharedShow json}, sharedAt, encores, encoredByMe, mine}]}`: newest 60, leaving out posts you reported |
+| `GET /api/crew/shared` | | `{"shared": {"<showId>": {showUpdatedAt, includesNotes}}}` |
+| `PUT /api/crew/shared/{showId}` | `{show: {...}, showUpdatedAt}` | 204 (share, or replace the copy; `need_stage_name` without a profile; `show` at most 8 KB) |
+| `DELETE /api/crew/shared/{showId}` | | 204 (its Encores go with it) |
+| `PUT /api/crew/posts/{postId}/encore` | | 204 |
+| `DELETE /api/crew/posts/{postId}/encore` | | 204 |
+| `POST /api/crew/posts/{postId}/report` | `{reason}` (1 to 500 characters) | 204 |
+
+Profile JSON: `{userId, stageName, color, alwaysShare, showOpeningNight,
+openingNight, tourName}`. When `showOpeningNight` is false, `openingNight`
+and `tourName` are stored as `null`. `stageName` is trimmed to 1 to 30
+characters, and `color` is 0 to 7.
+
+## Spotify search
+
+`GET /api/spotify/search?q=<text>&limit=<1..25>` returns
+`{"results": [{title, artist, album, artworkUrl, spotifyUrl, durationMs}]}`.
+No sign-in is needed. Without Spotify secrets it returns a 503
+`not_configured`, and the app falls back to Apple's catalog.
+
+## The app's side
+
+- `--dart-define=API_URL=...` points the app at the backend:
+  - On the web, `same-origin` means the address the page was loaded from.
+    The deploy workflow builds with this.
+  - iPhone builds pass the full Worker address, for example
+    `https://setlist-tracker.<account>.workers.dev`.
+  - Without `API_URL`, the app stays local-only, as before.
+- Tokens are kept in a Sembast store on the device. The access token is
+  refreshed when it's within 2 minutes of expiring, or after a 401, and the
+  call is retried once.

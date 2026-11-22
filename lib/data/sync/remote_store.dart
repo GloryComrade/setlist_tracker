@@ -1,7 +1,8 @@
 /// What the sync service needs from a cloud backend.
 ///
-/// Supabase implements it in `lib/data/remote/supabase_remote_store.dart`.
-/// Tests use an in-memory fake. Nothing here knows about Supabase.
+/// The Cloudflare Worker implements it in
+/// `lib/data/remote/cloudflare_remote_store.dart`. Tests use an in-memory
+/// fake. Nothing here knows about Cloudflare.
 library;
 
 /// One record as the cloud holds it.

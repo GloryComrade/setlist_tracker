@@ -31,13 +31,10 @@ class _FakeSearch implements MusicSearch {
   }
 }
 
-SpotifyMusicSearch _spotify(http.Client client, {String? token}) =>
-    SpotifyMusicSearch(
-      functionsUrl: 'https://proj.supabase.co/functions/v1',
-      apiKey: 'sb_publishable_test',
-      accessToken: () => token,
-      client: client,
-    );
+SpotifyMusicSearch _spotify(http.Client client) => SpotifyMusicSearch(
+  apiUrl: 'https://setlist-tracker.example.workers.dev',
+  client: client,
+);
 
 void main() {
   group('SpotifyMusicSearch', () {
@@ -61,7 +58,7 @@ void main() {
       expect(parseSpotifyResults('{"results":[]}'), isEmpty);
     });
 
-    test('guests send the publishable key as the bearer', () async {
+    test('asks the Worker with no keys and no sign-in', () async {
       late http.Request sent;
       final client = MockClient((req) async {
         sent = req;
@@ -70,24 +67,12 @@ void main() {
       final results = await _spotify(client).search('  mr brightside ');
       expect(results, hasLength(2));
       expect(sent.method, 'GET');
-      expect(
-        sent.url.toString(),
-        startsWith('https://proj.supabase.co/functions/v1/spotify-search?'),
-      );
-      expect(sent.url.queryParameters['q'], 'mr brightside');
-      expect(sent.headers['apikey'], 'sb_publishable_test');
-      expect(sent.headers['Authorization'], 'Bearer sb_publishable_test');
-    });
-
-    test('signed-in runners send their session token', () async {
-      late http.Request sent;
-      final client = MockClient((req) async {
-        sent = req;
-        return http.Response(_functionBody, 200);
-      });
-      await _spotify(client, token: 'user-jwt').search('queen');
-      expect(sent.headers['apikey'], 'sb_publishable_test');
-      expect(sent.headers['Authorization'], 'Bearer user-jwt');
+      expect(sent.url.scheme, 'https');
+      expect(sent.url.host, 'setlist-tracker.example.workers.dev');
+      expect(sent.url.path, '/api/spotify/search');
+      expect(sent.url.queryParameters, {'q': 'mr brightside', 'limit': '25'});
+      expect(sent.headers.containsKey('Authorization'), isFalse);
+      expect(sent.headers.containsKey('apikey'), isFalse);
     });
 
     test('empty queries make no request', () async {
@@ -133,9 +118,14 @@ void main() {
       expect(itunes.queries, ['x']);
     });
 
-    test('falls back when the function is not deployed (404)', () async {
+    test('falls back when the Worker has no Spotify secrets (503)', () async {
       final notDeployed = _spotify(
-        MockClient((_) async => http.Response('Not found', 404)),
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode({'error': 'not_configured', 'message': 'Off'}),
+            503,
+          ),
+        ),
       );
       final itunes = _FakeSearch([apple]);
       final results = await FallbackMusicSearch(

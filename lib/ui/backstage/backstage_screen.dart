@@ -1,13 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/providers.dart';
+import '../../data/remote/backend_config.dart';
 import '../../logic/show_math.dart';
 import '../../models/gear.dart';
 import '../../models/saved_mix.dart';
 import '../../theme/app_theme.dart';
 import '../records/records_entry.dart';
+import '../widgets/open_link.dart';
 import '../widgets/stage_widgets.dart';
 import 'apple_health_card.dart';
 import 'backstage_pass_card.dart';
@@ -105,11 +108,51 @@ class BackstageScreen extends ConsumerWidget {
                             children: [for (final m in mixes) _MixTile(mix: m)],
                           ),
                   ),
+                  const _FinePrint(),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Privacy policy and Support links, under everything else. They live on
+/// the website, so they're left out of a local-only iPhone build.
+class _FinePrint extends StatelessWidget {
+  const _FinePrint();
+
+  static Uri? _page(String name) {
+    final base = apiBaseUrl;
+    if (base != null) return Uri.parse('$base/$name');
+    if (kIsWeb) return Uri.base.resolve(name);
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final privacy = _page('privacy.html');
+    final support = _page('support.html');
+    if (privacy == null || support == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        children: [
+          TextButton(
+            onPressed: () => openLink(context, privacy),
+            style: TextButton.styleFrom(foregroundColor: StageColors.textMuted),
+            child: const Text('Privacy policy'),
+          ),
+          TextButton(
+            onPressed: () => openLink(context, support),
+            style: TextButton.styleFrom(foregroundColor: StageColors.textMuted),
+            child: const Text('Support'),
+          ),
+        ],
       ),
     );
   }

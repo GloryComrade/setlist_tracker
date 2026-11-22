@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Help with Setlist Tracker.">
+<meta name="theme-color" content="#0B0A12">
+<title>Support · Setlist Tracker</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  @font-face { font-family: "Bebas"; src: url("assets/assets/fonts/BebasNeue-Regular.ttf") format("truetype"); font-display: swap; }
+  @font-face { font-family: "Inter"; src: url("assets/assets/fonts/Inter-400.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Inter"; src: url("assets/assets/fonts/Inter-700.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "Inter"; src: url("assets/assets/fonts/Inter-800.ttf") format("truetype"); font-weight: 800; font-display: swap; }
+  :root { color-scheme: dark; --stage: #0B0A12; --surface: #16141F; --outline: #3A3548; --text: #F5F3FA; --muted: #A8A3B8; --magenta: #FF4D9A; --amber: #FFB020; }
+  * { box-sizing: border-box; }
+  html { background: var(--stage); }
+  body { margin: 0; color: var(--text); font: 400 16px/1.6 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: radial-gradient(ellipse 70% 420px at 0% 0%, rgba(224,21,122,.22), transparent 70%),
+                radial-gradient(ellipse 60% 420px at 100% 0%, rgba(109,40,217,.25), transparent 70%), var(--stage);
+    background-repeat: no-repeat; min-height: 100vh; }
+  ::selection { background: #E0157A; color: #fff; }
+  main { max-width: 680px; margin: 0 auto; padding: 24px 16px 64px; }
+  .poster { border-radius: 20px; padding: 28px 24px; color: #fff;
+    background: linear-gradient(135deg, #6D28D9, #E0157A 55%, #C2410C); }
+  .poster h1 { font: 400 clamp(44px, 11vw, 64px)/0.95 "Bebas", Impact, sans-serif; letter-spacing: .6px; margin: 0 0 10px; }
+  .poster p { margin: 0; max-width: 46ch; }
+  h2 { font: 400 28px/1 "Bebas", Impact, sans-serif; letter-spacing: .6px; margin: 40px 0 10px; }
+  p, li { color: var(--text); }
+  .muted { color: var(--muted); }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+  a { color: var(--magenta); text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--magenta); outline-offset: 3px; border-radius: 4px; }
+  .card { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 16px 18px; margin: 14px 0; }
+  .card strong { display: block; font-weight: 700; }
+  .label { font: 800 12px/1 "Inter", sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+  footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
+  .back { display: inline-block; margin: 0 0 18px; font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="./">← Back to Setlist Tracker</a>
+<header class="poster">
+  <h1>SUPPORT</h1>
+  <p>Questions, bugs, or an idea for the next Tour? Here’s how to reach us.</p>
+</header>
+
+<h2>Get in touch</h2>
+<div class="card">
+  <strong>Report a problem or ask a question</strong>
+  <span class="muted">Open an issue on <a href="https://github.com/GloryComrade/setlist_tracker/issues">GitHub</a>. Say what you tapped, what you expected, and what happened.</span>
+</div>
+
+<h2>Common questions</h2>
+<div class="card"><strong>How do I sync between my iPhone and the website?</strong>
+<span class="muted">Sign in with the same Google or Apple account on both, under Backstage → Backstage Pass.</span></div>
+<div class="card"><strong>How do I add a friend to my Crew?</strong>
+<span class="muted">Open The Crew, tap Invite a friend, and send them the link or code. Codes last 7 days.</span></div>
+<div class="card"><strong>How do I stop sharing a Show?</strong>
+<span class="muted">Open the Show and turn off Share with your Crew. It leaves your Crew’s feed right away.</span></div>
+<div class="card"><strong>How do I block or report someone?</strong>
+<span class="muted">On their Show, tap ⋯ and choose Report or Block. You can also open them from Your Crew and tap Block.</span></div>
+<div class="card"><strong>How do I delete my account?</strong>
+<span class="muted">Backstage → Backstage Pass → ⋮ → Delete account. Everything is deleted on every device. See <a href="privacy.html">Privacy</a>.</span></div>
+
+<h2>Training advice</h2>
+<p class="muted">Setlist Tracker gives general training guidance, not medical advice. If you’re injured or unsure, check with a doctor or coach.</p>
+<footer>Setlist Tracker · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a></footer>
+</main>
+</body>
+</html>

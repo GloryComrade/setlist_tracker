@@ -1,5 +1,7 @@
-# Publishes the web app to GitHub Pages on every push to main, so there is
-# always a link to try the latest version on a laptop or phone.
+# Publishes a local-only copy of the web app to GitHub Pages on every push to
+# main, until the Cloudflare deploy is set up (deploy.yml). Once the
+# D1_DATABASE_ID repository variable exists this workflow skips itself, and
+# Pages can be turned off under Settings → Pages.
 name: Deploy web app
 
 on:
@@ -18,6 +20,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ vars.D1_DATABASE_ID == '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,15 +31,10 @@ jobs:
           cache: true
       - run: flutter pub get
       # The site lives at https://<user>.github.io/<repo>/, so the app's base path is /<repo>/.
-      # Backstage Pass settings come from repository variables (Settings >
-      # Secrets and variables > Actions > Variables). Left unset, the site is
-      # local-only. See docs/backstage-pass-setup.md.
+      # No backend here: the Pages copy is local-only (no sign-in or Crew).
       - run: >-
           flutter build web --release
           --base-href "/${{ github.event.repository.name }}/"
-          --dart-define=SUPABASE_URL=${{ vars.SUPABASE_URL }}
-          --dart-define=SUPABASE_KEY=${{ vars.SUPABASE_KEY }}
-          --dart-define=APPLE_SIGN_IN=${{ vars.APPLE_SIGN_IN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web

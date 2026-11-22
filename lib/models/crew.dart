@@ -1,6 +1,6 @@
 /// The Crew: running friends who share Shows with each other.
 ///
-/// Everything here lives on the server (Supabase), not on the device: a
+/// Everything here lives on the server (the Cloudflare Worker), not on the device: a
 /// shared Show is a snapshot copied out of the Setlist, so friends never see
 /// anything that wasn't picked for them.
 library;

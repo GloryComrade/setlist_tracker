@@ -1,7 +1,7 @@
 /// The storage contract for The Crew.
 ///
-/// The screens only know [CrewService]. [SupabaseCrewService] talks to the
-/// tables in `supabase/migrations/20261123000000_the_crew.sql`;
+/// The screens only know [CrewService]. [CloudflareCrewService] talks to the
+/// Worker's `/api/crew` routes (docs/cloudflare-api.md);
 /// [MemoryCrewService] keeps everything in memory for tests and previews.
 library;
 

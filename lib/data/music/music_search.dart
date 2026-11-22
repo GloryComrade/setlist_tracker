@@ -1,9 +1,9 @@
 /// Song search for the Song of the Show picker.
 ///
-/// The UI only knows [MusicSearch]. With backend settings it searches Spotify
-/// through the `spotify-search` Supabase Edge Function (which holds Spotify's
-/// API secret) and falls back to Apple's free iTunes Search API whenever that
-/// fails. Local-only builds search iTunes directly.
+/// The UI only knows [MusicSearch]. With backend settings main() overrides
+/// [musicSearchProvider] to search Spotify through the Cloudflare Worker
+/// (which holds Spotify's API secret), falling back to Apple's free iTunes
+/// Search API whenever that fails. Local-only builds search iTunes directly.
 library;
 
 import 'dart:convert';
@@ -12,9 +12,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-import '../remote/backend_config.dart';
 import 'jsonp.dart';
-import 'spotify_music_search.dart';
 
 /// Which catalog a result came from.
 enum MusicSource { apple, spotify }
@@ -123,8 +121,8 @@ List<SongResult> parseITunesResults(String body) {
   return out;
 }
 
-/// Tries [primary]; if it throws (function not deployed, offline, Spotify
-/// down), runs the same query on [fallback] so the picker keeps working.
+/// Tries [primary]; if it throws (Worker without Spotify secrets, offline,
+/// Spotify down), runs the same query on [fallback] so the picker keeps working.
 class FallbackMusicSearch implements MusicSearch {
   FallbackMusicSearch(this.primary, this.fallback);
   final MusicSearch primary;
@@ -146,16 +144,8 @@ final iTunesSearchProvider = Provider<ITunesMusicSearch>(
   (ref) => ITunesMusicSearch(),
 );
 
-final musicSearchProvider = Provider<MusicSearch>((ref) {
-  final itunes = ref.watch(iTunesSearchProvider);
-  if (!backendConfigured) return itunes;
-  // Guests get Spotify too: the publishable key is enough to call it.
-  return FallbackMusicSearch(
-    SpotifyMusicSearch(
-      functionsUrl: '$supabaseUrl/functions/v1',
-      apiKey: supabaseKey,
-      accessToken: supabaseAccessToken,
-    ),
-    itunes,
-  );
-});
+/// iTunes by default; main() swaps in Spotify-with-fallback when the build
+/// has a backend.
+final musicSearchProvider = Provider<MusicSearch>(
+  (ref) => ref.watch(iTunesSearchProvider),
+);

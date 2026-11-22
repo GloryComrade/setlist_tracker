@@ -4,7 +4,7 @@ Marathon training tracker with a music-tour theme. Phase 1: log Shows (Studio Se
 
 ## Try it
 
-Every merge to `main` publishes the web app to https://glorycomrade.github.io/setlist_tracker/ (works on a phone too).
+Every merge to `main` publishes the app and its backend to Cloudflare, at your `setlist-tracker.<subdomain>.workers.dev` address (works on a phone too). Until Cloudflare is set up ([docs/cloudflare-setup.md](docs/cloudflare-setup.md)), it keeps publishing a local-only copy to https://glorycomrade.github.io/setlist_tracker/.
 
 ## Run it locally
 
@@ -45,10 +45,11 @@ lib/
   data/
     repositories/               abstract storage contracts (no storage code)
     local/                      Sembast versions (IndexedDB on web, file on iOS)
-    auth/                       sign-in contract (no Supabase code)
+    auth/                       sign-in contract
     health/                     Apple Health reader (iPhone only; web gets a stub)
     sync/                       outbox, sync engine, sync controller
-    remote/                     Supabase: settings, sign-in, cloud tables
+    remote/                     the Cloudflare API: client, sign-in, sync, The Crew
+    crew/                       The Crew: contract, in-memory version, controller
     providers.dart              wires storage, sign-in and sync together
   ui/
     setlist/                    home: Setlist grouped by week, filters, ticket cards
@@ -56,15 +57,21 @@ lib/
     show_detail/                one Show: poster, numbers, Tracks or venue, song
     tour/                       The Tour: setup quiz, Tour Schedule, Planned Show page
     backstage/                  Backstage Pass, Apple Health import, Gear, Saved Mixes, dialogs
+    crew/                       The Crew: feed, invites, sharing, block and report
     widgets/                    shared pieces, including the Track editor
 test/
+backend/                        the Cloudflare Worker: website, /api/*, D1 database
 ```
 
 ## Accounts and syncing (Backstage Pass)
 
-Signing in is optional. With Supabase settings passed at build time (`--dart-define=SUPABASE_URL=… --dart-define=SUPABASE_KEY=…`), Backstage offers Google sign-in (and Apple, once switched on) and syncs Shows, Gear, Saved Mixes and Tours. The screens still read the on-device copy, so the app works offline; `lib/data/sync/` copies changes to and from the cloud underneath. Without the settings the app is local-only, as before.
+Signing in is optional. With the backend address passed at build time (`--dart-define=API_URL=…`, or `same-origin` on the website), Backstage offers Google sign-in (and Apple, once switched on with `--dart-define=APPLE_SIGN_IN=true`) and syncs Shows, Gear, Saved Mixes and Tours. The screens still read the on-device copy, so the app works offline; `lib/data/sync/` copies changes to and from the cloud underneath. Without `API_URL` the app is local-only, as before.
 
-Setup steps: [docs/backstage-pass-setup.md](docs/backstage-pass-setup.md). Database tables and security rules: `supabase/migrations/`.
+The backend is one Cloudflare Worker in `backend/`. How the app and the Worker talk: [docs/cloudflare-api.md](docs/cloudflare-api.md). Setup steps: [docs/cloudflare-setup.md](docs/cloudflare-setup.md). Database tables: `backend/migrations/`.
+
+## The Crew
+
+Invite-only friend sharing: invite a running friend with a link or code, share the Shows you choose, and cheer theirs with an Encore. Block and report are on every shared Show. Needs a Backstage Pass. Try the screens with fake friends: `flutter run -d chrome -t tool/crew_preview.dart`.
 
 ## Apple Health (iPhone only)
 
@@ -73,7 +80,7 @@ Backstage can bring in runs from Apple Health (Apple Watch or iPhone) as Shows. 
 ## Notes
 
 - Studio Session distance and time come from the Tracks by default. Switch "Use Track totals" off to type what the treadmill screen said.
-- Song of the Show is picked from a search list with album art, or typed in. With the Supabase settings and the `spotify-search` Edge Function deployed it searches Spotify (the function holds Spotify's secret) and saves the song's Spotify link; a picked Spotify song borrows Apple's 30-second preview for the clip. Without them, or whenever Spotify can't be reached, it searches Apple's free iTunes catalog. Setup: [docs/spotify-setup.md](docs/spotify-setup.md). The Show page has Open in Spotify and Apple Music buttons.
+- Song of the Show is picked from a search list with album art, or typed in. With the backend's Spotify secrets set it searches Spotify (the Worker holds Spotify's secret) and saves the song's Spotify link; a picked Spotify song borrows Apple's 30-second preview for the clip. Without them, or whenever Spotify can't be reached, it searches Apple's free iTunes catalog. Setup: [docs/cloudflare-setup.md](docs/cloudflare-setup.md), Part 3. The Show page has Open in Spotify and Apple Music buttons.
 - Saved Mixes are copied into a Show when picked, so editing a Mix never changes past Shows.
 - Fonts (Bebas Neue, Inter) are bundled in assets/fonts under the SIL Open Font License, so type works offline and on iOS.
 

@@ -1,13 +1,13 @@
 /// The local Sembast stores the sync service knows about.
 ///
-/// Each one has a matching Supabase table with the same name. Every save or
+/// Each one has a matching Cloudflare sync table (`/api/sync/{name}`) with the same name. Every save or
 /// delete made through a repository also writes an entry in [outboxStore],
 /// so the sync service knows what to upload next.
 library;
 
 import 'package:sembast/sembast.dart';
 
-/// The record stores that sync, by name. Local store name == Supabase table.
+/// The record stores that sync, by name. Local store name == Cloudflare sync table.
 const syncedStoreNames = ['shows', 'gear', 'saved_mixes', 'tours'];
 
 StoreRef<String, Map<String, Object?>> recordStore(String name) =>
