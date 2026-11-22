@@ -14,7 +14,8 @@ an issue or the code. Each one goes straight into the box named below.
 **Done (Nov 21, 2026):** Parts 1, 2, 5 and 6. SITE is
 `https://setlisttracker.com` (the workers.dev address,
 `https://setlist-tracker.ryanchengpictures.workers.dev`, works too).
-Not done yet: Part 3 (Spotify), so song search uses Apple's catalog.
+Not done yet: Part 3 (Spotify), so song search uses Apple's catalog, and
+Part 7 (push notifications, for build 5).
 
 You'll fill in the address of your site as you go. It looks like
 `https://setlist-tracker.YOUR-SUBDOMAIN.workers.dev`. Below, it's written
@@ -219,6 +220,24 @@ The workers.dev address keeps working too.
 
 ---
 
+## Part 7 (optional): push notifications on iPhone (about 10 minutes)
+
+From build 5, the iPhone app can notify runners when a Crew mate logs a
+Show or someone gives a Shout-out on their Show. It needs an APNs key from
+Apple and three more **Secrets** in Cloudflare:
+
+| Name | Value |
+| --- | --- |
+| `APNS_KEY` | the whole text of the push key's `.p8` file, including the BEGIN and END lines |
+| `APNS_KEY_ID` | the 10-character Key ID of that key |
+| `APNS_TEAM_ID` | your 10-character Team ID (the same as `APPLE_TEAM_ID`) |
+
+The step-by-step (making the key, checking the App ID, testing on
+TestFlight) is in [push-setup.md](push-setup.md). Without these secrets
+nothing is sent and nothing else changes.
+
+---
+
 ## Looking after it
 
 - **Reports from The Crew:** Cloudflare → **D1 → setlist-tracker →
@@ -245,3 +264,5 @@ The workers.dev address keeps working too.
   set in Cloudflare yet. Check **Variables and Secrets**.
 - **Song search only shows Apple Music**: the Spotify secrets are missing
   (Part 3).
+- **No push notifications arrive**: see "If nothing arrives" in
+  [push-setup.md](push-setup.md).
