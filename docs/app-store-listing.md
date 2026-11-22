@@ -194,7 +194,8 @@ account.
 > who reviews it within 24 hours and removes the content and the account.
 >
 > Shout-outs are short comments (up to 280 characters) on a Show, seen
-> only by the Show's owner and their Crew. Tap Shout-out under a Show to
+> only by the Show's owner and their Crew. The server filters slurs and
+> profanity out of Shout-outs and stage names before anyone sees them. Tap Shout-out under a Show to
 > open them, and long-press one for Report or Delete. Each report alerts
 > the developer, who reviews it within 24 hours, and the reported
 > Shout-out leaves the reporter's view right away. The writer or the
