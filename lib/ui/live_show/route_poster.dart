@@ -7,6 +7,7 @@ import '../../logic/show_math.dart';
 import '../../models/gps_track.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
+import 'route_map.dart';
 
 /// A GPS route drawn like the Live Show print: a neon line on the dark
 /// stage, a white start ring, an amber tick at every mile and, while
@@ -193,7 +194,7 @@ class RouteSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          RouteView(segments: segments),
+          RouteMap(segments: segments),
           if (track.splits.isNotEmpty) ...[
             const SizedBox(height: 16),
             MileSplits(splits: track.splits),

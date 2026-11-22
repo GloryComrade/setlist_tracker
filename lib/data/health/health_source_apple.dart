@@ -31,7 +31,8 @@ class AppleHealthSource implements HealthSource {
   static const _askAccess = [
     HealthDataAccess.READ_WRITE,
     HealthDataAccess.READ,
-    HealthDataAccess.WRITE,
+    // Read: imported runs bring their route. Write: Go Live routes.
+    HealthDataAccess.READ_WRITE,
   ];
 
   @override
@@ -101,7 +102,64 @@ class AppleHealthSource implements HealthSource {
         ),
       );
     }
-    return runs;
+    if (runs.every((r) => r.indoor == true)) return runs;
+    // Routes end with their run, so look a little past [to].
+    final routes = await _routes(from, to.add(const Duration(hours: 12)));
+    if (routes.isEmpty) return runs;
+    return [
+      for (final r in runs)
+        if (r.indoor != true)
+          switch (matchRoute(r.start.toUtc(), r.end.toUtc(), [
+            for (final x in routes)
+              (start: x.start.toUtc(), end: x.end.toUtc(), fixes: x.fixes),
+          ])) {
+            final fixes? => r.withRoute(fixes),
+            null => r,
+          }
+        else
+          r,
+    ];
+  }
+
+  /// Health's routes between [from] and [to]: start, end and fixes.
+  /// Routes from other apps aren't tied to their workout by id, so they are
+  /// matched to runs by time. Empty if routes can't be read.
+  Future<List<({DateTime start, DateTime end, List<GpsPoint> fixes})>> _routes(
+    DateTime from,
+    DateTime to,
+  ) async {
+    try {
+      final points = await _health.getHealthDataFromTypes(
+        types: const [HealthDataType.WORKOUT_ROUTE],
+        startTime: from,
+        endTime: to,
+      );
+      return [
+        for (final p in points)
+          if (p.value case WorkoutRouteHealthValue(:final locations)
+              when locations.length >= 2)
+            (
+              start: p.dateFrom,
+              end: p.dateTo,
+              fixes: [
+                for (final l in locations)
+                  GpsPoint(
+                    lat: l.latitude,
+                    lng: l.longitude,
+                    time: l.timestamp.toUtc(),
+                    altitudeM: l.altitude,
+                    accuracyM: l.horizontalAccuracy,
+                  ),
+              ]..sort((a, b) => a.time.compareTo(b.time)),
+            ),
+      ];
+    } on HealthPlatformException catch (e) {
+      debugPrint('Apple Health routes: $e');
+      return const [];
+    } on PlatformException catch (e) {
+      debugPrint('Apple Health routes: $e');
+      return const [];
+    }
   }
 
   @override

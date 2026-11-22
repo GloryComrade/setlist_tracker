@@ -386,3 +386,16 @@ List<List<(double, double)>> trackSegments(GpsTrack track) {
       if (cuts[i + 1] > cuts[i]) pts.sublist(cuts[i], cuts[i + 1]),
   ];
 }
+
+/// The route to keep on a Show from fixes recorded elsewhere (an Apple
+/// Watch run in Health): the same filtering, thinning and mile splits as a
+/// Go Live run. Null when fewer than two fixes survive.
+GpsTrack? trackFromFixes(List<GpsPoint> fixes) {
+  if (fixes.length < 2) return null;
+  final rec = LiveRecording.start(fixes.first.time);
+  for (final f in fixes) {
+    rec.addFix(f);
+  }
+  if (rec.points.length < 2) return null;
+  return rec.toTrack();
+}

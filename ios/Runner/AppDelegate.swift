@@ -22,6 +22,10 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    // Show page route maps (RouteMapView.swift).
+    if let maps = engineBridge.pluginRegistry.registrar(forPlugin: "SetlistRouteMap") {
+      maps.register(RouteMapFactory(), withId: "setlist/route-map")
+    }
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SetlistPush") else {
       return
     }
