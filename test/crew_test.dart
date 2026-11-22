@@ -379,6 +379,11 @@ void main() {
       crewInviteLink('K7Q9MX', base: Uri.parse('https://x.dev/app/#/crew')),
       'https://x.dev/app/#/crew/join/K7Q9MX',
     );
+    // Tests run as the app, not the website: the public site.
+    expect(
+      crewInviteLink('K7Q9MX4P'),
+      'https://setlisttracker.com/#/crew/join/K7Q9MX4P',
+    );
   });
 
   group('on screen', () {

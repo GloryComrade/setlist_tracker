@@ -140,10 +140,11 @@ String? openingNightLine(DateTime? night, {DateTime? now}) {
 }
 
 /// Where invite links point. The website on the web; on the iPhone, the
-/// public site (set with --dart-define=SITE_URL=...).
+/// public site (override with --dart-define=SITE_URL=...). The site opens
+/// the app for any "#/" address, so the link lands on the join screen.
 const _siteUrl = String.fromEnvironment(
   'SITE_URL',
-  defaultValue: 'https://glorycomrade.github.io/setlist_tracker/',
+  defaultValue: 'https://setlisttracker.com/',
 );
 
 String crewInviteLink(String code, {Uri? base}) {
