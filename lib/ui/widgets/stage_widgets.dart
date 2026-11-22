@@ -651,11 +651,20 @@ double measureTextWidth(BuildContext context, String text, TextStyle? style) {
 /// word too long for one line (BACKSTAGE at 200%) is set a little smaller
 /// instead of being broken in the middle.
 class WholeWordsText extends StatelessWidget {
-  const WholeWordsText(this.text, {super.key, this.style, this.textAlign});
+  const WholeWordsText(
+    this.text, {
+    super.key,
+    this.style,
+    this.textAlign,
+    this.semanticsLabel,
+  });
 
   final String text;
   final TextStyle? style;
   final TextAlign? textAlign;
+
+  /// What a screen reader says instead of [text], as on [Text].
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -678,7 +687,13 @@ class WholeWordsText extends StatelessWidget {
             fit = TextScaler.linear(math.max(scaled, size) / size);
           }
         }
-        return Text(text, style: style, textAlign: textAlign, textScaler: fit);
+        return Text(
+          text,
+          style: style,
+          textAlign: textAlign,
+          textScaler: fit,
+          semanticsLabel: semanticsLabel,
+        );
       },
     );
   }

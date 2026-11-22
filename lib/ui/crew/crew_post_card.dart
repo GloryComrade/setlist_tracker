@@ -202,10 +202,13 @@ class _Stub extends StatelessWidget {
               letterSpacing: 1,
             ),
           ),
-          Text(
-            '${s.date.day}',
-            style: Theme.of(context).textTheme.displaySmall
-                ?.copyWith(color: Colors.white),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${s.date.day}',
+              style: Theme.of(context).textTheme.displaySmall
+                  ?.copyWith(color: Colors.white),
+            ),
           ),
           Icon(iconFor(s.venue), color: Colors.white, size: 18),
         ],

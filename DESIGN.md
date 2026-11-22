@@ -217,6 +217,12 @@ All run top-left to bottom-right, built only from the deep shades:
 
 **The Shout Sparingly Rule.** Uppercase is for Archivo Condensed titles and tiny tracked labels only. Body copy, buttons other than the Gradient Button (app bar "Save" included), and helper text stay in sentence case.
 
+**The 11 pt Floor Rule.** No text below 11 pt anywhere, including chart labels and stamps.
+
+**The Grow With the Reader Rule.** Every screen must hold at 150% and 200% text (iPhone Dynamic Type). Side-by-side pieces stack when they no longer fit (Tour countdown, Paces header, stat rows), and titles shrink a too-wide word with `WholeWordsText` rather than breaking it mid-word. Two deliberate caps: bottom tab bar labels stay at 100% like iOS tab bars, and chart axis text grows to 120% at most.
+
+**The Say It Like a Runner Rule.** Screen readers hear words, not abbreviations. Any number with a unit gets its spoken form from `lib/logic/spoken.dart` ("15 miles, 9 minutes 20 seconds per mile"), `StatTile` does this by itself, and a tappable card is one button with a spoken summary (the Show card reads "Sunday 22. Headliner, Live Show. 15 miles, … Song: Lose Yourself by Eminem.").
+
 ## Layout
 
 Single column, mobile first. Content sits inside `MaxWidth` (720px) centered on wide browser windows. At 800px wide and up, the bottom NavigationBar becomes a NavigationRail on the left with the magenta mic as its logo; below that, a bottom bar.
@@ -304,7 +310,7 @@ The fourth tab, "The Crew" (`groups_outlined` → `groups`), between The Charts 
 - **Guests and local-only builds** get the Empty State: "JOIN THE CREW" with a "Go Backstage" Gradient Button, or "THE CREW IS COMING" with no button.
 - **First visit:** a Poster Header "THE CREW", a Section Card "Pick your stage name" (filled field, four avatar swatches, Gradient Button "Join the Crew"), then three plain rows on how it works with magenta 22px icons.
 - **Crew Avatar:** a circle in one of the four deep shades (`crewColors`) with the initial in Archivo Condensed, white. 24px on a post, 40px in lists, 48px in the Crew strip, 56–64px on sheets and the invite poster (with a 3px white ring on a gradient).
-- **Home:** a headline-gradient `PosterSurface` with "THE CREW", one white line ("3 runners in your Crew. Only they see what you share.") and a white `tune` button for Crew settings. Below it the "Your Crew" Section Card: a horizontal strip of 76px-wide avatar chips (name in Archivo 600, days to Opening Night in amber tabular figures), "Enter a code" as the text-button action, and the screen's one Gradient Button, "Invite a friend". Then a "LATEST SHOWS" micro label and the feed.
+- **Home:** a headline-gradient `PosterSurface` with "THE CREW", one white line ("3 runners in your Crew. Only they see what you share.") and a white `tune` button for Crew settings. Below it the "Your Crew" Section Card: a horizontal strip of avatar chips at least 76px wide that grow with text size (name in Archivo 600, days to Opening Night in amber tabular figures), "Enter a code" as the text-button action, and the screen's one Gradient Button, "Invite a friend". Then a "LATEST SHOWS" micro label and the feed.
 - **Crew post:** the Show Card ticket (`TicketBorder`, venue-gradient stub), with a signature row on top (24px avatar, stage name in Archivo 700 or "You", grey "2 hr ago", an overflow menu), the same workout line and Archivo Condensed numbers, the Song of the Show with 36px album art and the song note in grey, Gold Records as small Stage Surface High pills with an amber outline and an amber `album` disc, shared notes in body text, and the Encore text button (`celebration_outlined` → `celebration` in Neon Magenta when you cheered, "Encore · 3"). On your own post the Encore line is a grey count instead.
 - **Invite sheet:** "INVITE TO THE CREW", one grey sentence, the code in Archivo Condensed Display with wide tracking on a Stage Surface High block, then a filled "Send invite" (system share sheet, falls back to copy) and an outlined "Copy link". Codes are 8 characters shown as "K7Q9 MX4P".
 - **Join screen** (`/crew/join/CODE`): a headline-gradient poster with the inviter's avatar and "MAYA INVITES YOU TO THE CREW", what joining means in one white sentence, then the Gradient Button "Join the Crew" and a "Not now" text button. Expired, own and already-joined invites use the Empty State.

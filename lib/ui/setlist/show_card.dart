@@ -55,10 +55,13 @@ class ShowCard extends StatelessWidget {
                             letterSpacing: 1,
                           ),
                         ),
-                        Text(
-                          '${show.date.day}',
-                          style: theme.textTheme.displaySmall?.copyWith(
-                            color: Colors.white,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${show.date.day}',
+                            style: theme.textTheme.displaySmall?.copyWith(
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                         Icon(
