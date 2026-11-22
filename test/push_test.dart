@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_memory.dart';
 import 'package:setlist_tracker/data/auth/auth_service.dart';
 import 'package:setlist_tracker/data/crew/crew_controller.dart';
