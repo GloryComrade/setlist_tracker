@@ -128,7 +128,7 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
   crew.invites['P4TR8WHN'] = 'sam';
 
   final twoHours = now.subtract(const Duration(hours: 2));
-  crew.addShow(
+  final maya1 = crew.addShow(
     'maya',
     _show(
       'm1',
@@ -170,7 +170,24 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
     ),
     gearName: 'Saucony Endorphin Speed 4',
     at: twoHours,
-    encoreCount: 3,
+    encoreCount: 1,
+  );
+  // Encores from Jordan and Priya are named; the fan outside Ryan's Crew is
+  // only counted ("and 1 more outside your Crew").
+  crew.encores[maya1]!.addAll(['jordan', 'priya']);
+  addPreviewShoutout(
+    crew,
+    'jordan',
+    maya1,
+    'Tempo before work? Headliner energy.',
+    now.subtract(const Duration(minutes: 95)),
+  );
+  addPreviewShoutout(
+    crew,
+    'maya',
+    maya1,
+    'Legs were flying today. New shoes helped.',
+    now.subtract(const Duration(minutes: 70)),
   );
   crew.addShow(
     'maya',
@@ -225,9 +242,23 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
     ),
     gearName: 'Hoka Speedgoat 6',
     at: now.subtract(const Duration(days: 1, hours: 3)),
-    encoreCount: 4,
+    encoreCount: 2,
   );
-  crew.encores[jordan]!.add('me');
+  crew.encores[jordan]!.addAll(['me', 'maya']);
+  addPreviewShoutout(
+    crew,
+    'maya',
+    jordan,
+    '16 on those hills. Encore!',
+    now.subtract(const Duration(hours: 20)),
+  );
+  addPreviewShoutout(
+    crew,
+    'priya',
+    jordan,
+    'That second wind song is going on my long run mix.',
+    now.subtract(const Duration(hours: 9)),
+  );
   crew.addShow(
     'priya',
     _show(
@@ -250,6 +281,24 @@ MemoryCrewService previewCrew(DateTime now, {DateTime? coHeadlineRace}) {
   );
   return crew;
 }
+
+/// A Shout-out from [from] on [postId] at [at], so previews show real
+/// times rather than the memory service's clock.
+void addPreviewShoutout(
+  MemoryCrewService crew,
+  String from,
+  String postId,
+  String body,
+  DateTime at,
+) => crew.shoutoutRows.add(
+  MemoryShoutout(
+    id: 'preview-so${crew.shoutoutRows.length + 1}',
+    postId: postId,
+    userId: from,
+    body: body,
+    createdAt: at.toUtc(),
+  ),
+);
 
 /// A stand-in profile photo: a soft violet-to-teal ground with a pale head
 /// and shoulders, drawn in code. 256 px JPEG, like the app makes.

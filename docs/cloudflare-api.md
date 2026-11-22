@@ -180,7 +180,8 @@ syncs (Backstage Pass, the `records` table). The rules:
   codes from a blocked runner.
 - Each block is its own row. Unblocking removes only your own block.
 - Encores: only on a Show you can see, and never on your own. Posts return
-  how many Encores a Show has and whether one is yours, never who gave them.
+  how many Encores a Show has and whether one is yours. Who gave them comes
+  from the audience route (see "Seen by, who gave Encores, and Shout-outs").
 - A report copies the Show's data on the server and hides that Show from the
   reporter (feed and mate page).
 
@@ -315,6 +316,92 @@ migration `0004_avatars.sql`.
 The `?v=` is the photo's save time in milliseconds, so a new photo has a new
 address. The app makes the photo on the device: square, 256 px, JPEG.
 Deleting the account deletes the photo.
+
+### Seen by, who gave Encores, and Shout-outs
+
+Migration `0005_show_audience.sql`; code in `backend/src/show_views.ts` and
+`backend/src/shoutouts.ts`.
+
+**Seen by.** A view is recorded when a Crew mate's Show is opened, or its
+feed card stays at least half on screen for about a second. Only the Show's
+owner can see who saw it.
+
+- `PUT /api/crew/profile` takes `shareViews` (boolean; leaving it out keeps
+  the saved value), and the profile carries it (`true` by default). It is
+  the Settings switch "Let my Crew know when I've seen their Shows". Sending
+  `false` deletes every view you left, and while it's off nothing new is
+  recorded and you don't appear in anyone's Seen by.
+- Your own Shows, Shows you can't see, and runners with `shareViews: false`
+  record nothing. The first view is kept; seeing a Show again changes
+  nothing.
+- Only Crew mates are counted: someone who left your Crew or is blocked
+  either way drops out of Seen by (the row is kept until either account is
+  deleted).
+
+**Who gave Encores.** Encore givers are named only when they are you or in
+your Crew; anyone else is counted in `otherEncores`.
+
+**Shout-outs.** Short comments on a Show, 1 to 280 characters after
+trimming (code points), from the Show's owner and their Crew.
+
+- A Shout-out shows while its writer is the Show's owner or in the owner's
+  Crew, isn't blocked either way with you, and you haven't reported it.
+  Writers who left are hidden, not deleted.
+- At most 30 Shout-outs an hour per runner (`too_many_tries`), and
+  `bad_request` without a stage name.
+- The writer and the Show's owner can delete one. Deleting anything else
+  is a 204 that does nothing.
+- A report copies the text into `crew_reports` (`post_id`
+  `shoutout:<id>`, `post_data` `{owner, showId, body}`), hides it from the
+  reporter at once, and sends the developer alert (kind `shoutout`,
+  `backend/src/reports.ts`). You can't report your own.
+- Deleting an account deletes the views it left and received, and every
+  Shout-out it wrote or that was on its Shows.
+
+| Route | Body | Answer |
+| --- | --- | --- |
+| `PUT /api/crew/posts/{postId}/seen` | | 204 (404 `not_found` if you can't see that Show) |
+| `GET /api/crew/posts/{postId}/audience` | | `{encores: [Person], otherEncores, seenBy: [Person] \| null}`; `seenBy` is non-null only on your own Show. Both lists newest first |
+| `GET /api/crew/posts/{postId}/shoutouts` | | `{"shoutouts": [Shoutout]}`, oldest first |
+| `POST /api/crew/posts/{postId}/shoutouts` | `{body}` | 201 Shoutout |
+| `DELETE /api/crew/shoutouts/{id}` | | 204 |
+| `POST /api/crew/shoutouts/{id}/report` | `{reason}` (1 to 500 characters) | 204, or 404 `not_found` when it's gone or hidden from you |
+
+Posts gain two fields: `shoutouts`, the number of Shout-outs you would
+see, and `seenBy`, `{count, names}` (the three latest stage names) on your
+own posts and `null` on everyone else's.
+
+```json
+{
+  "id": "<ownerId>:<showId>",
+  "encores": 3, "encoredByMe": false, "mine": true,
+  "shoutouts": 2,
+  "seenBy": {"count": 5, "names": ["Maya", "Sam", "Jo"]}
+}
+```
+
+Person JSON (`at` is when they gave the Encore, or first saw the Show):
+
+```json
+{
+  "userId": "…", "stageName": "Maya", "color": 3,
+  "avatarBadge": "mic", "avatarUrl": "/api/crew/avatar/…?v=…",
+  "at": "2026-11-22T03:04:05.678Z"
+}
+```
+
+Shoutout JSON (`avatarUrl` is `null` unless the writer is you or in your
+Crew; `canDelete` is true when you wrote it or it's on your Show):
+
+```json
+{
+  "id": "…", "userId": "…", "stageName": "Sam", "color": 5,
+  "avatarBadge": null, "avatarUrl": null,
+  "body": "Huge negative split!",
+  "createdAt": "2026-11-22T03:04:05.678Z",
+  "mine": false, "canDelete": true
+}
+```
 
 ## Spotify search
 

@@ -79,11 +79,24 @@ Future<void> main() async {
   );
   await shows.save(mine);
   final saved = (await shows.getById(mine.id))!;
-  crew.addShow(
+  final minePost = crew.addShow(
     'me',
     saved,
     at: now.subtract(const Duration(days: 2)),
-    encoreCount: 2,
+  );
+  // Encores, Seen by and a Shout-out on Ryan's Show.
+  crew.encores[minePost]!.addAll(['maya', 'jordan']);
+  crew.views[minePost] = {
+    'priya': now.subtract(const Duration(hours: 3)).toUtc(),
+    'maya': now.subtract(const Duration(hours: 30)).toUtc(),
+    'jordan': now.subtract(const Duration(hours: 40)).toUtc(),
+  };
+  addPreviewShoutout(
+    crew,
+    'maya',
+    minePost,
+    'Easy pace looks good on you. See you Saturday.',
+    now.subtract(const Duration(hours: 29)),
   );
 
   runApp(

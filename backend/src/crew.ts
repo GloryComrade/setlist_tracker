@@ -14,7 +14,8 @@
 // - Ten wrong codes in an hour gets too_many_tries (codes from a blocked
 //   runner count as wrong).
 // - Encores only on Shows you can see, never your own. The feed shows how
-//   many and whether one is yours, never who.
+//   many and whether one is yours; GET .../audience names who
+//   (src/show_views.ts, with "Seen by").
 // - A post is named "<ownerId>:<showId>". The server copies the Show into a
 //   report.
 
@@ -28,6 +29,8 @@ import {
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
 import { notifyReport } from "./reports";
+import { forgetMyViews, seenSummaries, showViewsRoute } from "./show_views";
+import { postShoutoutsRoute, shoutoutRoute, VISIBLE_SHOUTOUT } from "./shoutouts";
 import { tourInvitesRoute } from "./tour_invites";
 import { addMs, DAY, HOUR, iso, isObject, randomBytes } from "./util";
 
@@ -93,6 +96,8 @@ export interface Profile {
   avatarBadge: string | null;
   /** Where to fetch the photo, or null without one. */
   avatarUrl: string | null;
+  /** "Let my Crew know when I've seen their Shows" (migration 0005). */
+  shareViews: boolean;
 }
 
 interface ProfileRow {
@@ -102,6 +107,7 @@ interface ProfileRow {
   all_activity_since: string | null;
   avatar_badge: string | null;
   avatar_at: string | null;
+  share_views: number;
 }
 
 /**
@@ -118,6 +124,7 @@ function toProfile(r: ProfileRow): Profile {
     color: r.color,
     allActivityPending: r.all_activity_since === ALL_ACTIVITY_PENDING,
     ...avatarFields(r.user_id, r.avatar_badge, r.avatar_at),
+    shareViews: r.share_views !== 0,
   };
 }
 
@@ -128,7 +135,7 @@ export async function getProfile(
   const row = await db
     .prepare(
       `SELECT user_id, stage_name, color, all_activity_since, avatar_badge,
-              ${AVATAR_AT("user_id")} AS avatar_at
+              share_views, ${AVATAR_AT("user_id")} AS avatar_at
        FROM crew_profiles WHERE user_id = ?`,
     )
     .bind(userId)
@@ -176,10 +183,13 @@ export async function saveProfile(
   }
   // Left out (older app builds): the saved badge stays.
   const badge = badgeField(body);
+  // Left out (older app builds): the switch stays as it was.
+  const shareViews = typeof body.shareViews === "boolean" ? body.shareViews : undefined;
   await db
     .prepare(
-      `INSERT INTO crew_profiles (user_id, stage_name, color, updated_at, avatar_badge)
-       VALUES (?1, ?2, ?3, ?4, ?8)
+      `INSERT INTO crew_profiles
+         (user_id, stage_name, color, updated_at, avatar_badge, share_views)
+       VALUES (?1, ?2, ?3, ?4, ?8, coalesce(?9, 1))
        ON CONFLICT (user_id) DO UPDATE SET
          stage_name = excluded.stage_name, color = excluded.color,
          updated_at = excluded.updated_at,
@@ -187,7 +197,8 @@ export async function saveProfile(
            WHEN ?5 = 1 AND all_activity_since = ?6 THEN excluded.updated_at
            ELSE all_activity_since END,
          avatar_badge = CASE WHEN ?7 = 1 THEN excluded.avatar_badge
-           ELSE avatar_badge END`,
+           ELSE avatar_badge END,
+         share_views = CASE WHEN ?9 IS NULL THEN share_views ELSE ?9 END`,
     )
     .bind(
       userId,
@@ -198,8 +209,10 @@ export async function saveProfile(
       ALL_ACTIVITY_PENDING,
       badge === undefined ? 0 : 1,
       badge ?? null,
+      shareViews === undefined ? null : shareViews ? 1 : 0,
     )
     .run();
+  if (shareViews === false) await forgetMyViews(db, userId);
   return (await getProfile(db, userId))!;
 }
 
@@ -614,7 +627,10 @@ async function crewShows(
                WHERE e.owner = s.user_id AND e.show_id = s.id) AS encores,
               EXISTS (SELECT 1 FROM crew_encores_v2 e
                       WHERE e.owner = s.user_id AND e.show_id = s.id
-                        AND e.user_id = ?1) AS encored_by_me
+                        AND e.user_id = ?1) AS encored_by_me,
+              (SELECT count(*) FROM crew_shoutouts so
+               WHERE so.owner = s.user_id AND so.show_id = s.id
+                 AND ${VISIBLE_SHOUTOUT("so")}) AS shoutouts
        FROM records s
        JOIN crew_profiles pr ON pr.user_id = s.user_id
        LEFT JOIN records g ON g.kind = 'gear'
@@ -640,9 +656,15 @@ async function crewShows(
       gear_name: unknown;
       encores: number;
       encored_by_me: number;
+      shoutouts: number;
       avatar_badge: string | null;
       avatar_at: string | null;
     }>();
+  const seen = await seenSummaries(
+    db,
+    me,
+    results.filter((r) => r.owner === me).map((r) => r.id),
+  );
   return results.map((r) => ({
     id: postId(r.owner, r.id),
     ownerId: r.owner,
@@ -655,7 +677,9 @@ async function crewShows(
     sharedAt: r.updated_at,
     encores: r.encores,
     encoredByMe: r.encored_by_me === 1,
+    shoutouts: r.shoutouts,
     mine: r.owner === me,
+    seenBy: r.owner === me ? (seen.get(r.id) ?? { count: 0, names: [] }) : null,
   }));
 }
 
@@ -664,7 +688,7 @@ export async function feed(db: D1Database, me: string) {
 }
 
 /** A Show the signed-in runner [me] can see (their own, or their Crew's). */
-async function visibleShow(db: D1Database, me: string, id: string) {
+export async function visibleShow(db: D1Database, me: string, id: string) {
   const parsed = parsePostId(id);
   if (!parsed) return null;
   return db
@@ -824,6 +848,18 @@ export async function crewRoute(
       await unencore(db, me, b);
       return noContent();
     }
+  }
+  if (a === "posts" && n === 3) {
+    const res = c === "shoutouts"
+      ? await postShoutoutsRoute(request, db, me, b)
+      : await showViewsRoute(request, db, me, b, c);
+    if (res) return res;
+  }
+  if (a === "shoutouts" && n >= 2) {
+    const res = await shoutoutRoute(request, db, me, parts.slice(1), (reason) =>
+      notifyReport(env, "shoutout", reason),
+    );
+    if (res) return res;
   }
   if (a === "posts" && n === 3 && c === "report" && m === "POST") {
     const reason = (await readJson(request)).reason;

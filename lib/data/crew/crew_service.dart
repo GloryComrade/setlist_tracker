@@ -17,7 +17,7 @@ class CrewException implements Exception {
   String toString() => message;
 }
 
-abstract class CrewService implements CrewTourInvites {
+abstract class CrewService implements CrewTourInvites, CrewShowAudience {
   /// Null until a stage name is picked.
   Future<CrewProfile?> myProfile();
 
@@ -97,3 +97,30 @@ abstract interface class CrewTourInvites {
 
 /// The biggest photo the server takes.
 const kMaxAvatarBytes = 64 * 1024;
+
+/// Seen by, who gave Encores, and Shout-outs on a Show. Part of
+/// [CrewService].
+abstract interface class CrewShowAudience {
+  /// Turns "Let my Crew know when I've seen their Shows" on or off. Off also
+  /// forgets the views already recorded.
+  Future<CrewProfile> setShareViews(CrewProfile profile, bool on);
+
+  /// You saw a Crew mate's Show. Does nothing on your own Shows or with the
+  /// switch off.
+  Future<void> markSeen(String postId);
+
+  /// Who gave the Show an Encore, and on your own Shows who saw it.
+  Future<CrewAudience> audience(String postId);
+
+  /// The Show's Shout-outs, oldest first.
+  Future<List<CrewShoutout>> shoutouts(String postId);
+
+  /// Posts a Shout-out of 1 to [kMaxShoutoutChars] characters.
+  Future<CrewShoutout> addShoutout(String postId, String body);
+
+  /// Yours, or any on your own Show.
+  Future<void> deleteShoutout(String id);
+
+  /// Reports a Shout-out to the app's owner and hides it from you.
+  Future<void> reportShoutout(String id, String reason);
+}
