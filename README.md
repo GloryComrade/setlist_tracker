@@ -40,20 +40,25 @@ lib/
   data/
     repositories/               abstract storage contracts (no storage code)
     local/                      Sembast versions (IndexedDB on web, file on iOS)
-    providers.dart              THE place to swap storage for Supabase/Firebase
+    auth/                       sign-in contract (no Supabase code)
+    sync/                       outbox, sync engine, sync controller
+    remote/                     Supabase: settings, sign-in, cloud tables
+    providers.dart              wires storage, sign-in and sync together
   ui/
     setlist/                    home: Setlist grouped by week, filters, ticket cards
     show_form/                  Book a Show (new + edit)
     show_detail/                one Show: poster, numbers, Tracks or venue, song
     tour/                       The Tour: setup quiz, Tour Schedule, Planned Show page
-    backstage/                  Gear, Saved Mixes, dialogs
+    backstage/                  Backstage Pass, Gear, Saved Mixes, dialogs
     widgets/                    shared pieces, including the Track editor
 test/
 ```
 
-## Swapping storage later
+## Accounts and syncing (Backstage Pass)
 
-Write `SupabaseShowRepository implements ShowRepository` (and the Gear / Saved Mix / Tour ones), then change the providers at the top of `lib/data/providers.dart`. Records already carry UUID ids, `updatedAt`, soft-delete `deletedAt` and `schemaVersion` for syncing.
+Signing in is optional. With Supabase settings passed at build time (`--dart-define=SUPABASE_URL=… --dart-define=SUPABASE_KEY=…`), Backstage offers Google sign-in (and Apple, once switched on) and syncs Shows, Gear, Saved Mixes and Tours. The screens still read the on-device copy, so the app works offline; `lib/data/sync/` copies changes to and from the cloud underneath. Without the settings the app is local-only, as before.
+
+Setup steps: [docs/backstage-pass-setup.md](docs/backstage-pass-setup.md). Database tables and security rules: `supabase/migrations/`.
 
 ## Notes
 

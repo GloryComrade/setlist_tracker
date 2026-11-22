@@ -1,7 +1,9 @@
 /// The one place that decides which storage the app uses.
 ///
-/// Phase 5 swap: replace the Sembast repositories below with Supabase
-/// (or Firebase) ones. Everything else reads data through these providers.
+/// The screens always read the on-device Sembast copy, so the app works
+/// offline. When the build has backend settings, main() overrides
+/// [authServiceProvider] and [remoteStoreProvider], and the sync service
+/// (lib/data/sync) copies changes to and from the cloud underneath.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,13 +13,31 @@ import '../models/gear.dart';
 import '../models/saved_mix.dart';
 import '../models/show.dart';
 import '../models/tour.dart';
+import 'auth/auth_service.dart';
 import 'local/sembast_repositories.dart';
 import 'repositories/repositories.dart';
+import 'sync/remote_store.dart';
+import 'sync/sync_engine.dart';
 
 /// Opened in main() and passed in with an override.
 final databaseProvider = Provider<Database>(
   (ref) => throw UnimplementedError('databaseProvider must be overridden'),
 );
+
+/// Signing in. Local-only builds keep the default, which hides sign-in.
+final authServiceProvider = Provider<AuthService>(
+  (ref) => const NoAuthService(),
+);
+
+/// The cloud copy. Null in local-only builds.
+final remoteStoreProvider = Provider<RemoteStore?>((ref) => null);
+
+final syncEngineProvider = Provider<SyncEngine?>((ref) {
+  final remote = ref.watch(remoteStoreProvider);
+  return remote == null
+      ? null
+      : SyncEngine(ref.watch(databaseProvider), remote);
+});
 
 final showRepositoryProvider = Provider<ShowRepository>(
   (ref) => SembastShowRepository(ref.watch(databaseProvider)),

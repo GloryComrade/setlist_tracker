@@ -9,6 +9,8 @@ import '../../models/enums.dart';
 import '../../models/show.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
+import '../../data/sync/sync_controller.dart';
+import 'pass_nudge.dart';
 import 'show_card.dart';
 
 /// Which Shows the Setlist is showing.
@@ -50,6 +52,9 @@ class SetlistScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final showsAsync = ref.watch(showsProvider);
     final filter = ref.watch(setlistFilterProvider);
+    final signedIn = ref.watch(
+      syncControllerProvider.select((s) => s.signedIn),
+    );
 
     return Scaffold(
       // The tab shell paints the stage and its glow behind every tab.
@@ -67,33 +72,45 @@ class SetlistScreen extends ConsumerWidget {
               SetlistFilter.live =>
                 shows.where((s) => s.venue == Venue.live).toList(),
             };
-            return MaxWidth(
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    sliver: SliverToBoxAdapter(child: _Header(shows: shows)),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverToBoxAdapter(
-                      child: _FilterChips(
-                        value: filter,
-                        onChanged: (f) =>
-                            ref.read(setlistFilterProvider.notifier).set(f),
-                      ),
+            final list = CustomScrollView(
+              // Lets pull to refresh work even when the list is short.
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverToBoxAdapter(child: _Header(shows: shows)),
+                ),
+                SliverToBoxAdapter(child: PassNudge(showCount: shows.length)),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _FilterChips(
+                      value: filter,
+                      onChanged: (f) =>
+                          ref.read(setlistFilterProvider.notifier).set(f),
                     ),
                   ),
-                  if (visible.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EmptyState(filtered: shows.isNotEmpty),
+                ),
+                if (visible.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _EmptyState(filtered: shows.isNotEmpty),
+                  )
+                else
+                  ..._weekSlivers(visible),
+                const SliverToBoxAdapter(child: SizedBox(height: 96)),
+              ],
+            );
+            return MaxWidth(
+              child: signedIn
+                  // Signed in: pull down to sync with your Backstage Pass.
+                  ? RefreshIndicator(
+                      onRefresh: ref
+                          .read(syncControllerProvider.notifier)
+                          .syncNow,
+                      child: list,
                     )
-                  else
-                    ..._weekSlivers(visible),
-                  const SliverToBoxAdapter(child: SizedBox(height: 96)),
-                ],
-              ),
+                  : list,
             );
           },
         ),
