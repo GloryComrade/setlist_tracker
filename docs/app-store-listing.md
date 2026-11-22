@@ -176,9 +176,10 @@ account.
 > deletes all data on our server and revokes Sign in with Apple.
 >
 > The Crew (friend sharing) is invite-only: The Crew tab → Invite a friend
-> makes a code. To see a shared Show from another runner, use invite code
-> DEMO-CODE (from our test account "Review Crew"), via The Crew → Enter a
-> code. Every shared Show has ⋯ → Report this Show / Block, and a friend's
+> makes a code. To see another runner's Shows, sign in, pick a stage
+> name, then The Crew → Enter a code → TRYCREW2. That joins our demo
+> runner "Review Crew", which has three Shows and a Shout-out. The code
+> doesn't expire. Every shared Show has ⋯ → Report this Show / Block, and a friend's
 > profile photo has Report photo. Joining The Crew means agreeing to the
 > Crew rules (https://setlisttracker.com/terms.html), which have zero
 > tolerance for objectionable content. Each report alerts the developer,
@@ -207,7 +208,7 @@ account.
 > (the app asks for "While Using" only; iOS shows the blue location
 > indicator). There is no location use outside a run you started.
 
-Before submitting, sign in on https://setlisttracker.com with a second account, pick the
-stage name "Review Crew", log a Show or two, make an invite (The Crew →
-Invite a friend), and put its code in place of `DEMO-CODE`. Invites last 7
-days, so make a fresh one right before you submit.
+`TRYCREW2` is a permanent invite to the demo runner "Review Crew", seeded
+by backend migration 0006 (three Shows and a Shout-out; nobody can sign in
+as it). Joining links you to Review Crew only, not to other people who
+used the code.
