@@ -105,6 +105,10 @@ abstract interface class CrewShowAudience {
   /// forgets the views already recorded.
   Future<CrewProfile> setShareViews(CrewProfile profile, bool on);
 
+  /// Turns "Tell me when my Crew plays a Show" on or off for every phone
+  /// you're signed in on.
+  Future<CrewProfile> setNotifyShows(CrewProfile profile, bool on);
+
   /// You saw a Crew mate's Show. Does nothing on your own Shows or with the
   /// switch off.
   Future<void> markSeen(String postId);

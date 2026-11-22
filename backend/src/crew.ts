@@ -98,6 +98,8 @@ export interface Profile {
   avatarUrl: string | null;
   /** "Let my Crew know when I've seen their Shows" (migration 0005). */
   shareViews: boolean;
+  /** "Tell me when my Crew plays a Show" (migration 0007). */
+  notifyShows: boolean;
 }
 
 interface ProfileRow {
@@ -108,6 +110,7 @@ interface ProfileRow {
   avatar_badge: string | null;
   avatar_at: string | null;
   share_views: number;
+  notify_shows: number;
 }
 
 /**
@@ -125,6 +128,7 @@ function toProfile(r: ProfileRow): Profile {
     allActivityPending: r.all_activity_since === ALL_ACTIVITY_PENDING,
     ...avatarFields(r.user_id, r.avatar_badge, r.avatar_at),
     shareViews: r.share_views !== 0,
+    notifyShows: r.notify_shows !== 0,
   };
 }
 
@@ -135,7 +139,7 @@ export async function getProfile(
   const row = await db
     .prepare(
       `SELECT user_id, stage_name, color, all_activity_since, avatar_badge,
-              share_views, ${AVATAR_AT("user_id")} AS avatar_at
+              share_views, notify_shows, ${AVATAR_AT("user_id")} AS avatar_at
        FROM crew_profiles WHERE user_id = ?`,
     )
     .bind(userId)
@@ -185,11 +189,13 @@ export async function saveProfile(
   const badge = badgeField(body);
   // Left out (older app builds): the switch stays as it was.
   const shareViews = typeof body.shareViews === "boolean" ? body.shareViews : undefined;
+  const notifyShows = typeof body.notifyShows === "boolean" ? body.notifyShows : undefined;
   await db
     .prepare(
       `INSERT INTO crew_profiles
-         (user_id, stage_name, color, updated_at, avatar_badge, share_views)
-       VALUES (?1, ?2, ?3, ?4, ?8, coalesce(?9, 1))
+         (user_id, stage_name, color, updated_at, avatar_badge, share_views,
+          notify_shows)
+       VALUES (?1, ?2, ?3, ?4, ?8, coalesce(?9, 1), coalesce(?10, 1))
        ON CONFLICT (user_id) DO UPDATE SET
          stage_name = excluded.stage_name, color = excluded.color,
          updated_at = excluded.updated_at,
@@ -198,7 +204,8 @@ export async function saveProfile(
            ELSE all_activity_since END,
          avatar_badge = CASE WHEN ?7 = 1 THEN excluded.avatar_badge
            ELSE avatar_badge END,
-         share_views = CASE WHEN ?9 IS NULL THEN share_views ELSE ?9 END`,
+         share_views = CASE WHEN ?9 IS NULL THEN share_views ELSE ?9 END,
+         notify_shows = CASE WHEN ?10 IS NULL THEN notify_shows ELSE ?10 END`,
     )
     .bind(
       userId,
@@ -210,6 +217,7 @@ export async function saveProfile(
       badge === undefined ? 0 : 1,
       badge ?? null,
       shareViews === undefined ? null : shareViews ? 1 : 0,
+      notifyShows === undefined ? null : notifyShows ? 1 : 0,
     )
     .run();
   if (shareViews === false) await forgetMyViews(db, userId);
@@ -579,7 +587,7 @@ export async function unblock(db: D1Database, me: string, other: string) {
  * Crew before it showed everything, logged after that change or shared
  * before it (migration 0002).
  */
-const CREW_SHOW = `(s.kind = 'shows' AND s.deleted_at IS NULL
+export const CREW_SHOW = `(s.kind = 'shows' AND s.deleted_at IS NULL
   AND coalesce(json_extract(s.data, '$.crewPrivate'), 0) = 0
   AND NOT EXISTS (
     SELECT 1 FROM crew_profiles op

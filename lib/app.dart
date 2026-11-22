@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:material_ui/material_ui.dart';
 
 import 'data/crew/crew_controller.dart';
+import 'data/push/push_controller.dart';
 import 'data/settings/app_settings.dart';
 import 'data/sync/sync_controller.dart';
 import 'models/tour.dart';
@@ -132,17 +135,39 @@ final appRouter = GoRouter(
   ],
 );
 
-class SetlistApp extends ConsumerWidget {
+class SetlistApp extends ConsumerStatefulWidget {
   const SetlistApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SetlistApp> createState() => _SetlistAppState();
+}
+
+class _SetlistAppState extends ConsumerState<SetlistApp> {
+  StreamSubscription<String>? _opens;
+
+  @override
+  void initState() {
+    super.initState();
+    // A tapped notification ("Maya played a Show") opens that runner's page.
+    _opens = ref.read(pushBridgeProvider).opens.listen(appRouter.push);
+  }
+
+  @override
+  void dispose() {
+    _opens?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Keeps the Backstage Pass sync running whichever tab is open.
     ref.listen(syncControllerProvider, (_, _) {});
     // Keeps the Crew feed in step with the Setlist and each sync.
     ref.listen(crewControllerProvider, (_, _) {});
     // Reads the saved Settings at start, so every screen gets them.
     ref.listen(appSettingsProvider, (_, _) {});
+    // Registers this phone for the Crew's notifications once allowed.
+    ref.listen(pushControllerProvider, (_, _) {});
     return MaterialApp.router(
       title: 'Setlist Tracker',
       debugShowCheckedModeBanner: false,

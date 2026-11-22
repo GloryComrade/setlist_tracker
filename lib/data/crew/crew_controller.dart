@@ -329,6 +329,13 @@ class CrewController extends Notifier<CrewState> {
     state = state.copyWith(profile: await _s.setShareViews(p, on));
   }
 
+  /// "Tell me when my Crew plays a Show".
+  Future<void> setNotifyShows(bool on) async {
+    final p = state.profile;
+    if (p == null) return;
+    state = state.copyWith(profile: await _s.setNotifyShows(p, on));
+  }
+
   Future<CrewAudience> audience(CrewPost post) => _s.audience(post.id);
 
   Future<List<CrewShoutout>> shoutouts(CrewPost post) async {

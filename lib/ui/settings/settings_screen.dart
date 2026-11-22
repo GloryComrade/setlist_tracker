@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../app_version.dart';
 import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
+import '../../data/push/push_bridge.dart';
+import '../../data/push/push_controller.dart';
 import '../../data/remote/backend_config.dart';
 import '../../data/settings/app_settings.dart';
 import '../../models/crew.dart';
@@ -169,8 +171,31 @@ class _CrewSection extends ConsumerWidget {
   const _CrewSection({required this.crew});
   final CrewState crew;
 
+  /// On asks iOS first (the prompt shows once); off just tells the server.
+  Future<void> _setNotify(BuildContext context, WidgetRef ref, bool on) async {
+    final push = ref.read(pushControllerProvider.notifier);
+    try {
+      if (on && !ref.read(pushControllerProvider).allowed) {
+        if (!await push.requestPermission()) {
+          if (context.mounted) {
+            crewSnack(
+              context,
+              'Turn on notifications for Setlist Tracker in the iPhone’s '
+              'Settings app.',
+            );
+          }
+          return;
+        }
+      }
+      await ref.read(crewControllerProvider.notifier).setNotifyShows(on);
+    } catch (_) {
+      if (context.mounted) crewSnack(context, 'Couldn’t reach the Crew.');
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final push = ref.watch(pushControllerProvider);
     final settings = ref.watch(appSettingsProvider);
     final c = ref.read(crewControllerProvider.notifier);
     return SectionCard(
@@ -235,6 +260,19 @@ class _CrewSection extends ConsumerWidget {
               }
             },
           ),
+          if (push.supported) ...[
+            const Divider(height: 24),
+            _Switch(
+              value: (crew.profile?.notifyShows ?? true) && push.allowed,
+              title: 'Tell me when my Crew plays a Show',
+              subtitle: push.permission == PushPermission.denied
+                  ? 'Notifications are off for Setlist Tracker. Turn them on '
+                        'in the iPhone’s Settings app.'
+                  : 'A notification when someone in your Crew logs a new '
+                        'Show.',
+              onChanged: (v) => _setNotify(context, ref, v),
+            ),
+          ],
           const Divider(height: 24),
           _SubHead('Blocked runners'),
           const SizedBox(height: 4),

@@ -1,6 +1,7 @@
 // Backstage Pass: syncing Shows, Gear, Saved Mixes and Tours.
 
 import type { Env } from "./env";
+import { existingShowIds, notifyCrewOfShows, pushConfigured } from "./push";
 import { ApiError, json, readJson } from "./http";
 import { byteLength, iso, isObject, normalizeIso } from "./util";
 
@@ -198,10 +199,21 @@ export async function pushRoute(
   env: Env,
   userId: string,
   tableName: string,
+  later?: (work: Promise<unknown>) => Promise<void>,
 ): Promise<Response> {
   const table = syncTable(tableName);
   const rows = parseRows(await readJson(request));
+  // Shows the server hasn't seen before may notify the Crew (src/push.ts).
+  const ids = rows.filter((r) => r.deletedAt == null).map((r) => r.id);
+  const known =
+    table === "shows" && later && pushConfigured(env)
+      ? await existingShowIds(env.DB, userId, ids)
+      : null;
   const { rejected } = await upsertRows(env.DB, userId, table, rows);
+  if (known && later) {
+    const fresh = ids.filter((id) => !known.has(id) && !rejected.includes(id));
+    if (fresh.length > 0) await later(notifyCrewOfShows(env, userId, fresh));
+  }
   if (rejected.length > 0) {
     throw new ApiError(
       "bad_request",

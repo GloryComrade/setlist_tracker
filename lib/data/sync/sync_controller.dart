@@ -152,6 +152,14 @@ class SyncController extends Notifier<SyncState> {
   Future<void> signInWithGoogle() => _auth.signInWithGoogle();
   Future<void> signInWithApple() => _auth.signInWithApple();
 
+  final _beforeSignOut = <Future<void> Function()>[];
+
+  /// Runs [hook] at sign-out, before the session ends. Returns the remover.
+  void Function() beforeSignOut(Future<void> Function() hook) {
+    _beforeSignOut.add(hook);
+    return () => _beforeSignOut.remove(hook);
+  }
+
   /// Uploads anything left, signs out and clears this device's copy. Your
   /// Shows stay in the account for next time.
   ///
@@ -162,6 +170,11 @@ class SyncController extends Notifier<SyncState> {
     if (!force && state.pending > 0) return false;
     _leaving = true;
     try {
+      // While still signed in: e.g. this phone stops getting the Crew's
+      // notifications (PushController).
+      for (final hook in List.of(_beforeSignOut)) {
+        await hook();
+      }
       await _auth.signOut();
       await _engine?.clearLocal();
       state = const SyncState();

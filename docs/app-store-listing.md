@@ -80,6 +80,7 @@ Free, in all countries.
 >   the Crew"
 > • See who gave your Shows an Encore, and which Crew mates saw them
 > • Training for the same race? Book a Tour featuring a friend
+> • Get a notification when someone in your Crew plays a Show
 > • Block and report are always one tap away
 >
 > BACKSTAGE PASS
@@ -156,6 +157,7 @@ For every type below:
 | User Content | Photos or Videos | profile photo, if you upload one (only your Crew sees it) |
 | Usage Data | Product Interaction | Seen by: which Crew mates' Shows you've seen, shown only to each Show's owner (Settings → The Crew turns it off and forgets past views) |
 | Identifiers | User ID | account id |
+| Identifiers | Device ID | the notification token Apple gives the app, kept so Crew notifications reach your iPhone (removed at sign-out) |
 
 Not collected: coarse location, location outside a Go Live run, contacts, browsing or search history (song
 searches aren't stored), other usage data (no analytics), diagnostics, purchases.
@@ -207,6 +209,12 @@ account.
 > running with the screen locked so the route and distance are complete
 > (the app asks for "While Using" only; iOS shows the blue location
 > indicator). There is no location use outside a run you started.
+>
+> Notifications: with someone in The Crew, the Crew tab offers "Turn on"
+> (or Settings → The Crew → "Tell me when my Crew plays a Show"). iOS asks
+> first. A Crew mate logging a new Show sends one notification; tapping it
+> opens their page. Notifications are only for Crew activity, never
+> marketing, and the switch turns them off.
 
 `TRYCREW2` is a permanent invite to the demo runner "Review Crew", seeded
 by backend migration 0006 (three Shows and a Shout-out; nobody can sign in

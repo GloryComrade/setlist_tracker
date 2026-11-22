@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +10,9 @@ import 'data/local/open_database.dart';
 import 'data/music/music_search.dart';
 import 'data/music/spotify_music_search.dart';
 import 'data/providers.dart';
+import 'data/push/push_api.dart';
+import 'data/push/push_bridge.dart';
+import 'data/push/push_controller.dart';
 import 'data/remote/api_client.dart';
 import 'data/remote/backend_config.dart';
 import 'data/remote/cloudflare_auth_service.dart';
@@ -34,6 +38,9 @@ Future<void> main() async {
       authServiceProvider.overrideWithValue(auth),
       remoteStoreProvider.overrideWithValue(CloudflareRemoteStore(api)),
       crewServiceProvider.overrideWithValue(CloudflareCrewService(api)),
+      pushApiProvider.overrideWithValue(CloudflarePushApi(api)),
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+        pushBridgeProvider.overrideWithValue(MethodChannelPushBridge.instance),
       // Guests get Spotify too: the search needs no sign-in.
       musicSearchProvider.overrideWith(
         (ref) => FallbackMusicSearch(

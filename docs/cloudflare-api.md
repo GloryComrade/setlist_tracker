@@ -403,6 +403,33 @@ Crew; `canDelete` is true when you wrote it or it's on your Show):
 }
 ```
 
+## Push notifications (iPhone)
+
+The app registers the phone's APNs device token once the runner allows
+notifications, and removes it at sign-out. Both need sign-in.
+
+- `PUT /api/push/device` `{"token": "<hex>", "sandbox": false}` → 204. A
+  token belongs to one runner at a time; registering it again moves it.
+  `sandbox` is true in debug builds (Xcode installs), which use APNs'
+  sandbox.
+- `DELETE /api/push/device/{token}` → 204.
+
+`notifyShows` on `GET/PUT /api/crew/profile` is the Settings switch "Tell me
+when my Crew plays a Show" (default true; leaving it out keeps it as it is).
+
+When `POST /api/sync/shows` brings a Show the server hasn't seen before,
+made and dated within 36 hours, and visible to the Crew (not deleted, not
+Keep off the Crew), each Crew mate with the switch on gets one notification
+on every registered phone: "Maya played a Show" / "6.2 mi Tempo · Studio
+Session". A sync with several new Shows notifies once, about the newest.
+Blocks work both ways. A tap opens `/crew/mate/{ownerId}` (the payload's
+`path`). Tokens APNs reports as gone (410, BadDeviceToken, Unregistered) are
+deleted.
+
+Secrets: `APNS_KEY` (the .p8 key with Apple Push Notifications enabled) and
+`APNS_KEY_ID`; the team is `APPLE_TEAM_ID` and the topic `APPLE_BUNDLE_ID`.
+Without `APNS_KEY` nothing is sent.
+
 ## Spotify search
 
 `GET /api/spotify/search?q=<text>&limit=<1..25>` returns

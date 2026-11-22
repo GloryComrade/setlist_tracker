@@ -201,6 +201,26 @@ sign-in, so do this before sending the app for review.
 When someone deletes their account, the backend also revokes their Sign in
 with Apple, which App Review checks.
 
+### Push notifications ("Maya played a Show")
+
+1. developer.apple.com → **Certificates, Identifiers & Profiles →
+   Identifiers** → `com.glorycomrade.setlisttracker` → tick **Push
+   Notifications** (no certificate needed) → **Save**.
+2. **Keys → +**: name it `Setlist Tracker Push`, tick **Apple Push
+   Notifications service (APNs)**, then **Continue → Register →
+   Download**. Keep the `.p8` in your password manager; Apple won't let you
+   download it again.
+3. Cloudflare → **Workers & Pages** → the worker → **Settings → Variables
+   and Secrets → Add**, type **Secret**, twice:
+
+   | Name | Value |
+   | --- | --- |
+   | `APNS_KEY` | the whole text of the push key's `.p8` file, including the BEGIN and END lines |
+   | `APNS_KEY_ID` | the 10 characters in that key's file name |
+
+   `APPLE_TEAM_ID` from above is reused. Without `APNS_KEY` the app still
+   works; it just sends no notifications.
+
 ---
 
 ## Part 6 (optional): your own domain

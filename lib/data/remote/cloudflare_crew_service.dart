@@ -247,18 +247,31 @@ class CloudflareCrewService implements CrewService {
   // ---- Seen by, Encores and Shout-outs ----
 
   @override
-  Future<CrewProfile> setShareViews(CrewProfile p, bool on) =>
+  Future<CrewProfile> setNotifyShows(CrewProfile p, bool on) =>
       _guard(() async {
         final r = await _api.put(
           '/api/crew/profile',
           body: {
             'stageName': p.stageName.trim(),
             'color': p.color,
-            'shareViews': on,
+            'notifyShows': on,
           },
         );
         return _profile(_map(r));
       });
+
+  @override
+  Future<CrewProfile> setShareViews(CrewProfile p, bool on) => _guard(() async {
+    final r = await _api.put(
+      '/api/crew/profile',
+      body: {
+        'stageName': p.stageName.trim(),
+        'color': p.color,
+        'shareViews': on,
+      },
+    );
+    return _profile(_map(r));
+  });
 
   @override
   Future<void> markSeen(String postId) =>

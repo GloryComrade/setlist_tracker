@@ -278,7 +278,7 @@ export async function appleClientSecret(
 }
 
 /** Accepts the .p8 text as pasted, with real or escaped newlines. */
-function normalizePem(pem: string): string {
+export function normalizePem(pem: string): string {
   let p = pem.trim().replace(/\\n/g, "\n");
   if (!p.includes("BEGIN")) {
     const body = p.replace(/\s+/g, "");

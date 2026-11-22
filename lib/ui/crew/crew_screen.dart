@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../data/crew/crew_controller.dart';
 import '../../data/crew/tour_invites_controller.dart';
+import '../../data/push/push_bridge.dart';
+import '../../data/push/push_controller.dart';
 import '../../models/crew.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
@@ -290,6 +292,7 @@ class _CrewHome extends ConsumerWidget {
                   ),
                 ],
                 const TourInviteCards(),
+                if (crew.isNotEmpty) const PushNudge(),
                 const SizedBox(height: 16),
                 _CrewCard(crew: crew),
                 const SizedBox(height: 24),
@@ -379,6 +382,86 @@ class _AllActivityNoticeState extends ConsumerState<AllActivityNotice> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Know when your Crew plays a Show": asks for notifications on the iPhone,
+/// once someone is in your Crew and iOS hasn't asked yet.
+class PushNudge extends ConsumerStatefulWidget {
+  const PushNudge({super.key});
+
+  @override
+  ConsumerState<PushNudge> createState() => _PushNudgeState();
+}
+
+class _PushNudgeState extends ConsumerState<PushNudge> {
+  bool _asking = false;
+
+  Future<void> _turnOn() async {
+    setState(() => _asking = true);
+    try {
+      final ok = await ref
+          .read(pushControllerProvider.notifier)
+          .requestPermission();
+      if (ok) {
+        await ref.read(crewControllerProvider.notifier).setNotifyShows(true);
+      }
+      if (mounted) {
+        crewSnack(
+          context,
+          ok
+              ? 'You’ll hear when your Crew plays a Show.'
+              : 'No notifications. Turn them on any time in Settings.',
+        );
+      }
+    } catch (_) {
+      if (mounted) crewSnack(context, 'Couldn’t reach the Crew. Try again.');
+    } finally {
+      if (mounted) setState(() => _asking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final push = ref.watch(pushControllerProvider);
+    if (push.permission != PushPermission.notDetermined || push.nudgeHidden) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SectionCard(
+        title: 'Know when your Crew plays',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Get a notification when someone in your Crew logs a new Show, '
+              'so you can cheer it with an Encore. Turn it off any time in '
+              'Settings.',
+              style: TextStyle(height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                TextButton(
+                  onPressed: _asking
+                      ? null
+                      : ref.read(pushControllerProvider.notifier).hideNudge,
+                  child: const Text('Not now'),
+                ),
+                FilledButton(
+                  onPressed: _asking ? null : _turnOn,
+                  child: const Text('Turn on'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
