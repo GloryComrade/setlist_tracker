@@ -1,13 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import 'data/crew/crew_controller.dart';
 import 'data/sync/sync_controller.dart';
+import 'models/tour.dart';
 import 'theme/app_theme.dart';
 import 'ui/backstage/backstage_screen.dart';
 import 'ui/backstage/saved_mix_screen.dart';
 import 'ui/charts/charts_screen.dart';
+import 'ui/crew/crew_mate_screen.dart';
 import 'ui/crew/crew_screen.dart';
 import 'ui/crew/join_crew_screen.dart';
 import 'ui/records/gold_records_screen.dart';
@@ -67,7 +70,16 @@ final appRouter = GoRouter(
       builder: (_, state) =>
           JoinCrewScreen(code: state.pathParameters['code']!),
     ),
-    GoRoute(path: '/tour/book', builder: (_, _) => const BookTourScreen()),
+    GoRoute(
+      path: '/crew/mate/:userId',
+      builder: (_, state) =>
+          CrewMateScreen(userId: state.pathParameters['userId']!),
+    ),
+    GoRoute(
+      path: '/tour/book',
+      builder: (_, state) =>
+          BookTourScreen(featuring: state.extra as TourFeaturing?),
+    ),
     GoRoute(
       path: '/tour/show/:id',
       builder: (_, state) =>
@@ -109,7 +121,7 @@ class SetlistApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Keeps the Backstage Pass sync running whichever tab is open.
     ref.listen(syncControllerProvider, (_, _) {});
-    // Keeps shared Shows in step with the Setlist.
+    // Keeps the Crew feed in step with the Setlist and each sync.
     ref.listen(crewControllerProvider, (_, _) {});
     return MaterialApp.router(
       title: 'Setlist Tracker',

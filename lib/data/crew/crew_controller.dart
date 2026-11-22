@@ -1,6 +1,6 @@
-/// Keeps The Crew loaded for the screens, and keeps your shared Shows in
-/// step with the Setlist: edit a shared Show and the Crew sees the new
-/// version; delete it and it leaves the feed.
+/// Keeps The Crew loaded for the screens. The Crew sees every Show the
+/// Setlist syncs (except Shows kept off the Crew), so there is nothing to
+/// share by hand: the feed reloads after each sync.
 library;
 
 import 'dart:async';
@@ -29,8 +29,8 @@ class CrewState {
     this.profile,
     this.mates = const [],
     this.posts = const [],
-    this.shared = const {},
     this.error,
+    this.allActivityNoticeHidden = false,
   });
 
   /// False when this build has no backend: the Crew tab says so.
@@ -45,10 +45,13 @@ class CrewState {
   /// In the Crew first, then blocked runners.
   final List<CrewMate> mates;
   final List<CrewPost> posts;
-
-  /// Your shared Shows, by Show id.
-  final Map<String, SharedInfo> shared;
   final String? error;
+
+  /// "Not now" on the "Your Crew sees more now" card, for this session.
+  final bool allActivityNoticeHidden;
+
+  /// The runner hasn't OK'd the Crew seeing every Show yet.
+  bool get allActivityPending => profile?.allActivityPending ?? false;
 
   List<CrewMate> get crew => mates.where((m) => !m.blocked).toList();
   List<CrewMate> get blocked => mates.where((m) => m.blocked).toList();
@@ -59,9 +62,9 @@ class CrewState {
     CrewProfile? profile,
     List<CrewMate>? mates,
     List<CrewPost>? posts,
-    Map<String, SharedInfo>? shared,
     String? error,
     bool clearError = false,
+    bool? allActivityNoticeHidden,
   }) => CrewState(
     available: available,
     signedIn: signedIn,
@@ -70,14 +73,43 @@ class CrewState {
     profile: profile ?? this.profile,
     mates: mates ?? this.mates,
     posts: posts ?? this.posts,
-    shared: shared ?? this.shared,
     error: clearError ? null : (error ?? this.error),
+    allActivityNoticeHidden:
+        allActivityNoticeHidden ?? this.allActivityNoticeHidden,
   );
 }
 
 final crewControllerProvider = NotifierProvider<CrewController, CrewState>(
   CrewController.new,
 );
+
+/// A Crew mate's page: their Tour and Setlist. Null when they aren't in your
+/// Crew (or the Crew isn't available).
+final crewMateProvider = FutureProvider.autoDispose
+    .family<CrewMateDetail?, String>((ref, userId) async {
+      final service = ref.watch(crewServiceProvider);
+      final signedIn = ref.watch(
+        crewControllerProvider.select((s) => s.profile != null),
+      );
+      if (service == null || !signedIn) return null;
+      return service.mate(userId);
+    });
+
+/// Crew mates racing the same Opening Night as your active Tour.
+final coHeadlinersProvider = Provider<List<CrewMate>>((ref) {
+  if (ref.watch(crewServiceProvider) == null) return const [];
+  final mine = ref.watch(activeTourProvider).value;
+  if (mine == null) return const [];
+  final crew = ref.watch(crewControllerProvider.select((s) => s.crew));
+  return [
+    for (final m in crew)
+      if (m.tour?.sameRaceAs(mine) ?? false) m,
+  ];
+});
+
+/// True when [mine] is co-headlined with [mate]'s Tour.
+bool coHeadlining(Tour? mine, CrewMate mate) =>
+    mine != null && (mate.tour?.sameRaceAs(mine) ?? false);
 
 /// An invite code waiting for sign-in. Kept on the device so it survives
 /// the trip out to Google's sign-in page and back.
@@ -86,7 +118,6 @@ const _pendingInviteKey = 'pendingInvite';
 
 class CrewController extends Notifier<CrewState> {
   CrewService? _service;
-  final _resharing = <String>{};
 
   @override
   CrewState build() {
@@ -98,12 +129,14 @@ class CrewController extends Notifier<CrewState> {
     if (service == null) return const CrewState();
     if (holderId == null) return const CrewState(available: true);
 
+    // Your own Shows on the feed follow the Setlist right away; the rest
+    // arrives with the next sync.
     ref.listen(showsProvider, (_, next) {
       final shows = next.value;
-      if (shows != null) unawaited(_reconcile(shows));
+      if (shows != null) _followSetlist(shows);
     });
-    ref.listen(activeTourProvider, (_, next) {
-      unawaited(_syncOpeningNight(next.value));
+    ref.listen(syncControllerProvider.select((s) => s.lastSynced), (_, _) {
+      if (state.profile != null) unawaited(_reloadFeed());
     });
     Future.microtask(refresh);
     return const CrewState(available: true, signedIn: true, loading: true);
@@ -118,69 +151,53 @@ class CrewController extends Notifier<CrewState> {
     try {
       final profile = await _s.myProfile();
       if (profile == null) {
-        state = CrewState(
-          available: true,
-          signedIn: true,
-          loaded: true,
-          shared: state.shared,
-        );
+        state = const CrewState(available: true, signedIn: true, loaded: true);
         return;
       }
-      final results = await Future.wait([
-        _s.crew(),
-        _s.feed(),
-        _s.mySharedShows(),
-      ]);
+      final results = await Future.wait([_s.crew(), _s.feed()]);
       state = state.copyWith(
         loaded: true,
         loading: false,
         profile: profile,
         mates: results[0] as List<CrewMate>,
         posts: results[1] as List<CrewPost>,
-        shared: results[2] as Map<String, SharedInfo>,
       );
-      final shows = ref.read(showsProvider).value;
-      if (shows != null) unawaited(_reconcile(shows));
-      unawaited(_syncOpeningNight(ref.read(activeTourProvider).value));
     } catch (e) {
-      state = state.copyWith(
-        loaded: true,
-        loading: false,
-        error: e is CrewException
-            ? e.message
-            : 'The Crew couldn’t be reached. Check your connection.',
-      );
+      _failed(e);
     }
   }
 
+  void _failed(Object? e) {
+    state = state.copyWith(
+      loaded: true,
+      loading: false,
+      error: e is CrewException
+          ? e.message
+          : 'The Crew couldn’t be reached. Check your connection.',
+    );
+  }
+
   Future<void> saveProfile(CrewProfile profile) async {
-    final withTour = _withTour(profile, ref.read(activeTourProvider).value);
-    final saved = await _s.saveProfile(withTour);
+    final saved = await _s.saveProfile(profile);
     state = state.copyWith(profile: saved);
     if (state.mates.isEmpty && state.posts.isEmpty) await refresh();
   }
 
-  /// Fills in the Opening Night fields from the active Tour, or clears them.
-  CrewProfile _withTour(CrewProfile p, Tour? tour) {
-    if (!p.showOpeningNight || tour == null) {
-      return p.copyWith(clearOpeningNight: true);
-    }
-    return p.copyWith(openingNight: tour.setup.raceDate, tourName: tour.name);
+  /// "Sounds good": the Crew sees every Show from now on.
+  Future<void> acceptAllActivity() async {
+    final p = state.profile;
+    if (p == null) return;
+    final saved = await _s.acceptAllActivity(p);
+    state = state.copyWith(profile: saved);
+    // The server has the last word on what the Crew sees.
+    final fresh = await _s.myProfile();
+    if (fresh != null) state = state.copyWith(profile: fresh);
   }
 
-  Future<void> _syncOpeningNight(Tour? tour) async {
-    final p = state.profile;
-    if (p == null || !p.showOpeningNight) return;
-    final next = _withTour(p, tour);
-    if (next.openingNight == p.openingNight && next.tourName == p.tourName) {
-      return;
-    }
-    try {
-      state = state.copyWith(profile: await _s.saveProfile(next));
-    } catch (e) {
-      debugPrint('Crew: Opening Night not updated: $e');
-    }
-  }
+  /// "Not now": hides the card until the app is opened again. The Crew
+  /// keeps seeing only the Shows you shared.
+  void hideAllActivityNotice() =>
+      state = state.copyWith(allActivityNoticeHidden: true);
 
   Future<String> inviteCode() => _s.inviteCode();
 
@@ -208,43 +225,20 @@ class CrewController extends Notifier<CrewState> {
     await refresh();
   }
 
-  /// Shares [show] with the Crew (or updates the shared copy).
-  Future<void> share(Show show, {bool includeNotes = false}) async {
-    final all = ref.read(showsProvider).value ?? [show];
-    await _s.share(
-      show.id,
-      SharedShow.fromShow(show, allShows: all, includeNotes: includeNotes),
-      show.updatedAt,
-    );
+  /// Marks one of your Shows "Keep off the Crew" and takes it off the feed.
+  /// The Crew stops seeing it once the Setlist syncs.
+  Future<void> keepOffCrew(CrewPost post) async {
+    final repo = ref.read(showRepositoryProvider);
+    final show = await repo.getById(post.showId);
+    if (show == null) return;
+    await repo.save(show.copyWith(crewPrivate: true));
     state = state.copyWith(
-      shared: {
-        ...state.shared,
-        show.id: SharedInfo(
-          showUpdatedAt: show.updatedAt,
-          includesNotes: includeNotes && show.notes != null,
-        ),
-      },
-    );
-    unawaited(_reloadFeed());
-  }
-
-  Future<void> unshare(String showId) async {
-    await _s.unshare(showId);
-    state = state.copyWith(
-      shared: {...state.shared}..remove(showId),
-      posts: state.posts.where((p) => !(p.mine && p.showId == showId)).toList(),
+      posts: state.posts.where((p) => p.id != post.id).toList(),
     );
   }
 
-  /// For a brand-new Show: shares it when "Share every new Show" is on.
-  Future<void> shareIfAlways(Show show) async {
-    if (state.profile?.alwaysShare != true) return;
-    try {
-      await share(show);
-    } catch (e) {
-      debugPrint('Crew: auto-share failed: $e');
-    }
-  }
+  /// A Crew mate's page. Null when they aren't in your Crew.
+  Future<CrewMateDetail?> mate(String userId) => _s.mate(userId);
 
   Future<void> toggleEncore(CrewPost post) async {
     final on = !post.encoredByMe;
@@ -283,35 +277,40 @@ class CrewController extends Notifier<CrewState> {
     }
   }
 
-  /// Re-shares edited Shows and takes deleted ones off the feed.
-  Future<void> _reconcile(List<Show> shows) async {
-    if (!state.signedIn || state.profile == null) return;
+  /// Your own posts show the Setlist's latest version of each Show, and
+  /// leave as soon as a Show is kept off the Crew.
+  void _followSetlist(List<Show> shows) {
+    if (!state.posts.any((p) => p.mine)) return;
     final byId = {for (final s in shows) s.id: s};
-    final db = ref.read(databaseProvider);
-    for (final entry in state.shared.entries.toList()) {
-      final id = entry.key;
-      if (_resharing.contains(id)) continue;
-      final show = byId[id];
-      _resharing.add(id);
-      try {
-        if (show == null) {
-          // Only a real delete counts. A Show that simply isn't on this
-          // device yet (first sync still running) stays shared.
-          final raw = await StoreRef<String, Object?>('shows')
-              .record(id)
-              .get(db);
-          if (raw is Map && raw['deletedAt'] != null) await unshare(id);
-        } else if (show.updatedAt.millisecondsSinceEpoch >
-            entry.value.showUpdatedAt.millisecondsSinceEpoch) {
-          // Compared to the millisecond: the server keeps times that way.
-          await share(show, includeNotes: entry.value.includesNotes);
-        }
-      } catch (e) {
-        debugPrint('Crew: shared Show $id not updated: $e');
-      } finally {
-        _resharing.remove(id);
+    final gear = ref.read(gearListProvider).value ?? const [];
+    var changed = false;
+    final next = <CrewPost>[];
+    for (final p in state.posts) {
+      final local = p.mine ? byId[p.showId] : null;
+      if (local == null || identical(local, p.show)) {
+        next.add(p);
+        continue;
       }
+      changed = true;
+      if (local.crewPrivate) continue;
+      next.add(
+        CrewPost(
+          id: p.id,
+          ownerId: p.ownerId,
+          stageName: p.stageName,
+          color: p.color,
+          show: local,
+          gearName: local.gearId == p.show.gearId
+              ? p.gearName
+              : gear.where((g) => g.id == local.gearId).firstOrNull?.name,
+          sharedAt: p.sharedAt,
+          encores: p.encores,
+          encoredByMe: p.encoredByMe,
+          mine: true,
+        ),
+      );
     }
+    if (changed) state = state.copyWith(posts: next);
   }
 
   // ---- Invite links that arrive before sign-in ----

@@ -12,6 +12,7 @@ import '../../models/show.dart';
 import '../../models/tour.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/stage_widgets.dart';
+import 'featuring_strip.dart';
 import 'tour_manager_cards.dart';
 import 'tour_widgets.dart';
 
@@ -51,8 +52,8 @@ class _NoTour extends StatelessWidget {
             children: [
               const SizedBox(height: 8),
               const Text(
-                'Every marathon is a tour, and race day is Opening Night. '
-                'Answer 8 quick questions and get a week-by-week plan from '
+                'Every race is a Tour, from a 5K to a marathon, and race day is Opening Night. '
+                'Answer 9 quick questions and get a week-by-week plan from '
                 'the first Rehearsal to the finish line.',
                 style: TextStyle(color: Colors.white, height: 1.4),
               ),
@@ -208,6 +209,7 @@ class _ScheduleState extends ConsumerState<_Schedule> {
               ),
             ),
           ),
+          const SliverToBoxAdapter(child: FeaturingStrips()),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             sliver: SliverToBoxAdapter(child: _PacesCard(paces: tour.paces)),
@@ -486,7 +488,7 @@ class _PacesCard extends StatelessWidget {
     String pace(double s) => formatPace(s, withUnit: false);
     final items = [
       ('Easy', '${pace(p.easyFast)}–${pace(p.easySlow)}'),
-      ('Opening Night', pace(p.marathon)),
+      ('Opening Night', pace(p.race)),
       ('Tempo', pace(p.tempo)),
       ('Intervals', pace(p.interval)),
     ];
@@ -509,7 +511,7 @@ class _PacesCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 Text(
-                  'Predicts ${formatDuration(p.predictedMarathonSeconds)}',
+                  'Predicts ${formatDuration(p.predictedRaceSeconds)}',
                   style: const TextStyle(
                     color: StageColors.amber,
                     fontWeight: FontWeight.w700,

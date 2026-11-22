@@ -18,8 +18,7 @@ const TABLES: [string, string][] = [
   ["crew_blocks", "?1 IN (blocker, blocked)"],
   ["crew_invites", "owner = ?1"],
   ["crew_invite_misses", "user_id = ?1"],
-  ["crew_posts", "owner = ?1"],
-  ["crew_encores", "user_id = ?1"],
+  ["crew_encores_v2", "?1 IN (user_id, owner)"],
   ["crew_reports", "?1 IN (reporter, reported_user)"],
 ];
 
@@ -31,7 +30,6 @@ async function rowsOf(userId: string): Promise<Record<string, number>> {
   return out;
 }
 
-const SHOW = { date: "2026-11-21T07:30:00.000", distanceMiles: 3.1, notes: null };
 
 describe("DELETE /api/me", () => {
   it("removes the runner and every row of theirs, and revokes Apple", async () => {
@@ -47,22 +45,23 @@ describe("DELETE /api/me", () => {
     await call("POST", "/api/crew/join", { token: me.token, body: { code: "ZZZZZZZZ" } });
     await call("POST", "/api/crew/blocks", { token: me.token, body: { userId: blocker.user.id } });
     await call("POST", "/api/crew/blocks", { token: blocker.token, body: { userId: me.user.id } });
-    // Posts both ways, Encores given and received, reports made and naming me.
-    const shareBody = { show: SHOW, showUpdatedAt: "2026-11-21T08:00:00.000Z" };
-    await call("PUT", "/api/crew/shared/mine", { token: me.token, body: shareBody });
-    await call("PUT", "/api/crew/shared/theirs", { token: friend.token, body: shareBody });
+    // Shows both ways, Encores given and received, reports made and naming me.
+    for (const r of [me, friend]) {
+      const id = crypto.randomUUID();
+      await call("POST", "/api/sync/shows", {
+        token: r.token,
+        body: { rows: [{ id, data: { id, date: "2026-11-21T07:30:00.000" }, updatedAt: "2026-11-21T08:00:00.000Z", deletedAt: null }] },
+      });
+    }
     const posts = (await callJson("GET", "/api/crew/feed", { token: me.token })).body.posts;
+    expect(posts).toHaveLength(2);
     const mine = posts.find((p: any) => p.mine).id;
     const theirs = posts.find((p: any) => !p.mine).id;
     await call("PUT", `/api/crew/posts/${theirs}/encore`, { token: me.token });
     await call("PUT", `/api/crew/posts/${mine}/encore`, { token: friend.token });
     await call("POST", `/api/crew/posts/${theirs}/report`, { token: me.token, body: { reason: "a" } });
     await call("POST", `/api/crew/posts/${mine}/report`, { token: friend.token, body: { reason: "b" } });
-    // Synced records, a login code, an Apple token.
-    await call("POST", "/api/sync/shows", {
-      token: me.token,
-      body: { rows: [{ id: crypto.randomUUID(), data: {}, updatedAt: "2026-11-21T08:00:00.000Z", deletedAt: null }] },
-    });
+    // A login code, an Apple token.
     await createLoginCode(env.DB, me.user.id);
     await env.DB.prepare(
       "INSERT INTO apple_tokens (user_id, client_id, refresh_token, created_at) VALUES (?, ?, ?, ?)",
@@ -91,13 +90,13 @@ describe("DELETE /api/me", () => {
     expect(form.get("token_type_hint")).toBe("refresh_token");
     expect(form.get("client_id")).toBe(env.APPLE_BUNDLE_ID);
 
-    // The friend keeps their account, post and profile.
+    // The friend keeps their account, Shows and profile.
     const friendAfter = await rowsOf(friend.user.id);
     expect(friendAfter.users).toBe(1);
-    expect(friendAfter.crew_posts).toBe(friendBefore.crew_posts);
+    expect(friendAfter.records).toBe(friendBefore.records);
     expect(friendAfter.crew_profiles).toBe(1);
     expect(friendAfter.crew_links).toBe(0);
-    expect(await count("SELECT count(*) AS n FROM crew_encores WHERE post_id = ?", theirs)).toBe(0);
+    expect(friendAfter.crew_encores_v2).toBe(0);
 
     // The old token no longer works.
     expect((await call("GET", "/api/me", { token: me.token })).status).toBe(401);

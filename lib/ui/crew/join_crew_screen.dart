@@ -145,7 +145,7 @@ class _JoinCrewScreenState extends ConsumerState<JoinCrewScreen> {
               title: p.ownInvite ? 'That’s your invite' : 'Already in the Crew',
               message: p.ownInvite
                   ? 'Send it to a running friend so they can join your Crew.'
-                  : 'You and ${p.stageName} already share Shows.',
+                  : 'You and ${p.stageName} already see each other’s Shows.',
               actionLabel: 'Go to The Crew',
               actionIcon: Icons.groups_outlined,
               onAction: _dismiss,
@@ -159,9 +159,8 @@ class _JoinCrewScreenState extends ConsumerState<JoinCrewScreen> {
                 headline:
                     '${p.stageName.toUpperCase()} INVITES YOU TO THE CREW',
                 body:
-                    'You’ll see the Shows ${p.stageName} shares, and '
-                    '${p.stageName} sees the ones you share. Nothing is shared '
-                    'until you turn it on for a Show.',
+                    'You’ll see ${p.stageName}’s Shows and Tour, and '
+                    '${p.stageName} sees yours. $kCrewSeesEverything',
               ),
               const SizedBox(height: 24),
               Center(
