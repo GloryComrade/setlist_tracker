@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'theme/app_theme.dart';
 import 'ui/backstage/backstage_screen.dart';
 import 'ui/backstage/saved_mix_screen.dart';
+import 'ui/records/gold_records_screen.dart';
+import 'ui/records/record_wall_screen.dart';
 import 'ui/setlist/setlist_screen.dart';
 import 'ui/show_detail/show_detail_screen.dart';
 import 'ui/show_form/show_form_screen.dart';
@@ -58,6 +60,14 @@ final appRouter = GoRouter(
       path: '/show/:id/edit',
       builder: (_, state) =>
           ShowFormScreen(showId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/backstage/gold-records',
+      builder: (_, _) => const GoldRecordsScreen(),
+    ),
+    GoRoute(
+      path: '/backstage/record-wall',
+      builder: (_, _) => const RecordWallScreen(),
     ),
     GoRoute(
       path: '/backstage/mix/new',
