@@ -168,6 +168,7 @@ class _GearTile extends ConsumerWidget {
     final repo = ref.read(gearRepositoryProvider);
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      horizontalTitleGap: 12,
       leading: CircleAvatar(
         backgroundColor: gear.retired ? StageColors.outline : StageColors.amber,
         child: Icon(
@@ -175,8 +176,11 @@ class _GearTile extends ConsumerWidget {
           color: gear.retired ? StageColors.textMuted : Colors.black,
         ),
       ),
+      // Brand and model stay whole: two lines at most, then an ellipsis.
       title: Text(
         gear.displayName,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
       subtitle: Text(formatMiles(miles)),
@@ -222,6 +226,8 @@ class _MixTile extends StatelessWidget {
       ),
       title: Text(
         mix.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
       subtitle: Text(

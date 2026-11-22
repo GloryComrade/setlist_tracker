@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:material_ui/material_ui.dart';
 
+import '../../logic/spoken.dart';
 import '../../models/enums.dart';
 import '../../theme/app_theme.dart';
 
@@ -150,9 +151,14 @@ class PosterHeader extends StatelessWidget {
     required this.title,
     this.gradient = StageColors.headlineGradient,
     this.children = const [],
+    this.semanticsTitle,
   });
 
   final String title;
+
+  /// What a screen reader says for [title] when it differs, e.g. "15 miles"
+  /// for "15 mi".
+  final String? semanticsTitle;
   final Gradient gradient;
   final List<Widget> children;
 
@@ -164,8 +170,9 @@ class PosterHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          WholeWordsText(
             title,
+            semanticsLabel: semanticsTitle,
             style: theme.textTheme.displayMedium?.copyWith(color: Colors.white),
           ),
           ...children,
@@ -186,7 +193,7 @@ class StageGlow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        const Positioned(
+        Positioned(
           top: 0,
           left: 0,
           right: 0,
@@ -200,7 +207,10 @@ class StageGlow extends StatelessWidget {
                     gradient: RadialGradient(
                       center: Alignment(-0.85, -1.15),
                       radius: 1.1,
-                      colors: [Color(0x38E0157A), Color(0x00E0157A)],
+                      colors: [
+                        StageColors.glowMagenta,
+                        StageColors.magentaDeep.withValues(alpha: 0),
+                      ],
                     ),
                   ),
                 ),
@@ -209,7 +219,10 @@ class StageGlow extends StatelessWidget {
                     gradient: RadialGradient(
                       center: Alignment(0.9, -1.2),
                       radius: 1.0,
-                      colors: [Color(0x406D28D9), Color(0x006D28D9)],
+                      colors: [
+                        StageColors.glowViolet,
+                        StageColors.violetDeep.withValues(alpha: 0),
+                      ],
                     ),
                   ),
                 ),
@@ -346,14 +359,95 @@ class EmptyStage extends StatelessWidget {
   }
 }
 
+/// How a Show felt, as a white face on a stage light: cool light for a rough
+/// night, warming up to the full headline gradient for an Encore. Drawn from
+/// Material icons so it looks the same on web and iPhone (emoji don't).
+class FeelFace extends StatelessWidget {
+  const FeelFace(this.feel, {super.key, this.size = 22, this.dim = false});
+  final Feel feel;
+  final double size;
+
+  /// Unpicked choices in the feel picker sit back at half strength.
+  final bool dim;
+
+  static const _gradients = {
+    Feel.rough: LinearGradient(
+      colors: [StageColors.violetDeep, StageColors.tealDeep],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    Feel.offKey: LinearGradient(
+      colors: [StageColors.violetDeep, StageColors.magentaDeep],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    Feel.fine: LinearGradient(
+      colors: [StageColors.magentaDeep, StageColors.violetDeep],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    Feel.good: StageColors.liveGradient,
+    Feel.encore: StageColors.headlineGradient,
+  };
+
+  static const _icons = {
+    Feel.rough: Icons.sentiment_very_dissatisfied_rounded,
+    Feel.offKey: Icons.sentiment_dissatisfied_rounded,
+    Feel.fine: Icons.sentiment_neutral_rounded,
+    Feel.good: Icons.sentiment_satisfied_rounded,
+    Feel.encore: Icons.sentiment_very_satisfied_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: dim ? 0.45 : 1,
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: _gradients[feel],
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        _icons[feel],
+        size: size * 0.74,
+        color: Colors.white,
+        semanticLabel: feel.label,
+      ),
+    ),
+  );
+}
+
 /// A labelled number, e.g. "PACE / 8:42 /mi".
 class StatTile extends StatelessWidget {
-  const StatTile({super.key, required this.label, required this.value});
+  const StatTile({
+    super.key,
+    required this.label,
+    required this.value,
+    this.leading,
+    this.spokenValue,
+  });
   final String label;
   final String value;
 
+  /// What a screen reader says for [value]. Defaults to [spokenStat], which
+  /// turns "8:42 /mi" into "8 minutes 42 seconds per mile".
+  final String? spokenValue;
+
+  /// Drawn before the value, e.g. the [FeelFace] on the Show page.
+  final Widget? leading;
+
   @override
   Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: '$label: ${spokenValue ?? spokenStat(value)}',
+      child: ExcludeSemantics(child: _tile(context)),
+    );
+  }
+
+  Widget _tile(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -368,10 +462,18 @@ class StatTile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontFeatures: StageFonts.tabular),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leading != null) ...[leading!, const SizedBox(width: 8)],
+            Flexible(
+              child: Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontFeatures: StageFonts.tabular),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -402,7 +504,7 @@ class SectionCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: WholeWordsText(
                     title.toUpperCase(),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
@@ -442,34 +544,46 @@ class GradientButton extends StatelessWidget {
           gradient: StageColors.headlineGradient,
           borderRadius: BorderRadius.circular(28),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: onPressed,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, color: Colors.white),
-                    const SizedBox(width: 8),
-                  ],
-                  // Wraps rather than overflowing on a narrow phone.
-                  Flexible(
-                    child: Text(
-                      label.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
+        child: Semantics(
+          container: true,
+          button: true,
+          enabled: enabled,
+          // Said in its own case; the caps are only for the eye.
+          label: label,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(28),
+              onTap: onPressed,
+              child: ExcludeSemantics(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, color: Colors.white),
+                        const SizedBox(width: 8),
+                      ],
+                      // Wraps rather than overflowing on a narrow phone.
+                      Flexible(
+                        child: Text(
+                          label.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -514,3 +628,73 @@ Widget? backButtonFor(BuildContext context, {String fallback = '/setlist'}) =>
         icon: const Icon(Icons.arrow_back),
         onPressed: () => context.go(fallback),
       );
+
+/// How wide [text] lays out on one line in [context], with the screen's
+/// text size (Dynamic Type) applied. [style] is merged onto the ambient
+/// [DefaultTextStyle], the same way a [Text] would draw it.
+double measureTextWidth(BuildContext context, String text, TextStyle? style) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: DefaultTextStyle.of(context).style.merge(style),
+    ),
+    textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// Big poster type that wraps only between words. At large text sizes a
+/// word too long for one line (BACKSTAGE at 200%) is set a little smaller
+/// instead of being broken in the middle.
+class WholeWordsText extends StatelessWidget {
+  const WholeWordsText(
+    this.text, {
+    super.key,
+    this.style,
+    this.textAlign,
+    this.semanticsLabel,
+  });
+
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+
+  /// What a screen reader says instead of [text], as on [Text].
+  final String? semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        var fit = scaler;
+        if (constraints.maxWidth.isFinite) {
+          final widest = text
+              .split(RegExp(r'\s+'))
+              .where((w) => w.isNotEmpty)
+              .map((w) => measureTextWidth(context, w, style))
+              .fold(0.0, math.max);
+          if (widest > constraints.maxWidth) {
+            final size =
+                DefaultTextStyle.of(context).style.merge(style).fontSize ?? 14;
+            final scaled =
+                scaler.scale(size) * 0.99 * constraints.maxWidth / widest;
+            // Never smaller than the type at 100%.
+            fit = TextScaler.linear(math.max(scaled, size) / size);
+          }
+        }
+        return Text(
+          text,
+          style: style,
+          textAlign: textAlign,
+          textScaler: fit,
+          semanticsLabel: semanticsLabel,
+        );
+      },
+    );
+  }
+}

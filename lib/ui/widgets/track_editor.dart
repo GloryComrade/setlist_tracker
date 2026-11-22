@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../models/track.dart';
 import '../../theme/app_theme.dart';
 
@@ -107,60 +108,77 @@ class _TrackTile extends StatelessWidget {
       child: Material(
         color: StageColors.surfaceHigh,
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: StageColors.violetDeep,
-                  child: Text(
-                    '$number',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
+        child: Semantics(
+          container: true,
+          button: true,
+          label: invalid
+              ? 'Track $number. End time must be after start time'
+              : 'Track $number, ${spokenDuration(track.startSeconds)} to '
+                    '${spokenDuration(track.endSeconds)}. '
+                    '${track.speedMph.toStringAsFixed(1)} miles per hour, '
+                    '${spokenPace(paceFromMph(track.speedMph))}, '
+                    '${track.inclinePercent.toStringAsFixed(1)} percent '
+                    'incline, ${spokenMiles(track.distanceMiles)}',
+          hint: 'Edit Track',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+              child: Row(
+                children: [
+                  ExcludeSemantics(
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: StageColors.violetDeep,
+                      child: Text(
+                        '$number',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${formatDuration(track.startSeconds)} – '
-                        '${formatDuration(track.endSeconds)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontFeatures: StageFonts.tabular,
-                        ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${formatDuration(track.startSeconds)} – '
+                            '${formatDuration(track.endSeconds)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: StageFonts.tabular,
+                            ),
+                          ),
+                          Text(
+                            invalid
+                                ? 'End time must be after start time'
+                                : '${track.speedMph.toStringAsFixed(1)} mph '
+                                      '(${formatPace(paceFromMph(track.speedMph))}) · '
+                                      '${track.inclinePercent.toStringAsFixed(1)}% · '
+                                      '${formatMiles(track.distanceMiles)}',
+                            style: TextStyle(
+                              color: invalid
+                                  ? Theme.of(context).colorScheme.error
+                                  : StageColors.textMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        invalid
-                            ? 'End time must be after start time'
-                            : '${track.speedMph.toStringAsFixed(1)} mph '
-                                  '(${formatPace(paceFromMph(track.speedMph))}) · '
-                                  '${track.inclinePercent.toStringAsFixed(1)}% · '
-                                  '${formatMiles(track.distanceMiles)}',
-                        style: TextStyle(
-                          color: invalid
-                              ? Theme.of(context).colorScheme.error
-                              : StageColors.textMuted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Remove Track',
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+                  IconButton(
+                    tooltip: 'Remove Track',
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

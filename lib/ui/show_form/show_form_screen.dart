@@ -410,7 +410,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             TextButton(
               onPressed: _saving ? null : _save,
               child: const Text(
-                'SAVE',
+                'Save',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
@@ -775,30 +775,27 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               for (final f in Feel.values)
-                Tooltip(
-                  message: f.label,
+                Semantics(
+                  button: true,
+                  selected: _feel == f,
+                  label: f.label,
+                  excludeSemantics: true,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(28),
+                    customBorder: const CircleBorder(),
                     onTap: () => setState(() => _feel = f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _feel == f
-                            ? StageColors.magenta.withValues(alpha: 0.3)
-                            : Colors.transparent,
                         border: Border.all(
                           color: _feel == f
-                              ? StageColors.magenta
+                              ? StageColors.text
                               : Colors.transparent,
                           width: 2,
                         ),
                       ),
-                      child: Text(
-                        f.emoji,
-                        style: const TextStyle(fontSize: 30),
-                      ),
+                      child: FeelFace(f, size: 44, dim: _feel != f),
                     ),
                   ),
                 ),

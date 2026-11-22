@@ -26,6 +26,30 @@ class StageColors {
   static const violetDeep = Color(0xFF6D28D9);
   static const tealDeep = Color(0xFF0E7490);
 
+  /// Gold foil for Gold Records (the foil gradient, discs and badges). Only
+  /// [goldInk] sits on the foil as text (15.4:1 on [goldLight], 11.4:1 on
+  /// [goldMid], 5.1:1 on [goldDeep]); the foil is never body text on the dark
+  /// stage, [amber] does that job.
+  static const goldLight = Color(0xFFFFE9A8);
+  static const goldMid = Color(0xFFF5C451);
+
+  /// The shadowed fold of the foil, also the halftone dots on it.
+  static const goldDeep = Color(0xFFB7791F);
+
+  /// Near-black brown ink for text and grooves on the gold foil.
+  static const goldInk = Color(0xFF1A1206);
+
+  /// Spotify's brand green. The one brand color allowed in the app, and only
+  /// as the fill of the "Open in Spotify" button, always with black text
+  /// (8.1:1). Never on song picker rows or anywhere else.
+  static const spotifyGreen = Color(0xFF1DB954);
+
+  /// Stage Glow house lights behind the main tabs: Magenta Deep at 22% from
+  /// the top-left and Violet Deep at 25% from the top-right, each fading to
+  /// fully transparent.
+  static final glowMagenta = magentaDeep.withValues(alpha: 0.22);
+  static final glowViolet = violetDeep.withValues(alpha: 0.25);
+
   /// Live Shows: warm stage lights.
   static const liveGradient = LinearGradient(
     colors: [magentaDeep, orangeDeep],
@@ -46,18 +70,25 @@ class StageColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  /// Gold Records foil: light, mid, the deep fold, then mid again.
+  static const goldFoil = LinearGradient(
+    colors: [goldLight, goldMid, goldDeep, goldMid],
+    stops: [0, 0.35, 0.75, 1],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 /// Font families bundled in assets/fonts.
 ///
-/// [display] is Anybody cut at condensed width and extra-bold weight: the
-/// gig-flyer face for poster titles and big numbers. It has lowercase, so
-/// names (songs, Gear, routes) stay in their own case; titles are uppercased
-/// where they are written. [body] is Atkinson Hyperlegible Next, built to be
-/// read at a glance.
+/// [display] is Archivo cut at extra-condensed width and black weight: the
+/// tour-poster face for titles and big numbers. It has lowercase, so names
+/// (songs, Gear, routes) stay in their own case; titles are uppercased where
+/// they are written. [body] is the same family at normal width.
 class StageFonts {
-  static const display = 'Anybody';
-  static const body = 'AtkinsonHyperlegibleNext';
+  static const display = 'ArchivoCondensed';
+  static const body = 'Archivo';
 
   /// Digits that line up in columns (times, paces, miles).
   static const tabular = [FontFeature.tabularFigures()];
@@ -89,7 +120,7 @@ class AppTheme {
           fontFamily: StageFonts.display,
           fontSize: size,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.2,
+          letterSpacing: 0,
           height: 1.05,
           color: StageColors.text,
         );

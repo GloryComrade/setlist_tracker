@@ -392,7 +392,7 @@ class HeadlinerChart extends StatelessWidget {
                       padding: const EdgeInsets.only(left: 4, bottom: 3),
                       style: const TextStyle(
                         color: liveMark,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.0,
                       ),
@@ -415,7 +415,7 @@ class HeadlinerChart extends StatelessWidget {
                         padding: const EdgeInsets.only(left: 4, bottom: 2),
                         style: const TextStyle(
                           color: StageColors.textMuted,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.0,
                         ),

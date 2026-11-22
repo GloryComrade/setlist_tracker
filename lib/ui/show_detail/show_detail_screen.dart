@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
+import '../../logic/spoken.dart';
 import '../../logic/spotify_links.dart';
 import '../../models/enums.dart';
 import '../../models/gear.dart';
@@ -143,11 +144,15 @@ class _Poster extends StatelessWidget {
     final theme = Theme.of(context);
     return PosterHeader(
       title: formatMiles(show.distanceMiles),
+      semanticsTitle: spokenMiles(show.distanceMiles),
       gradient: gradientFor(show.venue),
       children: [
         Text(
           '${formatPace(show.paceSecondsPerMile)}  ·  '
           '${formatDuration(show.durationSeconds)}',
+          semanticsLabel:
+              '${spokenPace(show.paceSecondsPerMile)}, '
+              '${spokenDuration(show.durationSeconds)}',
           style: theme.textTheme.headlineMedium?.copyWith(
             color: Colors.white,
             fontFeatures: StageFonts.tabular,
@@ -185,7 +190,8 @@ class _Stats extends StatelessWidget {
           StatTile(label: 'Effort', value: '${show.effort}/10'),
           StatTile(
             label: 'Feel',
-            value: '${show.feel.emoji} ${show.feel.label}',
+            value: show.feel.label,
+            leading: ExcludeSemantics(child: FeelFace(show.feel, size: 26)),
           ),
           if (gearName != null) StatTile(label: 'Gear', value: gearName!),
         ],
@@ -240,7 +246,7 @@ class _SongCard extends StatelessWidget {
                   children: [
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: spotifyGreen,
+                        backgroundColor: StageColors.spotifyGreen,
                         foregroundColor: Colors.black,
                       ),
                       // An exact track link when we have one; otherwise

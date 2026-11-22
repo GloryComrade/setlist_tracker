@@ -156,7 +156,7 @@ class TourTag extends StatelessWidget {
       text.toUpperCase(),
       style: TextStyle(
         color: color,
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: 1,
       ),

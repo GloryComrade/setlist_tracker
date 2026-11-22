@@ -8,14 +8,14 @@
 <title>Support · Setlist Tracker</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
-  @font-face { font-family: "Anybody"; src: url("assets/assets/fonts/Anybody-CondensedExtraBold.ttf") format("truetype"); font-weight: 800; font-display: swap; }
-  @font-face { font-family: "Atkinson"; src: url("assets/assets/fonts/AtkinsonHyperlegibleNext-400.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-  @font-face { font-family: "Atkinson"; src: url("assets/assets/fonts/AtkinsonHyperlegibleNext-700.ttf") format("truetype"); font-weight: 700; font-display: swap; }
-  @font-face { font-family: "Atkinson"; src: url("assets/assets/fonts/AtkinsonHyperlegibleNext-800.ttf") format("truetype"); font-weight: 800; font-display: swap; }
+  @font-face { font-family: "ArchivoCondensed"; src: url("assets/assets/fonts/Archivo-ExtraCondensedBlack.ttf") format("truetype"); font-weight: 800; font-display: swap; }
+  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-400.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-700.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "Archivo"; src: url("assets/assets/fonts/Archivo-800.ttf") format("truetype"); font-weight: 800; font-display: swap; }
   :root { color-scheme: dark; --stage: #0B0A12; --surface: #16141F; --outline: #3A3548; --text: #F5F3FA; --muted: #A8A3B8; --magenta: #FF4D9A; --amber: #FFB020; }
   * { box-sizing: border-box; }
   html { background: var(--stage); }
-  body { margin: 0; color: var(--text); font: 400 16px/1.6 "Atkinson", system-ui, -apple-system, "Segoe UI", sans-serif;
+  body { margin: 0; color: var(--text); font: 400 16px/1.6 "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
     background: radial-gradient(ellipse 70% 420px at 0% 0%, rgba(224,21,122,.22), transparent 70%),
                 radial-gradient(ellipse 60% 420px at 100% 0%, rgba(109,40,217,.25), transparent 70%), var(--stage);
     background-repeat: no-repeat; min-height: 100vh; }
@@ -23,9 +23,9 @@
   main { max-width: 680px; margin: 0 auto; padding: 24px 16px 64px; }
   .poster { border-radius: 20px; padding: 28px 24px; color: #fff;
     background: linear-gradient(135deg, #6D28D9, #E0157A 55%, #C2410C); }
-  .poster h1 { font: 800 clamp(44px, 11vw, 64px)/1 "Anybody", Impact, sans-serif; letter-spacing: .2px; text-transform: uppercase; margin: 0 0 10px; }
+  .poster h1 { font: 800 clamp(44px, 11vw, 64px)/1 "ArchivoCondensed", Impact, sans-serif; letter-spacing: 0; text-transform: uppercase; margin: 0 0 10px; }
   .poster p { margin: 0; max-width: 46ch; }
-  h2 { font: 800 28px/1.05 "Anybody", Impact, sans-serif; letter-spacing: .2px; text-transform: uppercase; margin: 40px 0 10px; }
+  h2 { font: 800 28px/1.05 "ArchivoCondensed", Impact, sans-serif; letter-spacing: 0; text-transform: uppercase; margin: 40px 0 10px; }
   p, li { color: var(--text); }
   .muted { color: var(--muted); }
   ul { padding-left: 20px; }
@@ -34,7 +34,7 @@
   a:focus-visible { outline: 2px solid var(--magenta); outline-offset: 3px; border-radius: 4px; }
   .card { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 16px 18px; margin: 14px 0; }
   .card strong { display: block; font-weight: 700; }
-  .label { font: 800 12px/1 "Atkinson", sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+  .label { font: 800 12px/1 "Archivo", sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
   footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
   .back { display: inline-block; margin: 0 0 18px; font-weight: 700; text-decoration: none; }
 </style>

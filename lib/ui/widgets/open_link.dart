@@ -11,5 +11,3 @@ Future<void> openLink(BuildContext context, Uri uri) async {
     );
   }
 }
-
-const spotifyGreen = Color(0xFF1DB954);
