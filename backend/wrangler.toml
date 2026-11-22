@@ -32,6 +32,13 @@ migrations_dir = "migrations"
 APPLE_BUNDLE_ID = "com.glorycomrade.setlisttracker"
 APPLE_SERVICES_ID = "com.glorycomrade.setlisttracker.web"
 NATIVE_REDIRECT = "com.glorycomrade.setlisttracker://login-callback"
+# REPORT_EMAIL_TO = "ryanchengpictures@gmail.com"
+
+# Crew report emails (docs/crew-reports.md). Turn on once Email Routing is
+# on for setlisttracker.com and the address below is a verified destination.
+# [[send_email]]
+# name = "REPORT_EMAIL"
+# destination_address = "ryanchengpictures@gmail.com"
 
 [observability]
 enabled = true

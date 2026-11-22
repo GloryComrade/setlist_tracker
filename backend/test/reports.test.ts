@@ -29,6 +29,20 @@ describe("notifyReport", () => {
     expect(body.content).toBe(body.text);
   });
 
+  it("emails the note when REPORT_EMAIL is bound", async () => {
+    const send = vi.fn(async () => ({}));
+    const ok = await notifyReport(
+      { ...base, REPORT_WEBHOOK_URL: undefined, REPORT_EMAIL: { send } as unknown as SendEmail, REPORT_EMAIL_TO: "me@example.com" },
+      "show",
+      "spam",
+    );
+    expect(ok).toBe(true);
+    const msg = (send.mock.calls[0] as unknown as [any])[0];
+    expect(msg.to).toBe("me@example.com");
+    expect(msg.subject).toBe("New Crew report");
+    expect(msg.text).toContain('"spam"');
+  });
+
   it("never throws when the webhook is down", async () => {
     const f = vi.fn(async () => {
       throw new Error("offline");

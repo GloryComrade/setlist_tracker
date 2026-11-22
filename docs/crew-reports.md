@@ -5,6 +5,17 @@ objectionable content within 24 hours. Here's the routine.
 
 ## Get an alert for every report
 
+### By email (Cloudflare Email Routing)
+
+1. Cloudflare dashboard → setlisttracker.com → **Email** → **Email Routing**
+   → **Get started** → let it add its DNS records.
+2. **Destination addresses** → add the address that should get reports and
+   click the link in Cloudflare's verification email.
+3. In `backend/wrangler.toml`, uncomment the `[[send_email]]` block and the
+   `REPORT_EMAIL_TO` var. Merge, and the next deploy picks it up.
+
+### By Discord or Slack
+
 1. Make an incoming webhook: in Discord, **Server Settings → Integrations →
    Webhooks → New Webhook → Copy Webhook URL** (or a Slack incoming
    webhook).
