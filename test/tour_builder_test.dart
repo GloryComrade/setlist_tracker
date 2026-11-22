@@ -352,20 +352,16 @@ void main() {
       expect(t.name, contains('5K Tour'));
       // Short races skip the race-pace finish on Headliners.
       expect(
-        t.allShows.where((s) => s.workoutType == WorkoutType.long).every(
-          (s) => s.detail?.contains('Opening Night pace') != true,
-        ),
+        t.allShows
+            .where((s) => s.workoutType == WorkoutType.long)
+            .every((s) => s.detail?.contains('Opening Night pace') != true),
         isTrue,
       );
     });
 
     test('a goal time is for the chosen distance', () {
       final p = pacesFor(
-        _setup(
-          distance: RaceDistance.half,
-          recent: null,
-          goalTime: 2 * 3600,
-        ),
+        _setup(distance: RaceDistance.half, recent: null, goalTime: 2 * 3600),
       )!;
       expect(p.predictedRaceSeconds, closeTo(7200, 2));
       expect(p.predictedMarathonSeconds, greaterThan(4 * 3600));

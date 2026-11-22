@@ -562,16 +562,12 @@ class TourBuilder {
           'Short Tour',
           '$weeks weeks is less than the usual ${rules.idealMinWeeks} to '
               '${rules.maxWeeks}, so mileage climbs on a tighter schedule.',
-          serious: base < 20,
+          // 20 mi a week for a marathon, less for shorter races.
+          serious: base < _lightBase(distance).$1 * 2,
         ),
       );
     }
-    final (lightBase, lightLong) = switch (distance) {
-      RaceDistance.fiveK => (3.0, 1.0),
-      RaceDistance.tenK => (6.0, 2.0),
-      RaceDistance.half => (8.0, 3.0),
-      RaceDistance.marathon => (10.0, 4.0),
-    };
+    final (lightBase, lightLong) = _lightBase(distance);
     if (base < lightBase || setup.longestRecentRunMiles < lightLong) {
       checks.add(
         TourCheck(
@@ -936,6 +932,15 @@ class TourBuilder {
     ];
   }
 }
+
+/// Under these weekly miles (or no run over the longest), the base is light
+/// for the distance.
+(double, double) _lightBase(RaceDistance d) => switch (d) {
+  RaceDistance.fiveK => (3.0, 1.0),
+  RaceDistance.tenK => (6.0, 2.0),
+  RaceDistance.half => (8.0, 3.0),
+  RaceDistance.marathon => (10.0, 4.0),
+};
 
 String _dateText(DateTime d) {
   const months = [

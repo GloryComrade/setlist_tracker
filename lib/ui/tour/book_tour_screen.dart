@@ -192,11 +192,16 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
 
   Future<void> _pickDate() async {
     final now = today();
+    final last = DateTime(now.year + 2, now.month, now.day);
+    // A friend's race can already be past (or the picker would assert).
+    var initial = _raceDate ?? suggestedRaceDate(now, _distance!);
+    if (initial.isBefore(now)) initial = now;
+    if (initial.isAfter(last)) initial = last;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _raceDate ?? suggestedRaceDate(now, _distance!),
+      initialDate: initial,
       firstDate: now,
-      lastDate: DateTime(now.year + 2, now.month, now.day),
+      lastDate: last,
       helpText: 'Opening Night',
     );
     if (picked != null) {
@@ -421,8 +426,12 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
           }(),
           selected: _distance == d,
           onTap: () => setState(() {
-            if (_distance != d && _suggested) _raceDate = null;
+            if (_distance == d) return;
             _distance = d;
+            // A picked-for-you date follows the distance.
+            if (_suggested) _raceDate = suggestedRaceDate(today(), d);
+            // "3:45" means something else for a 5K: ask for the goal again.
+            _goalTime.clear();
             if (!_goals.contains(_goal)) _goal = null;
           }),
         ),

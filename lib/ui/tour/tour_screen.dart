@@ -52,8 +52,8 @@ class _NoTour extends StatelessWidget {
             children: [
               const SizedBox(height: 8),
               const Text(
-                'Every marathon is a tour, and race day is Opening Night. '
-                'Answer 8 quick questions and get a week-by-week plan from '
+                'Every race is a tour, from a 5K to a marathon, and race day is Opening Night. '
+                'Answer 9 quick questions and get a week-by-week plan from '
                 'the first Rehearsal to the finish line.',
                 style: TextStyle(color: Colors.white, height: 1.4),
               ),
