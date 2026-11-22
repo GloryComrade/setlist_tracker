@@ -11,6 +11,11 @@ Developer Program ($99 a year), which only Part 5 needs.
 **Never paste a secret** (API token, client secret, `.p8` key) into a chat,
 an issue or the code. Each one goes straight into the box named below.
 
+**Done (Nov 21, 2026):** Parts 1, 2, 5 and 6. SITE is
+`https://setlisttracker.com` (the workers.dev address,
+`https://setlist-tracker.ryanchengpictures.workers.dev`, works too).
+Not done yet: Part 3 (Spotify), so song search uses Apple's catalog.
+
 You'll fill in the address of your site as you go. It looks like
 `https://setlist-tracker.YOUR-SUBDOMAIN.workers.dev`. Below, it's written
 as **SITE**.

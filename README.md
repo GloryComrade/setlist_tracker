@@ -4,7 +4,7 @@ Marathon training tracker with a music-tour theme. Phase 1: log Shows (Studio Se
 
 ## Try it
 
-Every merge to `main` publishes the app and its backend to Cloudflare, at your `setlist-tracker.<subdomain>.workers.dev` address (works on a phone too). Until Cloudflare is set up ([docs/cloudflare-setup.md](docs/cloudflare-setup.md)), it keeps publishing a local-only copy to https://glorycomrade.github.io/setlist_tracker/.
+Every merge to `main` publishes the app and its backend to Cloudflare: https://setlisttracker.com (works on a phone too). Setup: [docs/cloudflare-setup.md](docs/cloudflare-setup.md).
 
 ## Run it locally
 

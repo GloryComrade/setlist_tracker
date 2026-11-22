@@ -1,18 +1,24 @@
 # App Store listing: what to paste into App Store Connect
 
 Everything here is ready to copy into **App Store Connect → Apps → Setlist
-Tracker**. Character limits are in brackets. Replace `SITE` with your
-Cloudflare address (see [cloudflare-setup.md](cloudflare-setup.md)).
+Tracker**. Character limits are in brackets. The site is
+`https://setlisttracker.com`.
+
+**Status (Nov 21, 2026):** App Information, Pricing, Age Rating and the App
+Privacy answers are filled in. Still to do: **Publish** on App Privacy, the
+version page below, screenshots, review notes, and a TestFlight build.
 
 ## App Information
 
 - **Name** [30]: `Setlist Tracker`
 - **Subtitle** [30]: `Marathon training, on tour`
 - **Category**: Health & Fitness (secondary: Music)
-- **Privacy Policy URL**: `SITE/privacy.html`
-- **Content rights**: the app doesn't contain or show third-party content
-  that needs rights. Song titles and album art come from Spotify and Apple's
-  catalogs, and the app links back to them.
+- **Privacy Policy URL**: `https://setlisttracker.com/privacy.html`
+- **Content rights**: choose **Yes, it contains, shows, or accesses
+  third-party content**, and tick that you have the rights. The app shows
+  song titles and album art from Apple's and Spotify's catalogs through
+  their public search APIs, as their terms allow, and links back to them.
+  (This was set to "No" at first. Change it before you submit.)
 
 ## Pricing and Availability
 
@@ -80,8 +86,8 @@ Free, in all countries.
 marathon,running,training plan,run log,treadmill,half marathon,playlist,music,race,pace,10k,5k
 ```
 
-**Support URL**: `SITE/support.html`
-**Marketing URL** (optional): `SITE`
+**Support URL**: `https://setlisttracker.com/support.html`
+**Marketing URL** (optional): `https://setlisttracker.com`
 
 **Copyright**: `2026 Ryan Cheng`
 
@@ -152,7 +158,7 @@ account.
 > Apple Health: Backstage → Apple Health → Import runs. The app reads
 > running workouts only, on request, and never writes to Health.
 
-Before submitting, sign in on the website with a second account, pick the
+Before submitting, sign in on https://setlisttracker.com with a second account, pick the
 stage name "Review Crew", share a Show or two, make an invite (The Crew →
 Invite a friend), and put its code in place of `DEMO-CODE`. Invites last 7
 days, so make a fresh one right before you submit.
