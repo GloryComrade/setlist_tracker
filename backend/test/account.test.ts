@@ -21,6 +21,7 @@ const TABLES: [string, string][] = [
   ["crew_encores_v2", "?1 IN (user_id, owner)"],
   ["crew_reports", "?1 IN (reporter, reported_user)"],
   ["crew_tour_invites", "?1 IN (from_user, to_user)"],
+  ["crew_avatars", "user_id = ?1"],
 ];
 
 async function rowsOf(userId: string): Promise<Record<string, number>> {
@@ -70,6 +71,12 @@ describe("DELETE /api/me", () => {
       body: { rows: [{ id: tourId, data: { id: tourId, name: "Spring Tour", setup: { raceDate, raceDistance: "half" } }, updatedAt: "2026-11-21T08:00:00.000Z", deletedAt: null }] },
     });
     await call("POST", "/api/crew/tour-invites", { token: me.token, body: { tourId, to: [friend.user.id] } });
+    // A profile photo.
+    const photo = new Uint8Array(64).fill(1);
+    photo.set([0xff, 0xd8, 0xff]);
+    await env.DB.prepare(
+      "INSERT INTO crew_avatars (user_id, jpeg, updated_at) VALUES (?, ?, ?)",
+    ).bind(me.user.id, photo, new Date().toISOString()).run();
     // A login code, an Apple token.
     await createLoginCode(env.DB, me.user.id);
     await env.DB.prepare(

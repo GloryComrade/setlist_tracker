@@ -399,7 +399,13 @@ class _Signature extends StatelessWidget {
     final Widget owner = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        CrewAvatar(name: post.stageName, color: post.color, size: 24),
+        CrewAvatar(
+          name: post.stageName,
+          color: post.color,
+          size: 24,
+          badge: post.avatarBadge,
+          photoUrl: post.avatarUrl,
+        ),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
@@ -828,13 +834,56 @@ Future<void> showReportSheet(BuildContext context, CrewPost post) {
     useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => _ReportSheet(post: post),
+    builder: (context) => _ReportSheet(
+      title: 'REPORT THIS SHOW',
+      body:
+          'The app’s owner reads every report. The Show disappears from '
+          'your feed right away.',
+      name: post.stageName,
+      done: 'Thanks. The Show is hidden from your feed.',
+      send: (ref, reason, block) => ref
+          .read(crewControllerProvider.notifier)
+          .report(post, reason, block: block),
+    ),
+  );
+}
+
+/// Report a Crew mate's photo: pick a reason, optionally block them too.
+Future<void> showReportPhotoSheet(BuildContext context, CrewMate mate) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _ReportSheet(
+      title: 'REPORT THIS PHOTO',
+      body: 'The app’s owner reads every report and sees the photo.',
+      name: mate.stageName,
+      done: 'Thanks. The report is in.',
+      send: (ref, reason, block) => ref
+          .read(crewControllerProvider.notifier)
+          .reportAvatar(mate, reason, block: block),
+    ),
   );
 }
 
 class _ReportSheet extends ConsumerStatefulWidget {
-  const _ReportSheet({required this.post});
-  final CrewPost post;
+  const _ReportSheet({
+    required this.title,
+    required this.body,
+    required this.name,
+    required this.done,
+    required this.send,
+  });
+  final String title;
+  final String body;
+
+  /// Who's being reported.
+  final String name;
+
+  /// The snack bar once it's sent.
+  final String done;
+  final Future<void> Function(WidgetRef ref, String reason, bool block) send;
 
   @override
   ConsumerState<_ReportSheet> createState() => _ReportSheetState();
@@ -850,12 +899,10 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
     if (reason == null) return;
     setState(() => _sending = true);
     try {
-      await ref
-          .read(crewControllerProvider.notifier)
-          .report(widget.post, reason, block: _block);
+      await widget.send(ref, reason, _block);
       if (!mounted) return;
       Navigator.of(context).pop();
-      crewSnack(context, 'Thanks. The Show is hidden from your feed.');
+      crewSnack(context, widget.done);
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = false);
@@ -865,7 +912,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final name = widget.post.stageName;
+    final name = widget.name;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -874,14 +921,13 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'REPORT THIS SHOW',
+              widget.title,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 6),
-            const Text(
-              'The app’s owner reads every report. The Show disappears from '
-              'your feed right away.',
-              style: TextStyle(color: StageColors.textMuted),
+            Text(
+              widget.body,
+              style: const TextStyle(color: StageColors.textMuted),
             ),
             const SizedBox(height: 8),
             RadioGroup<String>(

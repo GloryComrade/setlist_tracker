@@ -416,14 +416,60 @@ class PosterHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          WholeWordsText(
-            title,
-            semanticsLabel: semanticsTitle,
-            style: theme.textTheme.displayMedium?.copyWith(color: Colors.white),
+          PosterTitleRow(
+            title: WholeWordsText(
+              title,
+              semanticsLabel: semanticsTitle,
+              style: theme.textTheme.displayMedium?.copyWith(
+                color: Colors.white,
+              ),
+            ),
           ),
           ...children,
         ],
       ),
+    );
+  }
+}
+
+/// What every tab's poster shows at its top-right corner (the Settings
+/// button), set once by the tab shell. Posters outside the tabs, and
+/// screens tested on their own, have none.
+class PosterCornerAction extends InheritedWidget {
+  const PosterCornerAction({
+    super.key,
+    required this.action,
+    required super.child,
+  });
+
+  final Widget action;
+
+  static Widget? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<PosterCornerAction>()?.action;
+
+  @override
+  bool updateShouldNotify(PosterCornerAction old) => old.action != action;
+}
+
+/// A poster's title with the [PosterCornerAction] (if any) at its right,
+/// top-aligned. [trailing] goes before it.
+class PosterTitleRow extends StatelessWidget {
+  const PosterTitleRow({super.key, required this.title, this.trailing});
+
+  final Widget title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final corner = PosterCornerAction.maybeOf(context);
+    if (corner == null && trailing == null) return title;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: title),
+        ?trailing,
+        ?corner,
+      ],
     );
   }
 }

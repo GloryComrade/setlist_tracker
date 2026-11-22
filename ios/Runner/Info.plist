@@ -87,6 +87,8 @@
 	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Setlist Tracker reads your running workouts so you can add them to your Setlist as Shows.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Setlist Tracker lets you pick a photo for your Crew profile picture. Only the photo you pick is used.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Setlist Tracker never writes to Apple Health. It only reads your running workouts.</string>
 </dict>

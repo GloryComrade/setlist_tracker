@@ -18,6 +18,13 @@
 // - A post is named "<ownerId>:<showId>". The server copies the Show into a
 //   report.
 
+import {
+  AVATAR_AT,
+  avatarFields,
+  avatarRoute,
+  badgeField,
+  NO_AVATAR,
+} from "./avatars";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson } from "./http";
 import { tourInvitesRoute } from "./tour_invites";
@@ -81,6 +88,10 @@ export interface Profile {
   color: number;
   /** In The Crew from before it showed everything, and not yet OK'd. */
   allActivityPending: boolean;
+  /** One of AVATAR_BADGES, or null (src/avatars.ts). */
+  avatarBadge: string | null;
+  /** Where to fetch the photo, or null without one. */
+  avatarUrl: string | null;
 }
 
 interface ProfileRow {
@@ -88,6 +99,8 @@ interface ProfileRow {
   stage_name: string;
   color: number;
   all_activity_since: string | null;
+  avatar_badge: string | null;
+  avatar_at: string | null;
 }
 
 /**
@@ -103,6 +116,7 @@ function toProfile(r: ProfileRow): Profile {
     stageName: r.stage_name,
     color: r.color,
     allActivityPending: r.all_activity_since === ALL_ACTIVITY_PENDING,
+    ...avatarFields(r.user_id, r.avatar_badge, r.avatar_at),
   };
 }
 
@@ -112,7 +126,9 @@ export async function getProfile(
 ): Promise<Profile | null> {
   const row = await db
     .prepare(
-      "SELECT user_id, stage_name, color, all_activity_since FROM crew_profiles WHERE user_id = ?",
+      `SELECT user_id, stage_name, color, all_activity_since, avatar_badge,
+              ${AVATAR_AT("user_id")} AS avatar_at
+       FROM crew_profiles WHERE user_id = ?`,
     )
     .bind(userId)
     .first<ProfileRow>();
@@ -157,17 +173,20 @@ export async function saveProfile(
   if (typeof color !== "number" || !Number.isInteger(color) || color < 0 || color > 7) {
     throw badProfile("Pick one of the avatar colors.");
   }
-  const row = await db
+  // Left out (older app builds): the saved badge stays.
+  const badge = badgeField(body);
+  await db
     .prepare(
-      `INSERT INTO crew_profiles (user_id, stage_name, color, updated_at)
-       VALUES (?1, ?2, ?3, ?4)
+      `INSERT INTO crew_profiles (user_id, stage_name, color, updated_at, avatar_badge)
+       VALUES (?1, ?2, ?3, ?4, ?8)
        ON CONFLICT (user_id) DO UPDATE SET
          stage_name = excluded.stage_name, color = excluded.color,
          updated_at = excluded.updated_at,
          all_activity_since = CASE
            WHEN ?5 = 1 AND all_activity_since = ?6 THEN excluded.updated_at
-           ELSE all_activity_since END
-       RETURNING user_id, stage_name, color, all_activity_since`,
+           ELSE all_activity_since END,
+         avatar_badge = CASE WHEN ?7 = 1 THEN excluded.avatar_badge
+           ELSE avatar_badge END`,
     )
     .bind(
       userId,
@@ -176,9 +195,11 @@ export async function saveProfile(
       iso(now),
       body.allActivity === true ? 1 : 0,
       ALL_ACTIVITY_PENDING,
+      badge === undefined ? 0 : 1,
+      badge ?? null,
     )
-    .first<ProfileRow>();
-  return toProfile(row!);
+    .run();
+  return (await getProfile(db, userId))!;
 }
 
 // ---- Invites ----
@@ -396,13 +417,15 @@ export async function listMates(
 ) {
   const { results } = await db
     .prepare(
-      `SELECT user_id, stage_name, color, since, blocked,
+      `SELECT user_id, stage_name, color, since, blocked, avatar_badge,
               CASE WHEN blocked = 0
-                THEN ${ACTIVE_TOUR("m.user_id", TOUR_SUMMARY_JSON)} END AS tour
+                THEN ${ACTIVE_TOUR("m.user_id", TOUR_SUMMARY_JSON)} END AS tour,
+              CASE WHEN blocked = 0 THEN ${AVATAR_AT("m.user_id")} END AS avatar_at
        FROM (
          SELECT o.other AS user_id,
                 coalesce(p.stage_name, 'Runner') AS stage_name,
                 coalesce(p.color, 0) AS color,
+                p.avatar_badge AS avatar_badge,
                 o.created_at AS since,
                 0 AS blocked
          FROM (SELECT CASE WHEN user_a = ?1 THEN user_b ELSE user_a END AS other,
@@ -414,7 +437,7 @@ export async function listMates(
                 OR (b.blocker = o.user_b AND b.blocked = o.user_a))
          UNION ALL
          SELECT b.blocked, coalesce(p.stage_name, 'Runner'), coalesce(p.color, 0),
-                b.created_at, 1
+                NULL, b.created_at, 1
          FROM crew_blocks b
          LEFT JOIN crew_profiles p ON p.user_id = b.blocked
          WHERE b.blocker = ?1
@@ -429,6 +452,8 @@ export async function listMates(
       since: string;
       blocked: number;
       tour: string | null;
+      avatar_badge: string | null;
+      avatar_at: string | null;
     }>();
   return results.map((r) => ({
     userId: r.user_id,
@@ -437,6 +462,10 @@ export async function listMates(
     since: r.since,
     tour: toTourSummary(r.tour),
     blocked: r.blocked === 1,
+    // Runners you blocked never get to show you their picture.
+    ...(r.blocked === 1
+      ? NO_AVATAR
+      : avatarFields(r.user_id, r.avatar_badge, r.avatar_at)),
   }));
 }
 
@@ -462,13 +491,21 @@ export async function mateDetail(
                 ELSE (SELECT l.created_at FROM crew_links l
                       WHERE (l.user_a = ?1 AND l.user_b = u.id)
                          OR (l.user_b = ?1 AND l.user_a = u.id)) END AS since,
-              ${ACTIVE_TOUR("u.id", "t.data")} AS tour
+              ${ACTIVE_TOUR("u.id", "t.data")} AS tour,
+              p.avatar_badge, ${AVATAR_AT("u.id")} AS avatar_at
        FROM users u
        LEFT JOIN crew_profiles p ON p.user_id = u.id
        WHERE u.id = ?3 AND (u.id = ?1 OR ${IS_CREW("u.id")})`,
     )
     .bind(me, utcDate(now), other)
-    .first<{ stage_name: string; color: number; since: string; tour: string | null }>();
+    .first<{
+      stage_name: string;
+      color: number;
+      since: string;
+      tour: string | null;
+      avatar_badge: string | null;
+      avatar_at: string | null;
+    }>();
   if (!row) throw mateNotFound();
   return {
     mate: {
@@ -476,6 +513,7 @@ export async function mateDetail(
       stageName: row.stage_name,
       color: row.color,
       since: row.since,
+      ...avatarFields(other, row.avatar_badge, row.avatar_at),
     },
     tour: row.tour ? JSON.parse(row.tour) : null,
     shows: await crewShows(db, me, { owner: other, limit: MATE_SHOWS_LIMIT }),
@@ -568,7 +606,8 @@ async function crewShows(
   const { results } = await db
     .prepare(
       `SELECT s.user_id AS owner, s.id, s.data, s.updated_at,
-              pr.stage_name, pr.color,
+              pr.stage_name, pr.color, pr.avatar_badge,
+              ${AVATAR_AT("s.user_id")} AS avatar_at,
               json_extract(g.data, '$.name') AS gear_name,
               (SELECT count(*) FROM crew_encores_v2 e
                WHERE e.owner = s.user_id AND e.show_id = s.id) AS encores,
@@ -600,12 +639,15 @@ async function crewShows(
       gear_name: unknown;
       encores: number;
       encored_by_me: number;
+      avatar_badge: string | null;
+      avatar_at: string | null;
     }>();
   return results.map((r) => ({
     id: postId(r.owner, r.id),
     ownerId: r.owner,
     stageName: r.stage_name,
     color: r.color,
+    ...avatarFields(r.owner, r.avatar_badge, r.avatar_at),
     showId: r.id,
     show: JSON.parse(r.data),
     gearName: typeof r.gear_name === "string" ? r.gear_name : null,
@@ -721,6 +763,8 @@ export async function crewRoute(
   const [a, b, c] = parts;
   const n = parts.length;
 
+  const avatar = await avatarRoute(request, db, me, parts);
+  if (avatar) return avatar;
   if (a === "profile" && n === 1) {
     if (m === "GET") return json(await getProfile(db, me));
     if (m === "PUT") return json(await saveProfile(db, me, await readJson(request)));

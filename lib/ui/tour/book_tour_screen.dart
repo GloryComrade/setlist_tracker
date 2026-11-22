@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/crew/crew_controller.dart';
 import '../../data/crew/tour_invites_controller.dart';
 import '../../data/providers.dart';
+import '../../data/settings/app_settings.dart';
 import '../../logic/show_math.dart';
 import '../../logic/spoken.dart';
 import '../../logic/tour_builder.dart';
@@ -81,6 +82,9 @@ class _BookTourScreenState extends ConsumerState<BookTourScreen> {
   @override
   void initState() {
     super.initState();
+    final defaults = ref.read(tourQuizDefaultsProvider);
+    _headlinerDay = defaults.headlinerWeekday;
+    _venue = defaults.venue;
     final f = widget.featuring;
     if (f != null) {
       _distance = f.raceDistance;

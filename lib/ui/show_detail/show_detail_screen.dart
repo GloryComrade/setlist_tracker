@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/providers.dart';
+import '../../data/settings/app_settings.dart';
 import '../../logic/show_math.dart';
 import '../../logic/spoken.dart';
 import '../../logic/spotify_links.dart';
@@ -221,13 +222,20 @@ class _Stats extends StatelessWidget {
   }
 }
 
-class _SongCard extends StatelessWidget {
+class _SongCard extends ConsumerWidget {
   const _SongCard({required this.show});
   final Show show;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final song = show.song!;
+    // Settings > Song of the Show picks which one leads.
+    final appleFirst =
+        ref.watch(appSettingsProvider.select((s) => s.musicApp)) ==
+        MusicApp.appleMusic;
+    final appleUri = song.appleMusicUrl != null
+        ? Uri.parse(song.appleMusicUrl!)
+        : appleMusicSearchUri(song.title, song.artist);
     return SectionCard(
       title: 'Song of the Show',
       child: Row(
@@ -272,6 +280,12 @@ class _SongCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (appleFirst)
+                      FilledButton.icon(
+                        onPressed: () => openLink(context, appleUri),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Open in Apple Music'),
+                      ),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: StageColors.spotifyGreen,
@@ -288,7 +302,7 @@ class _SongCard extends StatelessWidget {
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('Open in Spotify'),
                     ),
-                    if (song.appleMusicUrl != null)
+                    if (!appleFirst && song.appleMusicUrl != null)
                       OutlinedButton(
                         onPressed: () =>
                             openLink(context, Uri.parse(song.appleMusicUrl!)),

@@ -115,7 +115,13 @@ class FeaturingStrip extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
             child: Row(
               children: [
-                CrewAvatar(name: mate.stageName, color: mate.color, size: 40),
+                CrewAvatar(
+                  name: mate.stageName,
+                  color: mate.color,
+                  size: 40,
+                  badge: mate.avatarBadge,
+                  photoUrl: mate.avatarUrl,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

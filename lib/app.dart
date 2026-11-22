@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'data/crew/crew_controller.dart';
+import 'data/settings/app_settings.dart';
 import 'data/sync/sync_controller.dart';
 import 'models/tour.dart';
 import 'theme/app_theme.dart';
@@ -22,6 +23,8 @@ import 'ui/show_detail/show_detail_screen.dart';
 import 'ui/show_form/show_form_screen.dart';
 import 'ui/tour/book_tour_screen.dart';
 import 'ui/tour/planned_show_screen.dart';
+import 'ui/settings/settings_button.dart';
+import 'ui/settings/settings_screen.dart';
 import 'ui/tour/tour_screen.dart';
 import 'ui/widgets/stage_widgets.dart';
 
@@ -62,6 +65,7 @@ final appRouter = GoRouter(
         ),
       ],
     ),
+    GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(
       path: '/show/new',
       builder: (_, state) =>
@@ -133,6 +137,8 @@ class SetlistApp extends ConsumerWidget {
     ref.listen(syncControllerProvider, (_, _) {});
     // Keeps the Crew feed in step with the Setlist and each sync.
     ref.listen(crewControllerProvider, (_, _) {});
+    // Reads the saved Settings at start, so every screen gets them.
+    ref.listen(appSettingsProvider, (_, _) {});
     return MaterialApp.router(
       title: 'Setlist Tracker',
       debugShowCheckedModeBanner: false,
@@ -199,6 +205,10 @@ class _TabShell extends StatelessWidget {
     ),
   ];
 
+  /// Every tab's poster gets the Settings button at its top-right.
+  static Widget _withSettings(Widget tab) =>
+      PosterCornerAction(action: const SettingsAvatarButton(), child: tab);
+
   void _go(int i) =>
       shell.goBranch(i, initialLocation: i == shell.currentIndex);
 
@@ -229,14 +239,14 @@ class _TabShell extends StatelessWidget {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: StageGlow(child: shell)),
+            Expanded(child: StageGlow(child: _withSettings(shell))),
           ],
         ),
       );
     }
     return Scaffold(
       floatingActionButton: fab,
-      body: StageGlow(child: shell),
+      body: StageGlow(child: _withSettings(shell)),
       // Five tabs share a phone's width, so the labels keep their 100% size
       // at large text sizes (like iOS tab bars) instead of breaking mid-word.
       bottomNavigationBar: MediaQuery.withNoTextScaling(

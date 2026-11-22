@@ -372,6 +372,7 @@ class _Header extends StatelessWidget {
                   ),
                 ],
               ),
+              ?PosterCornerAction.maybeOf(context),
             ],
           ),
           const SizedBox(height: 6),
