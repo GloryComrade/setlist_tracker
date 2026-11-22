@@ -11,18 +11,115 @@ import '../models/tour.dart';
 import '../models/track.dart';
 import 'show_math.dart';
 
-const double kMarathonMiles = 26.2;
+const double kMarathonMiles = kFullMarathonMiles;
 const double k5kMiles = 3.10686;
 
-/// Shortest Tour the builder will make at all.
+/// Shortest marathon Tour the builder will make at all.
 const int kMinTourWeeks = 6;
 
-/// Under this, the builder warns that the race is too soon.
+/// Under this, the builder warns that the marathon is too soon.
 const int kShortTourWeeks = 12;
 
 /// The usual range for a marathon plan.
 const int kIdealMinTourWeeks = 16;
 const int kMaxTourWeeks = 20;
+
+/// The plan rules that change with the race distance.
+class DistanceRules {
+  const DistanceRules({
+    required this.minWeeks,
+    required this.shortWeeks,
+    required this.idealMinWeeks,
+    required this.maxWeeks,
+    required this.suggestWeeks,
+    required this.peakLongFinish,
+    required this.peakLongStrong,
+    required this.peakWeekMiles,
+    required this.peakGap,
+    required this.headlinerRaceFinish,
+  });
+
+  /// Shortest Tour the builder will make at all.
+  final int minWeeks;
+
+  /// Under this, warn that the race is too soon.
+  final int shortWeeks;
+
+  /// The usual range.
+  final int idealMinWeeks;
+  final int maxWeeks;
+
+  /// "Help me pick" puts the race this many weeks out.
+  final int suggestWeeks;
+
+  /// Top Headliner for a finish goal or a light base, and for everyone else.
+  final double peakLongFinish;
+  final double peakLongStrong;
+
+  /// Peak weekly miles for finish, target time and BQ goals.
+  final (double, double, double) peakWeekMiles;
+
+  /// Weeks between the top Headliner and race week.
+  final int peakGap;
+
+  /// Headline Leg Headliners finish with a few miles at race pace. Short
+  /// races skip it: 5K and 10K pace belongs in the interval sessions.
+  final bool headlinerRaceFinish;
+
+  /// Soundcheck weeks, counting race week.
+  int taperWeeks(int weeks) => peakGap >= 3 ? (weeks >= 18 ? 3 : 2) : peakGap;
+}
+
+DistanceRules rulesFor(RaceDistance d) => switch (d) {
+  RaceDistance.fiveK => const DistanceRules(
+    minWeeks: 4,
+    shortWeeks: 6,
+    idealMinWeeks: 8,
+    maxWeeks: 12,
+    suggestWeeks: 10,
+    peakLongFinish: 6,
+    peakLongStrong: 8,
+    peakWeekMiles: (15, 22, 22),
+    peakGap: 1,
+    headlinerRaceFinish: false,
+  ),
+  RaceDistance.tenK => const DistanceRules(
+    minWeeks: 5,
+    shortWeeks: 8,
+    idealMinWeeks: 10,
+    maxWeeks: 14,
+    suggestWeeks: 12,
+    peakLongFinish: 8,
+    peakLongStrong: 10,
+    peakWeekMiles: (20, 28, 28),
+    peakGap: 1,
+    headlinerRaceFinish: false,
+  ),
+  RaceDistance.half => const DistanceRules(
+    minWeeks: 6,
+    shortWeeks: 10,
+    idealMinWeeks: 12,
+    maxWeeks: 16,
+    suggestWeeks: 14,
+    peakLongFinish: 10,
+    peakLongStrong: 12,
+    peakWeekMiles: (26, 33, 33),
+    peakGap: 2,
+    headlinerRaceFinish: true,
+  ),
+  RaceDistance.marathon => const DistanceRules(
+    minWeeks: kMinTourWeeks,
+    shortWeeks: kShortTourWeeks,
+    idealMinWeeks: kIdealMinTourWeeks,
+    maxWeeks: kMaxTourWeeks,
+    suggestWeeks: 18,
+    peakLongFinish: 18,
+    peakLongStrong: 20,
+    peakWeekMiles: (36, 42, 50),
+    peakGap: 3,
+    headlinerRaceFinish: true,
+  ),
+};
 
 /// Treadmill incline that makes up for no wind resistance.
 const double kStudioInclinePercent = 1.0;
@@ -42,15 +139,22 @@ int predictMarathonSeconds(RaceResult race) => riegelSeconds(
   kMarathonMiles,
 ).round();
 
-/// Training paces from a marathon time.
+/// Training paces from a marathon time. [raceMiles] sets the Opening Night
+/// pace for shorter races (Riegel from the marathon time).
 ///
 /// - Easy runs and Headliners: 60 to 90 seconds per mile slower than
 ///   marathon pace.
 /// - Tempo: the pace Riegel predicts for 10 miles, roughly threshold effort.
 /// - Intervals: the pace Riegel predicts for 5K.
-TourPaces pacesFromMarathon(int marathonSeconds, String source) {
+TourPaces pacesFromMarathon(
+  int marathonSeconds,
+  String source, {
+  double raceMiles = kMarathonMiles,
+  double? raceSeconds,
+}) {
   final t = marathonSeconds.toDouble();
   final mp = t / kMarathonMiles;
+  final rs = raceSeconds ?? riegelSeconds(t, kMarathonMiles, raceMiles);
   return TourPaces(
     predictedMarathonSeconds: marathonSeconds,
     marathon: mp,
@@ -59,28 +163,63 @@ TourPaces pacesFromMarathon(int marathonSeconds, String source) {
     tempo: riegelSeconds(t, kMarathonMiles, 10) / 10,
     interval: riegelSeconds(t, kMarathonMiles, k5kMiles) / k5kMiles,
     source: source,
+    race: raceMiles == kMarathonMiles ? mp : rs / raceMiles,
+    raceMiles: raceMiles,
   );
 }
 
 /// Picks the best source for paces: a recent race first, then the goal time,
 /// then the runner's usual easy pace. Null means an effort-only Tour.
 TourPaces? pacesFor(TourSetup setup) {
+  final miles = raceMilesFor(setup.raceDistance);
   final race = setup.recentRace;
   if (race != null) {
-    return pacesFromMarathon(predictMarathonSeconds(race), 'recentRace');
+    return pacesFromMarathon(
+      predictMarathonSeconds(race),
+      'recentRace',
+      raceMiles: miles,
+      raceSeconds: riegelSeconds(
+        race.timeSeconds.toDouble(),
+        race.distanceMiles,
+        miles,
+      ),
+    );
   }
   final goal = setup.goalTimeSeconds;
   if (setup.goal != TourGoal.finish && goal != null && goal > 0) {
-    return pacesFromMarathon(goal, 'goalTime');
+    // The goal is for Opening Night's distance; training paces come from
+    // the marathon time it's worth.
+    return pacesFromMarathon(
+      riegelSeconds(goal.toDouble(), miles, kMarathonMiles).round(),
+      'goalTime',
+      raceMiles: miles,
+      raceSeconds: goal.toDouble(),
+    );
   }
   final easy = setup.easyPaceSecondsPerMile;
   if (easy != null && easy > 0) {
     // Easy pace is about 75 s/mi slower than marathon pace.
     final mp = math.max(easy - 75, 240.0);
-    return pacesFromMarathon((mp * kMarathonMiles).round(), 'easyPace');
+    return pacesFromMarathon(
+      (mp * kMarathonMiles).round(),
+      'easyPace',
+      raceMiles: miles,
+    );
   }
   return null;
 }
+
+/// Race miles as the plan uses them. A marathon stays 26.2 so older Tours
+/// read the same.
+double raceMilesFor(RaceDistance d) =>
+    d == RaceDistance.marathon ? kMarathonMiles : d.miles;
+
+/// Predicted Opening Night time from a recent race of any distance.
+int predictRaceSeconds(RaceResult race, RaceDistance d) => riegelSeconds(
+  race.timeSeconds.toDouble(),
+  race.distanceMiles,
+  raceMilesFor(d),
+).round();
 
 // ---------------------------------------------------------------------------
 // Dates
@@ -103,14 +242,22 @@ int weeksUntil(DateTime today, DateTime raceDate) {
   return (days + 1) ~/ 7;
 }
 
-/// The "help me pick" date: the first Sunday at least 18 weeks out.
-DateTime suggestedRaceDate(DateTime today) {
-  final d = _addDays(_day(today), 18 * 7);
+/// The "help me pick" date: the first Sunday at least 18 weeks out (fewer
+/// for shorter races, see [DistanceRules.suggestWeeks]).
+DateTime suggestedRaceDate(
+  DateTime today, [
+  RaceDistance distance = RaceDistance.marathon,
+]) {
+  final d = _addDays(_day(today), rulesFor(distance).suggestWeeks * 7);
   return _addDays(d, (DateTime.sunday - d.weekday) % 7);
 }
 
-/// "Spring 2027 Tour" from the race date.
-String tourNameFor(DateTime raceDate) {
+/// "Spring 2027 Tour" from the race date; "Spring 2027 Half Tour" for
+/// shorter races.
+String tourNameFor(
+  DateTime raceDate, [
+  RaceDistance distance = RaceDistance.marathon,
+]) {
   final m = raceDate.month;
   final season = switch (m) {
     3 || 4 || 5 => 'Spring',
@@ -120,7 +267,10 @@ String tourNameFor(DateTime raceDate) {
   };
   // A December race belongs to the winter that ends next year.
   final year = m == 12 ? raceDate.year + 1 : raceDate.year;
-  return '$season $year Tour';
+  final kind = distance == RaceDistance.marathon
+      ? ''
+      : '${distance.shortLabel} ';
+  return '$season $year ${kind}Tour';
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +308,7 @@ class TourBuild {
 // Workouts
 // ---------------------------------------------------------------------------
 
-enum _Effort { easy, jog, marathon, tempo, interval }
+enum _Effort { easy, jog, race, tempo, interval }
 
 /// One stretch of a run at one effort.
 class _Segment {
@@ -172,7 +322,7 @@ double? _paceOf(_Effort e, TourPaces? p) {
   return switch (e) {
     _Effort.easy => p.easy,
     _Effort.jog => p.easySlow,
-    _Effort.marathon => p.marathon,
+    _Effort.race => p.race,
     _Effort.tempo => p.tempo,
     _Effort.interval => p.interval,
   };
@@ -214,16 +364,16 @@ _Workout _easy(double miles, {bool recovery = false, String? detail}) =>
               : 'Conversational effort.'),
     );
 
-_Workout _headliner(double miles, double marathonPaceMiles) {
-  if (marathonPaceMiles <= 0) {
+_Workout _headliner(double miles, double racePaceMiles) {
+  if (racePaceMiles <= 0) {
     return _Workout(WorkoutType.long, 'Headliner', [
       _Segment(miles, _Effort.easy),
     ], 'Steady and easy the whole way. Practice your fueling.');
   }
   return _Workout(WorkoutType.long, 'Headliner', [
-    _Segment(miles - marathonPaceMiles, _Effort.easy),
-    _Segment(marathonPaceMiles, _Effort.marathon),
-  ], 'Easy, then the last ${_mi(marathonPaceMiles)} at Opening Night pace.');
+    _Segment(miles - racePaceMiles, _Effort.easy),
+    _Segment(racePaceMiles, _Effort.race),
+  ], 'Easy, then the last ${_mi(racePaceMiles)} at Opening Night pace.');
 }
 
 _Workout _tempo(double miles) {
@@ -258,11 +408,21 @@ _Workout _intervals(double miles) {
   );
 }
 
-_Workout _race() => _Workout(
+_Workout _race([RaceDistance distance = RaceDistance.marathon]) => _Workout(
   WorkoutType.race,
   'Opening Night',
-  const [_Segment(kMarathonMiles, _Effort.marathon)],
-  'Start a touch slower than goal pace for the first 3 miles. Enjoy the show.',
+  [_Segment(raceMilesFor(distance), _Effort.race)],
+  switch (distance) {
+    RaceDistance.fiveK =>
+      'Warm up with a mile easy and a few strides. Settle in for the first '
+          'mile, then go. Enjoy the show.',
+    RaceDistance.tenK =>
+      'Warm up with a mile easy. Hold back for the first 2 miles, then push '
+          'the last 2. Enjoy the show.',
+    _ =>
+      'Start a touch slower than goal pace for the first 3 miles. Enjoy the '
+          'show.',
+  },
 );
 
 /// Treadmill program plus expected time for a workout.
@@ -317,10 +477,10 @@ const Map<int, List<int>> _dayOffsets = {
 };
 
 /// Peak weekly miles each goal aims for.
-double _goalPeakMiles(TourGoal g) => switch (g) {
-  TourGoal.finish => 36,
-  TourGoal.targetTime => 42,
-  TourGoal.bq => 50,
+double _goalPeakMiles(DistanceRules r, TourGoal g) => switch (g) {
+  TourGoal.finish => r.peakWeekMiles.$1,
+  TourGoal.targetTime => r.peakWeekMiles.$2,
+  TourGoal.bq => r.peakWeekMiles.$3,
 };
 
 /// A week's targets before it's split into runs.
@@ -334,8 +494,8 @@ class _WeekTarget {
   /// tempo, intervals or null.
   final WorkoutType? quality;
 
-  /// Miles at marathon pace at the end of the Headliner.
-  double marathonFinish = 0;
+  /// Miles at Opening Night pace at the end of the Headliner.
+  double raceFinish = 0;
 }
 
 class TourBuilder {
@@ -348,17 +508,22 @@ class TourBuilder {
     final now = _day(today ?? DateTime.now());
     final race = _day(setup.raceDate);
     final checks = <TourCheck>[];
+    final distance = setup.raceDistance;
+    final rules = rulesFor(distance);
+    final raceWord = distance == RaceDistance.marathon
+        ? 'a marathon'
+        : 'a ${distance.label}';
     final available = weeksUntil(now, race);
-    final suggestion = suggestedRaceDate(now);
+    final suggestion = suggestedRaceDate(now, distance);
 
-    if (available < kMinTourWeeks) {
+    if (available < rules.minWeeks) {
       return TourBuild(
         checks: [
           TourCheck(
             'Opening Night is too close',
             'There are only $available full weeks to go, so there is no '
-                'room to build up and taper. Pick a race $kIdealMinTourWeeks '
-                'to $kMaxTourWeeks weeks out.',
+                'room to build up and taper. Pick a race '
+                '${rules.idealMinWeeks} to ${rules.maxWeeks} weeks out.',
             serious: true,
           ),
         ],
@@ -366,55 +531,58 @@ class TourBuilder {
       );
     }
 
-    final weeks = math.min(available, kMaxTourWeeks);
+    final weeks = math.min(available, rules.maxWeeks);
     final paces = pacesFor(setup);
     final base = setup.currentWeeklyMiles;
 
     // ---- Timing and fitness checks ----
-    if (available > kMaxTourWeeks) {
+    if (available > rules.maxWeeks) {
       final start = _addDays(race, -7 * weeks + 1);
       checks.add(
         TourCheck(
           'The Tour starts later',
-          'Rehearsals begin ${_dateText(start)}, $kMaxTourWeeks weeks before '
+          'Rehearsals begin ${_dateText(start)}, ${rules.maxWeeks} weeks before '
               'Opening Night. Keep your usual easy running until then.',
         ),
       );
     }
-    if (weeks < kShortTourWeeks) {
+    if (weeks < rules.shortWeeks) {
       checks.add(
         TourCheck(
           'Race may be too soon',
           'Only $weeks weeks to go from ${formatMiles(base)} a week. Think '
-              'about a later race (${_dateText(suggestion)} would give you 18 '
-              'weeks) or switch to a finish-only goal.',
+              'about a later race (${_dateText(suggestion)} would give you '
+              '${rules.suggestWeeks} weeks) or switch to a finish-only goal.',
           serious: true,
         ),
       );
-    } else if (weeks < kIdealMinTourWeeks) {
+    } else if (weeks < rules.idealMinWeeks) {
       checks.add(
         TourCheck(
           'Short Tour',
-          '$weeks weeks is less than the usual $kIdealMinTourWeeks to '
-              '$kMaxTourWeeks, so mileage climbs on a tighter schedule.',
-          serious: base < 20,
+          '$weeks weeks is less than the usual ${rules.idealMinWeeks} to '
+              '${rules.maxWeeks}, so mileage climbs on a tighter schedule.',
+          // 20 mi a week for a marathon, less for shorter races.
+          serious: base < _lightBase(distance).$1 * 2,
         ),
       );
     }
-    if (base < 10 || setup.longestRecentRunMiles < 4) {
+    final (lightBase, lightLong) = _lightBase(distance);
+    if (base < lightBase || setup.longestRecentRunMiles < lightLong) {
       checks.add(
         TourCheck(
           'Light starting base',
-          'Starting from under 10 miles a week (or no run over 4 miles) '
-              'makes a marathon a big jump. A finish-only goal fits best.',
-          serious: weeks < kIdealMinTourWeeks || setup.goal != TourGoal.finish,
+          'Starting from under ${formatMiles(lightBase)} a week (or no run '
+              'over ${formatMiles(lightLong)}) makes $raceWord a big jump. '
+              'A finish-only goal fits best.',
+          serious: weeks < rules.idealMinWeeks || setup.goal != TourGoal.finish,
         ),
       );
     }
     final race0 = setup.recentRace;
     final goalTime = setup.goalTimeSeconds;
     if (race0 != null && goalTime != null && setup.goal != TourGoal.finish) {
-      final predicted = predictMarathonSeconds(race0);
+      final predicted = predictRaceSeconds(race0, distance);
       if (goalTime < predicted * 0.95) {
         checks.add(
           TourCheck(
@@ -464,7 +632,7 @@ class TourBuilder {
     final created = DateTime.now();
     final tour = Tour(
       id: _newId(),
-      name: tourNameFor(race),
+      name: tourNameFor(race, distance),
       setup: setup,
       paces: paces,
       weeks: tourWeeks,
@@ -475,7 +643,7 @@ class TourBuilder {
     return TourBuild(
       tour: tour,
       checks: checks,
-      suggestedDate: weeks < kIdealMinTourWeeks ? suggestion : null,
+      suggestedDate: weeks < rules.idealMinWeeks ? suggestion : null,
     );
   }
 
@@ -485,9 +653,11 @@ class TourBuilder {
     int weeks,
     List<TourCheck> checks,
   ) {
-    // The Headliner peaks 3 weeks before race week.
-    final peakIdx = weeks - 4;
-    final taperWeeks = weeks >= 18 ? 3 : 2;
+    final rules = rulesFor(setup.raceDistance);
+    // The Headliner peaks [peakGap] weeks before race week (3 for a
+    // marathon).
+    final peakIdx = weeks - 1 - rules.peakGap;
+    final taperWeeks = rules.taperWeeks(weeks);
     final buildCount = peakIdx + 1;
     final rehearsalsEnd = math.max(1, (buildCount * 0.3).round());
     final onTheRoadEnd = math.max(
@@ -496,16 +666,22 @@ class TourBuilder {
     );
 
     final startMiles = math.max(setup.currentWeeklyMiles, 8.0);
+    final strongBase = setup.raceDistance == RaceDistance.marathon
+        ? 20.0
+        : rules.peakLongStrong;
     final peakLongGoal =
-        setup.goal == TourGoal.finish || setup.currentWeeklyMiles < 20
-        ? 18.0
-        : 20.0;
+        setup.goal == TourGoal.finish || setup.currentWeeklyMiles < strongBase
+        ? rules.peakLongFinish
+        : rules.peakLongStrong;
     final goalPeak = math.max(
-      math.max(_goalPeakMiles(setup.goal), peakLongGoal * 1.8),
+      math.max(_goalPeakMiles(rules, setup.goal), peakLongGoal * 1.8),
       startMiles,
     );
+    // Someone used to longer runs keeps the distance's top Headliner rather
+    // than shrinking toward it.
     final startLong = setup.longestRecentRunMiles
         .clamp(3.0, math.max(3.0, startMiles * 0.5))
+        .clamp(3.0, peakLongGoal)
         .toDouble();
 
     // Every 4th week is a Rest Stop, except the peak week itself.
@@ -587,13 +763,20 @@ class TourBuilder {
           );
           // Practice race pace at the end of Headline Leg Headliners.
           if (phase == TourPhase.headlineLeg) {
-            t.marathonFinish = lastLong >= 16 ? 3 : 2;
+            if (rules.headlinerRaceFinish) {
+              t.raceFinish = lastLong >= 16 ? 3 : 2;
+            }
           }
           out.add(t);
         }
       } else if (fromEnd < taperWeeks) {
-        // Soundcheck: 75%, then 55%, then race week.
-        final share = fromEnd == 2 ? 0.75 : 0.55;
+        // Soundcheck: 75%, then 55%, then race week. A 5K or 10K tapers
+        // in race week only, at 60%.
+        final share = fromEnd == 2
+            ? 0.75
+            : taperWeeks == 1
+            ? 0.6
+            : 0.55;
         final longShare = fromEnd == 2 ? 0.65 : 0.45;
         out.add(
           _WeekTarget(
@@ -694,7 +877,7 @@ class TourBuilder {
     DateTime dayAt(int offset) => _addDays(start, (headlinerIdx + offset) % 7);
 
     final workouts = <(int, _Workout)>[
-      (0, _headliner(long, paces == null ? 0 : t.marathonFinish)),
+      (0, _headliner(long, paces == null ? 0 : t.raceFinish)),
     ];
     final qualityOffset = runs == 2 ? 3 : 2;
     var easyLeft = easyCount;
@@ -720,8 +903,11 @@ class TourBuilder {
     DateTime race,
     TourPaces? paces,
   ) {
+    final short =
+        setup.raceDistance == RaceDistance.fiveK ||
+        setup.raceDistance == RaceDistance.tenK;
     final shakeouts = setup.daysPerWeek >= 4
-        ? [(6, 4.0), (4, 3.0), (2, 2.0)]
+        ? [(6, short ? 3.0 : 4.0), (4, 3.0), (2, 2.0)]
         : [(4, 3.0), (2, 2.0)];
     return [
       for (final (before, miles) in shakeouts)
@@ -736,10 +922,25 @@ class TourBuilder {
           ),
           paces,
         ),
-      _planned(setup, race, _race(), paces, venue: Venue.live),
+      _planned(
+        setup,
+        race,
+        _race(setup.raceDistance),
+        paces,
+        venue: Venue.live,
+      ),
     ];
   }
 }
+
+/// Under these weekly miles (or no run over the longest), the base is light
+/// for the distance.
+(double, double) _lightBase(RaceDistance d) => switch (d) {
+  RaceDistance.fiveK => (3.0, 1.0),
+  RaceDistance.tenK => (6.0, 2.0),
+  RaceDistance.half => (8.0, 3.0),
+  RaceDistance.marathon => (10.0, 4.0),
+};
 
 String _dateText(DateTime d) {
   const months = [
@@ -777,7 +978,7 @@ PlannedShow replanShow(
     WorkoutType.tempo => _tempo(miles),
     WorkoutType.intervals => _intervals(miles),
     WorkoutType.recovery => _easy(miles, recovery: true),
-    WorkoutType.race => _race(),
+    WorkoutType.race => _race(_distanceNear(p.distanceMiles)),
     WorkoutType.easy => _easy(miles),
   };
   final program = _program(w, paces, p.venue);
@@ -797,6 +998,12 @@ PlannedShow replanShow(
   );
 }
 
+/// The race distance closest to [miles] (a planned Opening Night keeps its
+/// race's miles).
+RaceDistance _distanceNear(double miles) => RaceDistance.values.reduce(
+  (a, b) => (a.miles - miles).abs() <= (b.miles - miles).abs() ? a : b,
+);
+
 /// Every pace [secondsFaster] seconds per mile quicker.
 TourPaces fasterPaces(TourPaces p, double secondsFaster) => TourPaces(
   predictedMarathonSeconds:
@@ -807,6 +1014,8 @@ TourPaces fasterPaces(TourPaces p, double secondsFaster) => TourPaces(
   tempo: p.tempo - secondsFaster,
   interval: p.interval - secondsFaster,
   source: p.source,
+  race: p.race - secondsFaster,
+  raceMiles: p.raceMiles,
 );
 
 /// [p] with every stretch [secondsFaster] sec/mi quicker. Distances stay the

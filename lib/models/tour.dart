@@ -3,6 +3,9 @@ import 'enums.dart';
 import 'json_utils.dart';
 import 'track.dart';
 
+/// 26.2 miles, as the Tour models store it.
+const double kFullMarathonMiles = 26.2;
+
 /// What the runner is aiming for on Opening Night.
 enum TourGoal {
   finish('Finish strong', 'Cross the line feeling good'),
@@ -16,6 +19,29 @@ enum TourGoal {
   static TourGoal fromName(String? name) => TourGoal.values.firstWhere(
     (v) => v.name == name,
     orElse: () => TourGoal.finish,
+  );
+}
+
+/// The race on Opening Night. Each distance has its own plan rules in
+/// lib/logic/tour_builder.dart.
+enum RaceDistance {
+  fiveK('5K', '5K', 3.10686, '3.1 miles'),
+  tenK('10K', '10K', 6.21371, '6.2 miles'),
+  half('Half Marathon', 'Half', 13.1094, '13.1 miles'),
+  marathon('Marathon', 'Marathon', 26.2188, '26.2 miles');
+
+  const RaceDistance(this.label, this.shortLabel, this.miles, this.milesText);
+  final String label;
+
+  /// For chips and badges, e.g. "Half".
+  final String shortLabel;
+  final double miles;
+  final String milesText;
+
+  /// Tours made before distances existed are marathons.
+  static RaceDistance fromName(String? name) => RaceDistance.values.firstWhere(
+    (v) => v.name == name,
+    orElse: () => RaceDistance.marathon,
   );
 }
 
@@ -50,7 +76,7 @@ enum VenuePreference {
       .firstWhere((v) => v.name == name, orElse: () => VenuePreference.live);
 }
 
-/// A recent race used to predict marathon time.
+/// A recent race used to predict the Opening Night time.
 class RaceResult {
   const RaceResult({required this.distanceMiles, required this.timeSeconds});
 
@@ -76,6 +102,7 @@ class TourSetup {
   const TourSetup({
     required this.raceDate,
     required this.goal,
+    this.raceDistance = RaceDistance.marathon,
     required this.currentWeeklyMiles,
     required this.longestRecentRunMiles,
     required this.daysPerWeek,
@@ -88,9 +115,10 @@ class TourSetup {
 
   /// Opening Night, a local calendar date (no time).
   final DateTime raceDate;
+  final RaceDistance raceDistance;
   final TourGoal goal;
 
-  /// Set for targetTime and bq goals.
+  /// Set for targetTime and bq goals, for [raceDistance].
   final int? goalTimeSeconds;
   final double currentWeeklyMiles;
   final double longestRecentRunMiles;
@@ -108,6 +136,7 @@ class TourSetup {
 
   Map<String, Object?> toJson() => {
     'raceDate': dateOnlyString(raceDate),
+    'raceDistance': raceDistance.name,
     'goal': goal.name,
     'goalTimeSeconds': goalTimeSeconds,
     'currentWeeklyMiles': currentWeeklyMiles,
@@ -121,6 +150,7 @@ class TourSetup {
 
   factory TourSetup.fromJson(Map<String, Object?> json) => TourSetup(
     raceDate: parseDateOnly(json['raceDate']) ?? DateTime.now(),
+    raceDistance: RaceDistance.fromName(asStringOrNull(json['raceDistance'])),
     goal: TourGoal.fromName(asStringOrNull(json['goal'])),
     goalTimeSeconds: json['goalTimeSeconds'] == null
         ? null
@@ -147,10 +177,24 @@ class TourPaces {
     required this.tempo,
     required this.interval,
     required this.source,
-  });
+    this.raceMiles = kFullMarathonMiles,
+    double? race,
+  }) : race = race ?? marathon;
 
+  /// Marathon-equivalent time. Easy, tempo and interval paces come from it
+  /// whatever the race distance.
   final int predictedMarathonSeconds;
+
+  /// Marathon pace.
   final double marathon;
+
+  /// Opening Night pace for a race of [raceMiles]. Same as [marathon] on a
+  /// marathon Tour.
+  final double race;
+  final double raceMiles;
+
+  /// Predicted finish time for Opening Night.
+  int get predictedRaceSeconds => (race * raceMiles).round();
 
   /// Easy runs and Headliners fall between these two paces.
   final double easySlow;
@@ -172,6 +216,8 @@ class TourPaces {
     'tempo': tempo,
     'interval': interval,
     'source': source,
+    'race': race,
+    'raceMiles': raceMiles,
   };
 
   static TourPaces? fromJson(Map<String, Object?>? json) {
@@ -184,6 +230,8 @@ class TourPaces {
       tempo: asDouble(json['tempo']),
       interval: asDouble(json['interval']),
       source: asStringOrNull(json['source']) ?? 'goalTime',
+      race: asDoubleOrNull(json['race']),
+      raceMiles: asDoubleOrNull(json['raceMiles']) ?? kFullMarathonMiles,
     );
   }
 }
@@ -402,6 +450,48 @@ class TourAdjustment {
   );
 }
 
+/// A Crew friend's race, handed to "Book The Tour" so you can book a Tour
+/// featuring them. Two Tours are co-headlined when race date and distance
+/// match.
+class TourFeaturing {
+  const TourFeaturing({
+    required this.userId,
+    required this.stageName,
+    required this.raceDate,
+    required this.raceDistance,
+    this.tourName,
+  });
+
+  final String userId;
+  final String stageName;
+  final DateTime raceDate;
+  final RaceDistance raceDistance;
+  final String? tourName;
+
+  Map<String, Object?> toJson() => {'userId': userId, 'stageName': stageName};
+
+  /// Only who it features is stored on the Tour; the race is in its setup.
+  static ({String userId, String stageName})? fromJson(
+    Map<String, Object?>? json,
+  ) {
+    final id = asStringOrNull(json?['userId']);
+    if (json == null || id == null) return null;
+    return (userId: id, stageName: asStringOrNull(json['stageName']) ?? '');
+  }
+}
+
+/// True when two Tours race the same Opening Night.
+bool sameRace(
+  DateTime aDate,
+  RaceDistance aDistance,
+  DateTime bDate,
+  RaceDistance bDistance,
+) =>
+    aDistance == bDistance &&
+    aDate.year == bDate.year &&
+    aDate.month == bDate.month &&
+    aDate.day == bDate.day;
+
 /// A training plan: every week from the first Rehearsal to Opening Night.
 class Tour implements Entity {
   const Tour({
@@ -415,12 +505,16 @@ class Tour implements Entity {
     this.warnings = const [],
     this.adjustments = const [],
     this.dismissed = const [],
+    this.featuring,
     this.deletedAt,
   });
 
   @override
   final String id;
   final String name;
+
+  /// The Crew friend this Tour was booked featuring, if any.
+  final ({String userId, String stageName})? featuring;
   final TourSetup setup;
   final TourPaces? paces;
   final List<TourWeek> weeks;
@@ -487,6 +581,7 @@ class Tour implements Entity {
     warnings: warnings,
     adjustments: adjustments ?? this.adjustments,
     dismissed: dismissed ?? this.dismissed,
+    featuring: featuring,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt ?? this.deletedAt,
@@ -503,6 +598,11 @@ class Tour implements Entity {
     'warnings': warnings,
     'adjustments': adjustments.map((a) => a.toJson()).toList(),
     'dismissed': dismissed,
+    if (featuring != null)
+      'featuring': {
+        'userId': featuring!.userId,
+        'stageName': featuring!.stageName,
+      },
     'createdAt': utcString(createdAt),
     'updatedAt': utcString(updatedAt),
     'deletedAt': deletedAt == null ? null : utcString(deletedAt!),
@@ -527,6 +627,7 @@ class Tour implements Entity {
       dismissed: rawDismissed is List
           ? rawDismissed.map((d) => '$d').toList()
           : const [],
+      featuring: TourFeaturing.fromJson(asMap(json['featuring'])),
       createdAt: created,
       updatedAt: parseDate(json['updatedAt']) ?? created,
       deletedAt: parseDate(json['deletedAt']),

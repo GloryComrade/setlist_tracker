@@ -4,6 +4,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../theme/app_theme.dart';
 
+/// What the Crew sees, said once the same way everywhere.
+const kCrewSeesEverything =
+    'Your Crew sees every Show you log. Mark a Show “Keep off the Crew” to '
+    'keep it to yourself.';
+
 /// Avatar fills. All deep shades, so the white initial stays readable.
 const crewColors = [
   StageColors.magentaDeep,
@@ -11,6 +16,11 @@ const crewColors = [
   StageColors.tealDeep,
   StageColors.orangeDeep,
 ];
+
+/// The same, for a runner who hasn't OK'd the Crew seeing every Show yet.
+const kCrewSeesShared =
+    'Your Crew sees the Shows you shared. OK the change on The Crew tab to '
+    'let them see every Show you log.';
 
 Color crewColor(int i) => crewColors[i.clamp(0, crewColors.length - 1)];
 
@@ -40,13 +50,16 @@ class CrewAvatar extends StatelessWidget {
         color: crewColor(color),
         shape: BoxShape.circle,
       ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontFamily: StageFonts.display,
-          fontSize: size * 0.55,
-          height: 1.05,
-          color: Colors.white,
+      // The name is always said next to the avatar; the initial is art.
+      child: ExcludeSemantics(
+        child: Text(
+          initial,
+          style: TextStyle(
+            fontFamily: StageFonts.display,
+            fontSize: size * 0.55,
+            height: 1.05,
+            color: Colors.white,
+          ),
         ),
       ),
     );

@@ -15,6 +15,8 @@ import 'package:setlist_tracker/data/remote/cloudflare_remote_store.dart';
 import 'package:setlist_tracker/data/sync/remote_store.dart';
 import 'package:setlist_tracker/models/crew.dart';
 import 'package:setlist_tracker/models/enums.dart';
+import 'package:setlist_tracker/models/show.dart';
+import 'package:setlist_tracker/models/tour.dart';
 
 const _base = 'https://api.test';
 final _now = DateTime.utc(2026, 11, 22, 12);
@@ -669,10 +671,8 @@ void main() {
       'userId': 'u1',
       'stageName': 'Ryan',
       'color': 2,
+      // Old fields an older server may still send are ignored.
       'alwaysShare': true,
-      'showOpeningNight': true,
-      'openingNight': '2027-04-18',
-      'tourName': 'Boston',
     };
 
     test('profile: GET reads it, null when there is none', () async {
@@ -681,9 +681,6 @@ void main() {
       expect(h.sent.single.path, '/api/crew/profile');
       expect(p?.stageName, 'Ryan');
       expect(p?.color, 2);
-      expect(p?.openingNight, DateTime(2027, 4, 18));
-      expect(p?.tourName, 'Boston');
-      expect(p?.alwaysShare, isTrue);
       h.handler = (_) async => http.Response('null', 200);
       expect(await s.myProfile(), isNull);
     });
@@ -691,36 +688,39 @@ void main() {
     test('profile: PUT sends the contract body', () async {
       final (s, h) = await crew((_) async => _json(profileJson));
       await s.saveProfile(
-        CrewProfile(
+        const CrewProfile(userId: 'u1', stageName: '  Ryan  ', color: 2),
+      );
+      expect(h.sent.single.method, 'PUT');
+      expect(h.sent.single.body, {'stageName': 'Ryan', 'color': 2});
+    });
+
+    test('profile: allActivityPending, and OK-ing every Show', () async {
+      final (s, h) = await crew(
+        (r) async =>
+            _json({...profileJson, 'allActivityPending': r.method == 'GET'}),
+      );
+      expect((await s.myProfile())?.allActivityPending, isTrue);
+      h.handler = (_) async => _json(profileJson);
+      expect((await s.myProfile())?.allActivityPending, isFalse);
+      h.sent.clear();
+      h.handler = (_) async =>
+          _json({...profileJson, 'allActivityPending': false});
+      final p = await s.acceptAllActivity(
+        const CrewProfile(
           userId: 'u1',
-          stageName: '  Ryan  ',
+          stageName: 'Ryan',
           color: 2,
-          alwaysShare: true,
-          showOpeningNight: true,
-          openingNight: DateTime(2027, 4, 18),
-          tourName: 'Boston',
+          allActivityPending: true,
         ),
       );
       expect(h.sent.single.method, 'PUT');
+      expect(h.sent.single.path, '/api/crew/profile');
       expect(h.sent.single.body, {
         'stageName': 'Ryan',
         'color': 2,
-        'alwaysShare': true,
-        'showOpeningNight': true,
-        'openingNight': '2027-04-18',
-        'tourName': 'Boston',
+        'allActivity': true,
       });
-      await s.saveProfile(
-        CrewProfile(
-          userId: 'u1',
-          stageName: 'Ryan',
-          openingNight: DateTime(2027, 4, 18),
-          tourName: 'Boston',
-        ),
-      );
-      final body = h.sent.last.body as Map;
-      expect(body['openingNight'], isNull);
-      expect(body['tourName'], isNull);
+      expect(p.allActivityPending, isFalse);
     });
 
     test('invite code, preview and join', () async {
@@ -766,8 +766,7 @@ void main() {
                 'stageName': 'Sam',
                 'color': 1,
                 'since': '2026-11-01T00:00:00.000Z',
-                'openingNight': null,
-                'tourName': null,
+                'tour': null,
                 'blocked': false,
               },
               {
@@ -775,8 +774,13 @@ void main() {
                 'stageName': 'Kit',
                 'color': 3,
                 'since': '2026-10-01T00:00:00.000Z',
-                'openingNight': '2027-01-02',
-                'tourName': 'Houston',
+                'tour': {
+                  'id': 't3',
+                  'name': 'Houston',
+                  'raceDate': '2027-01-02',
+                  'raceDistance': 'half',
+                  'featuring': null,
+                },
                 'blocked': true,
               },
             ],
@@ -787,7 +791,10 @@ void main() {
       final mates = await s.crew();
       expect(mates.map((m) => m.userId), ['u2', 'u3']);
       expect(mates.last.blocked, isTrue);
-      expect(mates.last.openingNight, DateTime(2027, 1, 2));
+      expect(mates.first.tour, isNull);
+      expect(mates.last.tour?.raceDate, DateTime(2027, 1, 2));
+      expect(mates.last.tour?.raceDistance, RaceDistance.half);
+      expect(mates.last.tour?.name, 'Houston');
       expect(mates.first.since, DateTime.utc(2026, 11));
 
       await s.leave('u2');
@@ -808,105 +815,123 @@ void main() {
       );
     });
 
-    test('feed and shared shows', () async {
-      final show = SharedShow(
-        date: DateTime(2026, 11, 20, 7, 30),
-        venue: Venue.values.first,
-        workoutType: WorkoutType.values.first,
-        distanceMiles: 6.2,
-        durationSeconds: 3000,
+    Show crewShow(String id, double miles) => Show(
+      id: id,
+      date: DateTime(2026, 11, 20, 7, 30),
+      venue: Venue.values.first,
+      workoutType: WorkoutType.values.first,
+      distanceMiles: miles,
+      durationSeconds: 3000,
+      effort: 7,
+      feel: Feel.good,
+      notes: 'Windy',
+      createdAt: DateTime.utc(2026, 11, 20),
+      updatedAt: DateTime.utc(2026, 11, 20),
+    );
+
+    Map<String, Object?> postJson(Show show) => {
+      'id': 'u2:${show.id}',
+      'ownerId': 'u2',
+      'stageName': 'Sam',
+      'color': 1,
+      'showId': show.id,
+      'show': show.toJson(),
+      'gearName': 'Pegasus 41',
+      'sharedAt': '2026-11-21T08:00:00.000Z',
+      'encores': 3,
+      'encoredByMe': true,
+      'mine': false,
+    };
+
+    test('feed: whole Shows with Gear names', () async {
+      final (s, h) = await crew(
+        (r) async => _json({
+          'posts': [postJson(crewShow('s9', 6.2))],
+        }),
       );
-      final (s, h) = await crew((r) async {
-        if (r.path == '/api/crew/feed') {
-          return _json({
-            'posts': [
-              {
-                'id': 'p1',
-                'ownerId': 'u2',
-                'stageName': 'Sam',
-                'color': 1,
-                'showId': 's9',
-                'show': show.toJson(),
-                'sharedAt': '2026-11-21T08:00:00.000Z',
-                'encores': 3,
-                'encoredByMe': true,
-                'mine': false,
-              },
-            ],
-          });
-        }
-        return _json({
-          'shared': {
-            's1': {
-              'showUpdatedAt': '2026-11-21T08:00:00.000Z',
-              'includesNotes': true,
-            },
-          },
-        });
-      });
       final post = (await s.feed()).single;
-      expect(post.id, 'p1');
+      expect(h.sent.single.path, '/api/crew/feed');
+      expect(post.id, 'u2:s9');
       expect(post.ownerId, 'u2');
+      expect(post.showId, 's9');
       expect(post.show.distanceMiles, 6.2);
+      expect(post.show.effort, 7);
+      expect(post.show.notes, 'Windy');
+      expect(post.gearName, 'Pegasus 41');
       expect(post.encores, 3);
       expect(post.encoredByMe, isTrue);
       expect(post.mine, isFalse);
       expect(post.sharedAt, DateTime.utc(2026, 11, 21, 8).toLocal());
-
-      final shared = await s.mySharedShows();
-      expect(h.sent.last.path, '/api/crew/shared');
-      expect(shared['s1']?.showUpdatedAt, DateTime.utc(2026, 11, 21, 8));
-      expect(shared['s1']?.includesNotes, isTrue);
     });
 
-    test('share, unshare, encore and report', () async {
-      final show = SharedShow(
-        date: DateTime(2026, 11, 20, 7, 30),
-        venue: Venue.values.first,
-        workoutType: WorkoutType.values.first,
-        distanceMiles: 3.1,
-        durationSeconds: 1500,
+    test('a mate’s page; null when they aren’t in your Crew', () async {
+      final tour = Tour(
+        id: 't1',
+        name: 'Spring Tour',
+        setup: TourSetup(
+          raceDate: DateTime(2027, 4, 18),
+          raceDistance: RaceDistance.half,
+          goal: TourGoal.finish,
+          currentWeeklyMiles: 20,
+          longestRecentRunMiles: 8,
+          daysPerWeek: 4,
+          headlinerWeekday: 7,
+          venuePreference: VenuePreference.mix,
+        ),
+        weeks: const [],
+        createdAt: DateTime.utc(2026, 11),
+        updatedAt: DateTime.utc(2026, 11),
       );
-      final (s, h) = await crew((_) async => http.Response('', 204));
-      await s.share('s1', show, DateTime.utc(2026, 11, 22, 1, 2, 3, 4, 5));
-      expect(
-        (h.sent.last.method, h.sent.last.path),
-        ('PUT', '/api/crew/shared/s1'),
-      );
-      expect(h.sent.last.body, {
-        'show': jsonDecode(jsonEncode(show.toJson())),
-        'showUpdatedAt': '2026-11-22T01:02:03.004Z',
+      final (s, h) = await crew((r) async {
+        if (r.path == '/api/crew/mates/u2') {
+          return _json({
+            'mate': {
+              'userId': 'u2',
+              'stageName': 'Sam',
+              'color': 1,
+              'since': '2026-11-01T00:00:00.000Z',
+            },
+            'tour': tour.toJson(),
+            'shows': [postJson(crewShow('a', 3)), postJson(crewShow('b', 5))],
+          });
+        }
+        return _error(404, 'not_found');
       });
-      await s.unshare('s1');
+      final page = await s.mate('u2');
+      expect(h.sent.last.method, 'GET');
+      expect(page?.mate.stageName, 'Sam');
+      expect(page?.tour?.name, 'Spring Tour');
+      expect(page?.tour?.setup.raceDistance, RaceDistance.half);
+      expect(page?.shows.map((p) => p.showId), ['a', 'b']);
+      expect(await s.mate('u9'), isNull);
+    });
+
+    test('encore and report use "<ownerId>:<showId>" post ids', () async {
+      final (s, h) = await crew((_) async => http.Response('', 204));
+      await s.encore('u2:s9', on: true);
       expect(
         (h.sent.last.method, h.sent.last.path),
-        ('DELETE', '/api/crew/shared/s1'),
+        ('PUT', '/api/crew/posts/u2%3As9/encore'),
       );
-      await s.encore('p1', on: true);
+      await s.encore('u2:s9', on: false);
       expect(
         (h.sent.last.method, h.sent.last.path),
-        ('PUT', '/api/crew/posts/p1/encore'),
-      );
-      await s.encore('p1', on: false);
-      expect(
-        (h.sent.last.method, h.sent.last.path),
-        ('DELETE', '/api/crew/posts/p1/encore'),
+        ('DELETE', '/api/crew/posts/u2%3As9/encore'),
       );
       await s.report(
         CrewPost(
-          id: 'p1',
+          id: 'u2:s9',
           ownerId: 'u2',
           stageName: 'Sam',
           color: 1,
-          showId: 's9',
-          show: show,
+          show: crewShow('s9', 3.1),
           sharedAt: _now,
         ),
         'Spam',
       );
       expect(
         (h.sent.last.method, h.sent.last.path),
-        ('POST', '/api/crew/posts/p1/report'),
+        ('POST', '/api/crew/posts/u2%3As9/report'),
       );
       expect(h.sent.last.body, {'reason': 'Spam'});
     });

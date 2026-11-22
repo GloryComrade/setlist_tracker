@@ -16,8 +16,10 @@ TourSetup _setup({
   VenuePreference venue = VenuePreference.mix,
   RaceResult? recent = const RaceResult(distanceMiles: 13.1, timeSeconds: 6600),
   double? easyPace,
+  RaceDistance distance = RaceDistance.marathon,
 }) => TourSetup(
   raceDate: race ?? DateTime(2027, 4, 18),
+  raceDistance: distance,
   goal: goal,
   goalTimeSeconds: goalTime,
   currentWeeklyMiles: weekly,
@@ -299,5 +301,113 @@ void main() {
     expect(back.toJson(), tour.toJson());
     expect(back.raceDate, DateTime(2027, 4, 18));
     expect(back.weeks.first.shows.first.date.hour, 0);
+  });
+
+  group('race distances', () {
+    double topHeadliner(Tour t) => t.weeks
+        .map((w) => w.headliner?.distanceMiles ?? 0)
+        .reduce((a, b) => a > b ? a : b);
+
+    test('older Tours without a distance read as marathons', () {
+      final json = _setup().toJson()..remove('raceDistance');
+      expect(TourSetup.fromJson(json).raceDistance, RaceDistance.marathon);
+      final paces = pacesFromMarathon(4 * 3600, 'goalTime').toJson()
+        ..remove('race')
+        ..remove('raceMiles');
+      final back = TourPaces.fromJson(paces)!;
+      expect(back.race, back.marathon);
+      expect(back.predictedRaceSeconds, closeTo(4 * 3600, 2));
+    });
+
+    for (final (d, maxWeeks, peakLo, peakHi) in [
+      (RaceDistance.fiveK, 12, 6.0, 8.0),
+      (RaceDistance.tenK, 14, 8.0, 10.0),
+      (RaceDistance.half, 16, 10.0, 12.0),
+      (RaceDistance.marathon, 20, 18.0, 20.0),
+    ]) {
+      test('${d.label}: length, Headliner peak and race day', () {
+        // A race far away: the Tour is capped at the distance's longest.
+        final far = _tour(
+          _setup(distance: d, race: DateTime(2027, 9, 26), goalTime: null),
+        );
+        expect(far.weeks.length, maxWeeks);
+        final top = topHeadliner(far);
+        expect(top, greaterThanOrEqualTo(peakLo - 0.5));
+        expect(top, lessThanOrEqualTo(peakHi));
+        final race = far.weeks.last.shows.last;
+        expect(race.workoutType, WorkoutType.race);
+        expect(race.distanceMiles, closeTo(raceMilesFor(d), 0.01));
+      });
+    }
+
+    test('a 5K Tour races at 5K pace, faster than marathon pace', () {
+      final t = _tour(
+        _setup(distance: RaceDistance.fiveK, race: DateTime(2027, 2, 28)),
+      );
+      final p = t.paces!;
+      expect(p.raceMiles, closeTo(3.107, 0.001));
+      expect(p.race, lessThan(p.marathon));
+      // A 1:50 half predicts about a 23:56 5K.
+      expect(p.predictedRaceSeconds, closeTo(1436, 5));
+      expect(t.name, contains('5K Tour'));
+      // Short races skip the race-pace finish on Headliners.
+      expect(
+        t.allShows
+            .where((s) => s.workoutType == WorkoutType.long)
+            .every((s) => s.detail?.contains('Opening Night pace') != true),
+        isTrue,
+      );
+    });
+
+    test('a goal time is for the chosen distance', () {
+      final p = pacesFor(
+        _setup(distance: RaceDistance.half, recent: null, goalTime: 2 * 3600),
+      )!;
+      expect(p.predictedRaceSeconds, closeTo(7200, 2));
+      expect(p.predictedMarathonSeconds, greaterThan(4 * 3600));
+    });
+
+    test('short races allow shorter Tours', () {
+      final eight = _tour(
+        _setup(
+          distance: RaceDistance.fiveK,
+          race: DateTime(2027, 1, 17), // 8 weeks out
+        ),
+      );
+      expect(eight.weeks.length, 8);
+      final build = TourBuilder().build(
+        _setup(distance: RaceDistance.fiveK, race: DateTime(2027, 1, 17)),
+        today: _today,
+      );
+      expect(build.checks.where((c) => c.serious), isEmpty);
+    });
+
+    test('a short 5K Tour from a modest base is not a serious warning', () {
+      final b = TourBuilder().build(
+        _setup(
+          distance: RaceDistance.fiveK,
+          race: DateTime(2027, 1, 10), // 7 weeks out
+          weekly: 12,
+          longest: 4,
+          goalTime: null,
+          goal: TourGoal.finish,
+        ),
+        today: _today,
+      );
+      final c = b.checks.firstWhere((c) => c.title == 'Short Tour');
+      expect(c.serious, isFalse);
+      // A marathon from the same base still is.
+      final m = TourBuilder().build(
+        _setup(race: DateTime(2027, 3, 7), weekly: 15),
+        today: _today,
+      );
+      expect(m.checks.firstWhere((c) => c.title == 'Short Tour').serious, true);
+    });
+
+    test('help me pick uses the distance', () {
+      final d = suggestedRaceDate(_today, RaceDistance.tenK);
+      expect(daysBetween(_today, d), inInclusiveRange(84, 90));
+      expect(d.weekday, DateTime.sunday);
+    });
   });
 }

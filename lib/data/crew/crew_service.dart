@@ -21,6 +21,10 @@ abstract class CrewService {
 
   Future<CrewProfile> saveProfile(CrewProfile profile);
 
+  /// OKs the Crew seeing every Show from now on (ends
+  /// [CrewProfile.allActivityPending]). Sends the stage name and color too.
+  Future<CrewProfile> acceptAllActivity(CrewProfile profile);
+
   /// Your invite code (six letters and digits), made if needed. Lasts a week.
   Future<String> inviteCode();
 
@@ -37,20 +41,16 @@ abstract class CrewService {
   Future<void> block(String userId);
   Future<void> unblock(String userId);
 
-  /// Shared Shows from you and your Crew, newest first. Leaves out anything
-  /// you reported.
+  /// Shows from you and your Crew, newest first. Leaves out Shows kept off
+  /// the Crew and anything you reported.
   Future<List<CrewPost>> feed();
 
-  /// Show id → when your shared copy was taken.
-  Future<Map<String, SharedInfo>> mySharedShows();
-
-  /// Shares a Show, or replaces the copy if it was shared before.
-  Future<void> share(String showId, SharedShow show, DateTime showUpdatedAt);
-
-  Future<void> unshare(String showId);
+  /// A Crew mate's page: their active Tour and Setlist. Null when they
+  /// aren't in your Crew.
+  Future<CrewMateDetail?> mate(String userId);
 
   Future<void> encore(String postId, {required bool on});
 
-  /// Reports a shared Show to the app's owner and hides it from your feed.
+  /// Reports a Crew mate's Show to the app's owner and hides it from your feed.
   Future<void> report(CrewPost post, String reason);
 }
