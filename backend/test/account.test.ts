@@ -22,6 +22,8 @@ const TABLES: [string, string][] = [
   ["crew_reports", "?1 IN (reporter, reported_user)"],
   ["crew_tour_invites", "?1 IN (from_user, to_user)"],
   ["crew_avatars", "user_id = ?1"],
+  ["crew_show_views", "?1 IN (user_id, owner)"],
+  ["crew_shoutouts", "?1 IN (user_id, owner)"],
 ];
 
 async function rowsOf(userId: string): Promise<Record<string, number>> {
@@ -61,6 +63,11 @@ describe("DELETE /api/me", () => {
     const theirs = posts.find((p: any) => !p.mine).id;
     await call("PUT", `/api/crew/posts/${theirs}/encore`, { token: me.token });
     await call("PUT", `/api/crew/posts/${mine}/encore`, { token: friend.token });
+    // Views and Shout-outs both ways.
+    await call("PUT", `/api/crew/posts/${theirs}/seen`, { token: me.token });
+    await call("PUT", `/api/crew/posts/${mine}/seen`, { token: friend.token });
+    await call("POST", `/api/crew/posts/${theirs}/shoutouts`, { token: me.token, body: { body: "Nice!" } });
+    await call("POST", `/api/crew/posts/${mine}/shoutouts`, { token: friend.token, body: { body: "Go!" } });
     await call("POST", `/api/crew/posts/${theirs}/report`, { token: me.token, body: { reason: "a" } });
     await call("POST", `/api/crew/posts/${mine}/report`, { token: friend.token, body: { reason: "b" } });
     // A Tour invite to the friend.
@@ -114,6 +121,8 @@ describe("DELETE /api/me", () => {
     expect(friendAfter.crew_links).toBe(0);
     expect(friendAfter.crew_encores_v2).toBe(0);
     expect(friendAfter.crew_tour_invites).toBe(0);
+    expect(friendAfter.crew_show_views).toBe(0);
+    expect(friendAfter.crew_shoutouts).toBe(0);
 
     // The old token no longer works.
     expect((await call("GET", "/api/me", { token: me.token })).status).toBe(401);
