@@ -298,6 +298,7 @@ class EmptyStage extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
+    this.actionIcon = Icons.add,
   });
 
   final IconData icon;
@@ -305,6 +306,7 @@ class EmptyStage extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final IconData actionIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -334,7 +336,7 @@ class EmptyStage extends StatelessWidget {
             const SizedBox(height: 24),
             GradientButton(
               label: actionLabel!,
-              icon: Icons.add,
+              icon: actionIcon,
               onPressed: onAction,
             ),
           ],
@@ -455,12 +457,16 @@ class GradientButton extends StatelessWidget {
                     Icon(icon, color: Colors.white),
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
+                  // Wraps rather than overflowing on a narrow phone.
+                  Flexible(
+                    child: Text(
+                      label.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                 ],

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
 import '../../logic/tour_logging.dart';
@@ -356,7 +359,17 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     );
 
     try {
-      await ref.read(showRepositoryProvider).save(show);
+      final repo = ref.read(showRepositoryProvider);
+      await repo.save(show);
+      if (_existing == null) {
+        // Read it back for the saved updatedAt, so it isn't shared twice.
+        final saved = await repo.getById(show.id);
+        if (saved != null) {
+          unawaited(
+            ref.read(crewControllerProvider.notifier).shareIfAlways(saved),
+          );
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);

@@ -23,6 +23,16 @@ chats.
    and click **Run**. It creates the `shows`, `gear`, `saved_mixes` and
    `tours` tables, the rules that let each runner see only their own rows,
    and the "Delete account" function. Running it again is harmless.
+3. **New query** again, paste all of
+   [`supabase/migrations/20261123000000_the_crew.sql`](../supabase/migrations/20261123000000_the_crew.sql)
+   and click **Run**. It sets up The Crew (sharing Shows with friends):
+   stage names, invite codes, shared Shows, Encores, blocks and reports.
+   Running it again is harmless.
+
+Reports about shared Shows land in **Table Editor → crew_reports**. Look
+there now and then; the reported Show is copied into `post_data`. To remove
+someone, delete them under **Authentication → Users** (everything of theirs
+goes with them).
 
 ## 3. Copy the URL and key
 

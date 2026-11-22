@@ -192,7 +192,8 @@ class _SignedIn extends ConsumerWidget {
       title: 'Delete your Backstage Pass?',
       body:
           'This deletes your account and every Show, Tour, Gear and Saved '
-          'Mix saved to it, on every device. It can’t be undone.',
+          'Mix saved to it, on every device, and takes you out of the Crew '
+          'with every Show you shared. It can’t be undone.',
       action: 'Delete account',
       destructive: true,
     );

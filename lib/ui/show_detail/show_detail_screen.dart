@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../data/crew/crew_controller.dart';
 import '../../data/providers.dart';
 import '../../logic/show_math.dart';
 import '../../logic/spotify_links.dart';
@@ -10,6 +11,7 @@ import '../../models/gear.dart';
 import '../../models/show.dart';
 import '../../models/venue_details.dart';
 import '../../theme/app_theme.dart';
+import '../crew/share_with_crew_card.dart';
 import '../widgets/album_art.dart';
 import '../widgets/clip_player.dart';
 import '../widgets/open_link.dart';
@@ -44,6 +46,14 @@ class ShowDetailScreen extends ConsumerWidget {
     );
     if (ok != true) return;
     await ref.read(showRepositoryProvider).delete(showId);
+    // A shared Show leaves the Crew's feed with it.
+    if (ref.read(crewControllerProvider).shared.containsKey(showId)) {
+      try {
+        await ref.read(crewControllerProvider.notifier).unshare(showId);
+      } catch (_) {
+        // Offline: the Crew catches up the next time the app syncs.
+      }
+    }
     if (context.mounted) leaveScreen(context);
   }
 
@@ -111,6 +121,7 @@ class ShowDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       SectionCard(title: 'Notes', child: Text(show.notes!)),
                     ],
+                    ShareWithCrewCard(show: show),
                     const SizedBox(height: 32),
                   ],
                 ),
