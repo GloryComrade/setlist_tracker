@@ -123,16 +123,20 @@ class _SuggestionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 4,
-            children: [
-              TextButton(onPressed: onDismiss, child: const Text('Not now')),
-              FilledButton(
-                onPressed: onApply,
-                child: Text(suggestion.applyLabel),
-              ),
-            ],
+          // Lines the buttons up under the text, past the icon (the text
+          // button's own padding makes up the rest).
+          Padding(
+            padding: const EdgeInsets.only(left: 22),
+            child: Wrap(
+              spacing: 4,
+              children: [
+                TextButton(onPressed: onDismiss, child: const Text('Not now')),
+                FilledButton(
+                  onPressed: onApply,
+                  child: Text(suggestion.applyLabel),
+                ),
+              ],
+            ),
           ),
         ],
       ),

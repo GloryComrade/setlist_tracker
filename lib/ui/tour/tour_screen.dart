@@ -185,6 +185,7 @@ class _ScheduleState extends ConsumerState<_Schedule> {
   Widget build(BuildContext context) {
     final tour = widget.tour;
     final done = ref.watch(tourProgressProvider);
+    final shows = ref.watch(showsProvider).value ?? const <Show>[];
     final current = _currentWeek;
     final daysToGo = daysBetween(today(), tour.raceDate);
 
@@ -245,6 +246,7 @@ class _ScheduleState extends ConsumerState<_Schedule> {
                   isCurrent: w.number == current,
                   open: _isOpen(w),
                   done: done,
+                  shows: shows,
                   onToggle: () => setState(() => _open[w.number] = !_isOpen(w)),
                 );
               },
@@ -485,9 +487,12 @@ class _WeekBlock extends StatelessWidget {
     required this.isCurrent,
     required this.open,
     required this.done,
+    required this.shows,
     required this.onToggle,
   });
 
+  /// Every Show on the Setlist; this week's ones count toward actual miles.
+  final List<Show> shows;
   final TourWeek week;
   final bool isCurrent;
   final bool open;
@@ -501,10 +506,10 @@ class _WeekBlock extends StatelessWidget {
     final active = week.shows.where((s) => !s.skipped).toList();
     final logged = active.where((s) => done.containsKey(s.id)).length;
     final all = active.length;
-    // Planned vs. actual: miles from the Shows logged for this week's runs.
-    final actualMiles = week.shows
-        .map((s) => done[s.id]?.distanceMiles ?? 0)
-        .fold(0.0, (a, b) => a + b);
+    // Planned vs. actual: every Show run this week counts, planned or not.
+    final weekShows = shows.where((s) => week.contains(s.date)).toList();
+    final actualMiles = weekShows.fold(0.0, (a, s) => a + s.distanceMiles);
+    final hasActual = weekShows.isNotEmpty;
     final past = week.endDate.isBefore(today());
 
     return Container(
@@ -567,13 +572,14 @@ class _WeekBlock extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text.rich(
                         TextSpan(
                           children: [
-                            if (logged > 0)
+                            if (hasActual)
                               TextSpan(
                                 text:
                                     '${formatMiles(actualMiles, withUnit: false)} / ',
@@ -584,7 +590,7 @@ class _WeekBlock extends StatelessWidget {
                               text: formatMiles(
                                 (week.plannedMiles * 2).round() / 2,
                               ),
-                              style: logged > 0
+                              style: hasActual
                                   ? const TextStyle(
                                       color: StageColors.textMuted,
                                     )
@@ -592,7 +598,7 @@ class _WeekBlock extends StatelessWidget {
                             ),
                           ],
                         ),
-                        semanticsLabel: logged > 0
+                        semanticsLabel: hasActual
                             ? '${formatMiles(actualMiles)} of '
                                   '${formatMiles(week.plannedMiles)} planned'
                             : '${formatMiles(week.plannedMiles)} planned',
