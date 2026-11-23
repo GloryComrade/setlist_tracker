@@ -638,7 +638,16 @@ void main() {
       crew.addTour('maya', tourFor(race));
       // Jo races a week later: not co-headlining.
       crew.addTour('jo', tourFor(race.add(const Duration(days: 7))));
-      crew.addShow('maya', mateShow('m1', miles: 4, date: DateTime.now()));
+      // Logged on a planned day of this week, so it counts as done whatever
+      // weekday the test runs on (today may be a rest day).
+      final now = DateTime.now();
+      final week = tourFor(race)
+          .weekContaining(DateTime(now.year, now.month, now.day))!;
+      final planned = week.shows.firstWhere((p) => !p.skipped).date;
+      crew.addShow(
+        'maya',
+        mateShow('m1', miles: 4, date: planned.add(const Duration(hours: 7))),
+      );
       await tester.runAsync(
         () => SembastTourRepository(db).save(tourFor(race)),
       );
