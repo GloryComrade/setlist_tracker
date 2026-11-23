@@ -12,7 +12,11 @@ class StudioDetails {
     this.savedMixId,
     this.tracks = const [],
     this.useTrackTotals = true,
+    this.inclinePercent,
   });
+
+  /// Highest grade most treadmills go to. Typed inclines are kept to 0 to 15.
+  static const maxInclinePercent = 15.0;
 
   final String? gymName;
   final String? treadmillName;
@@ -27,7 +31,16 @@ class StudioDetails {
   /// When false, the runner typed them (treadmill readouts often differ).
   final bool useTrackTotals;
 
+  /// The incline typed for a Studio Session logged without Tracks, in
+  /// percent grade. Ignored once the Show has Tracks: each Track keeps its own.
+  final double? inclinePercent;
+
   TrackTotals get totals => TrackTotals.of(tracks);
+
+  /// The Show's incline: the Tracks' time-weighted average when there are
+  /// Tracks, else the typed incline. Null when neither says.
+  double? get averageInclinePercent =>
+      tracks.isNotEmpty ? totals.averageInclinePercent : inclinePercent;
 
   Map<String, Object?> toJson() => {
     'gymName': gymName,
@@ -35,6 +48,8 @@ class StudioDetails {
     'savedMixId': savedMixId,
     'tracks': tracks.map((t) => t.toJson()).toList(),
     'useTrackTotals': useTrackTotals,
+    // Absent on Shows saved before build 6, and on Shows with Tracks.
+    if (inclinePercent != null) 'inclinePercent': inclinePercent,
   };
 
   factory StudioDetails.fromJson(Map<String, Object?> json) => StudioDetails(
@@ -43,6 +58,7 @@ class StudioDetails {
     savedMixId: asStringOrNull(json['savedMixId']),
     tracks: asMapList(json['tracks']).map(Track.fromJson).toList(),
     useTrackTotals: json['useTrackTotals'] != false,
+    inclinePercent: asDoubleOrNull(json['inclinePercent']),
   );
 }
 

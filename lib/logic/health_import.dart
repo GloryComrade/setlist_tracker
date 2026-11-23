@@ -67,6 +67,20 @@ List<HealthRun> newHealthRuns(List<HealthRun> runs, List<Show> shows) {
 Venue venueForHealthRun(HealthRun run) =>
     run.indoor == true ? Venue.studio : Venue.live;
 
+/// The average incline of a treadmill run, worked out from the climb Health
+/// recorded: a treadmill connected to an Apple Watch (GymKit) reports its
+/// elevation gain. Null when Health has no climb for the run, which is the
+/// usual case: Health has no incline field of its own.
+double? inclineFromHealthRun(HealthRun run) {
+  final gain = run.elevationGainFt;
+  final miles = run.distanceMiles;
+  if (gain == null || gain <= 0 || miles <= 0) return null;
+  final percent = gain / (miles * 5280) * 100;
+  final rounded = (percent * 10).round() / 10;
+  if (rounded <= 0) return null;
+  return rounded.clamp(0, StudioDetails.maxInclinePercent).toDouble();
+}
+
 /// A new Show for [run]. Workout type Easy, effort 5 and Feel "Fine" are
 /// placeholders the runner can change; distance, time and (for Live Shows)
 /// elevation and temperature come from Health.
@@ -83,7 +97,9 @@ Show showFromHealthRun(HealthRun run, {required DateTime now, String? id}) {
     durationSeconds: run.durationSeconds,
     effort: 5,
     feel: Feel.fine,
-    studio: venue == Venue.studio ? const StudioDetails() : null,
+    studio: venue == Venue.studio
+        ? StudioDetails(inclinePercent: inclineFromHealthRun(run))
+        : null,
     live: venue == Venue.live
         ? LiveDetails(
             elevationGainFt: run.elevationGainFt?.roundToDouble(),
