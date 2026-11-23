@@ -276,16 +276,11 @@ Map<RecordKind, GoldRecord> computeGoldRecords(
 
   if (RecordKind.steepestStudio.appliesTo(scope)) {
     final steep = best(
-      ordered.where(
-        (s) =>
-            s.studio != null &&
-            s.studio!.tracks.isNotEmpty &&
-            s.studio!.totals.averageInclinePercent > 0,
-      ),
-      (s) => s.studio!.totals.averageInclinePercent,
+      ordered.where((s) => (s.studio?.averageInclinePercent ?? 0) > 0),
+      (s) => s.studio!.averageInclinePercent!,
     );
     if (steep != null) {
-      final incline = steep.studio!.totals.averageInclinePercent;
+      final incline = steep.studio!.averageInclinePercent!;
       records[RecordKind.steepestStudio] = GoldRecord(
         kind: RecordKind.steepestStudio,
         value: '${incline.toStringAsFixed(1)}%',

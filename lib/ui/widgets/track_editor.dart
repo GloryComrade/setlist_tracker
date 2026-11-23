@@ -238,6 +238,49 @@ class TrackTotalsBar extends StatelessWidget {
   }
 }
 
+/// "INCLINE 4.5%": the one number a Studio Session without Tracks keeps.
+/// Same panel as [TrackTotalsBar], read left to right.
+class InclineBar extends StatelessWidget {
+  const InclineBar({super.key, required this.inclinePercent});
+  final double inclinePercent;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = '${inclinePercent.toStringAsFixed(1)}%';
+    return Semantics(
+      label: 'Incline: ${inclinePercent.toStringAsFixed(1)} percent',
+      excludeSemantics: true,
+      child: VenueStub(
+        venue: Venue.studio,
+        markWidth: 4,
+        borderRadius: BorderRadius.circular(12),
+        padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'INCLINE',
+              style: TextStyle(
+                color: StageColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontFeatures: StageFonts.tabular,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Dialog to add or edit one Track. Returns null when cancelled.
 Future<Track?> showTrackDialog(
   BuildContext context,

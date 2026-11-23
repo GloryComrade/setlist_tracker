@@ -70,6 +70,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
   // Studio Session
   final _gym = TextEditingController();
   final _treadmill = TextEditingController();
+  final _incline = TextEditingController();
   List<Track> _tracks = [];
   bool _useTrackTotals = true;
   String? _savedMixId;
@@ -153,6 +154,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     if (st != null) {
       _gym.text = st.gymName ?? '';
       _treadmill.text = st.treadmillName ?? '';
+      _incline.text = _numText(st.inclinePercent);
       _tracks = [...st.tracks];
       _useTrackTotals = st.useTrackTotals;
       _savedMixId = st.savedMixId;
@@ -218,6 +220,7 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
     for (final c in [
       _gym,
       _treadmill,
+      _incline,
       _route,
       _elevation,
       _temp,
@@ -393,6 +396,8 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               savedMixId: _savedMixId,
               tracks: _tracks,
               useTrackTotals: _useTrackTotals,
+              // With Tracks, each Track keeps its own incline.
+              inclinePercent: _tracks.isEmpty ? _num(_incline) : null,
             )
           : null,
       live: venue == Venue.live
@@ -608,6 +613,31 @@ class _ShowFormScreenState extends ConsumerState<ShowFormScreen> {
               ),
             ],
           ),
+          if (_tracks.isEmpty) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _incline,
+              decoration: const InputDecoration(
+                labelText: 'Incline',
+                suffixText: '%',
+                helperText: 'Changed it mid-run? Add Tracks below instead.',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              validator: (v) {
+                final t = (v ?? '').trim();
+                if (t.isEmpty) return null;
+                final n = double.tryParse(t);
+                return n == null || n < 0 || n > StudioDetails.maxInclinePercent
+                    ? '0 to 15%, e.g. 4.5'
+                    : null;
+              },
+            ),
+          ],
           const SizedBox(height: 16),
           const _Label('Tracks'),
           TrackEditor(tracks: _tracks, onChanged: _setTracks),

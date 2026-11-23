@@ -338,8 +338,9 @@ class _StudioSection extends StatelessWidget {
       details.gymName,
       details.treadmillName,
     ].whereType<String>().join(' · ');
+    final incline = details.inclinePercent;
     return SectionCard(
-      title: 'The Tracks',
+      title: details.tracks.isEmpty ? 'The Studio' : 'The Tracks',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -351,7 +352,9 @@ class _StudioSection extends StatelessWidget {
                 style: const TextStyle(color: StageColors.textMuted),
               ),
             ),
-          if (details.tracks.isEmpty)
+          if (details.tracks.isEmpty && incline != null)
+            InclineBar(inclinePercent: incline)
+          else if (details.tracks.isEmpty)
             const Text(
               'No Tracks logged.',
               style: TextStyle(color: StageColors.textMuted),

@@ -354,6 +354,13 @@ List<CrewShowFact> crewShowFacts(Show s, {String? gearName}) {
           '$count, up to ${top.toStringAsFixed(1)} miles per hour, '
           '${incline.toStringAsFixed(1)} percent average incline.',
     ));
+  } else if (studio != null && studio.inclinePercent != null) {
+    final incline = studio.inclinePercent!.toStringAsFixed(1);
+    out.add((
+      icon: Icons.graphic_eq,
+      text: '$incline% incline',
+      spoken: '$incline percent incline.',
+    ));
   }
   if (gearName != null && gearName.trim().isNotEmpty) {
     out.add((
